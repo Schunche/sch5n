@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Schunche
+"""Experimental software."""
+
 from PIL import Image
 
 # Open the grayscale image

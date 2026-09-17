@@ -33,7 +33,7 @@ class Color:
         return f"{color_code}{text}{cls.color_codes["reset"]}"
 
 
-def logMSG(msg) -> None:
+def log_message(msg: str) -> None:
     """Log a message with a timestamp in white color.
 
     Args:
@@ -43,7 +43,7 @@ def logMSG(msg) -> None:
     print(Color.apply(f"{time.asctime()} :> {msg}", "white"))
 
 
-def logError(msg) -> None:
+def log_error(msg: str) -> None:
     """Log an error message with a timestamp in red color.
 
     Args:
@@ -53,7 +53,7 @@ def logError(msg) -> None:
     print(Color.apply(f"{time.asctime()} :> ERROR - {msg}", "red"))
 
 
-def logSuccess(msg) -> None:
+def log_success(msg: str) -> None:
     """Log a message with a timestamp in green color.
 
     Args:

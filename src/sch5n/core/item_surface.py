@@ -1,4 +1,3 @@
-from sch5n.core.item import *
 from sch5n.core.loader import STGS, loadIcon, loadImage, loadImageResized
 
 ITEM_ICON: dict = {
@@ -13,10 +12,10 @@ ITEM_IMAGE: dict = {
     1: loadImage("tool/copperAxe"),
     2: loadImageResized(
         "tile/dirt/0",
-        (int(STGS["tileSize"] * 0.5), int(STGS["tileSize"] * 0.5)),
+        (int(STGS["tile_size"] * 0.5), int(STGS["tile_size"] * 0.5)),
     ),
     3: loadImageResized(
         "tile/oakLog/0",
-        (int(STGS["tileSize"] * 0.5), int(STGS["tileSize"] * 0.5)),
+        (int(STGS["tile_size"] * 0.5), int(STGS["tile_size"] * 0.5)),
     ),
 }

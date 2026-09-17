@@ -2,14 +2,14 @@ import pygame
 
 from sch5n.core.item import Item
 from sch5n.core.loader import FIX_STGS, NAME_SPACE, STGS, loadSysFont
-from sch5n.core.log import logError
+from sch5n.core.log import log_error
 
 # https://fonts.google.com/specimen/Pixelify+Sans?query=pixel
 
 
 def renderText(
     surface: pygame.Surface,
-    pos: tuple[int],
+    pos: tuple[int, int],
     text: str,
     color: str = "text",
     fontName: str = "arial",
@@ -29,24 +29,24 @@ def renderText(
 class Button:
     def __init__(
         self,
-        pos: tuple[int],
+        pos: tuple[int, int],
         text: str,
         *,
-        size: tuple[int] = (
+        size: tuple[int, int] = (
             FIX_STGS["GUI"]["standardButtonWidth"],
             FIX_STGS["GUI"]["standardButtonHeight"],
         ),
-        alignBy: str = "topLeft",
-        solid: bool = True,
+        align_by: str = "topLeft",
+        is_solid: bool = True,
         innerColor: str = "buttonInner",
         textColor: str = "text",
         hoverColor: str = "buttonHover",
         borderColor: str = "buttonBorder",
-        font: pygame.font = loadSysFont("arial"),
+        font: pygame.font.Font = loadSysFont("arial"),
         borderWidth: int = FIX_STGS["GUI"]["buttonBorderWidth"],
         borderRadius: int = FIX_STGS["GUI"]["buttonBorderRadius"],
     ) -> None:
-        """TODO: solid
+        """TODO: is_solid
         Initializes a new instance of the `Button` class.
         """
         assert innerColor in NAME_SPACE["color"], (
@@ -59,19 +59,19 @@ class Button:
             f"Invalid hover color: {hoverColor}"
         )
 
-        self.pos: tuple[int] = pos
-        self.size: tuple[int] = size
+        self.pos: tuple[int, int] = pos
+        self.size: tuple[int, int] = size
         self.text: str = text.title()
         self.innerColor: str = innerColor
         self.textColor: str = textColor
         self.borderColor: str = borderColor
         self.hoverColor: str = hoverColor
-        self.font: pygame.font = font
+        self.font: pygame.font.Font = font
 
         self.borderWidth: int = borderWidth
         self.borderRadius: int = borderRadius
 
-        if alignBy == "topLeft":
+        if align_by == "topLeft":
             self.innerRect = pygame.Rect(
                 self.pos[0], self.pos[1], self.size[0], self.size[1]
             )
@@ -79,7 +79,8 @@ class Button:
                 self.pos[0], self.pos[1], self.size[0], self.size[1]
             )
             self.textRendered = self.font.render(
-                self.text, True, NAME_SPACE["color"][self.textColor]
+                self.text, antialias=True,
+                color=NAME_SPACE["color"][self.textColor]
             )
             self.textRect = self.textRendered.get_rect()
             self.textRect.center = (
@@ -87,7 +88,7 @@ class Button:
                 self.pos[1] + self.size[1] // 2,
             )
 
-        elif alignBy == "center":
+        elif align_by == "center":
             self.innerRect = pygame.Rect(
                 self.pos[0] - int(self.size[0] / 2),
                 self.pos[1] - int(self.size[1] / 2),
@@ -109,7 +110,7 @@ class Button:
                 self.pos[1] - FIX_STGS["GUI"]["buttonTextVerticalOffError"],
             )
 
-        elif alignBy == "bottomRight":
+        elif align_by == "bottomRight":
             self.innerRect = pygame.Rect(
                 self.pos[0] - self.borderWidth - int(self.size[0] / 2),
                 self.pos[1] - self.borderWidth - int(self.size[1] / 2),
@@ -130,7 +131,7 @@ class Button:
 
         else:
             # Not implemented possibility will raise error
-            raise ValueError("Invalid alignBy value")
+            raise ValueError("Invalid align_by value")
 
     def push(self, mousePos: tuple[int]) -> bool:
         """Pushes the button.
@@ -399,7 +400,7 @@ class Inventory:
             return item
                 # So it has empty slots
 
-        logError("Not all cases have been covered, in inventory adding")
+        log_error("Not all cases have been covered, in inventory adding")
 
 
 class CursorSlot:

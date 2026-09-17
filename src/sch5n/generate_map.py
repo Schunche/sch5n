@@ -1,9 +1,12 @@
+# Copyright (c) 2026 Schunche
+"""Experimental software."""
+
 import json
 import math
 import pathlib
 import random
 
-from sch5n.core.log import *
+from sch5n.core.log import log_error, log_message
 
 
 def saveMap(tilemap: dict[str, dict[str, str | int]], alias: str) -> None:
@@ -160,7 +163,7 @@ def generateMap(
 
 
 if __name__ == "__main__":
-    logMSG("Started making it")
+    log_message("Started making it")
     # X grows left to right
     # Y grows top to bottom
 
@@ -170,7 +173,7 @@ if __name__ == "__main__":
     mapRight: int = 300
     mapTop: int = 0
     mapBottom: int = 160
-    logMSG(
+    log_message(
         f"In range: x = ({mapLeft}; {mapRight}), y = ({mapTop}; {mapBottom})"
     )
 
@@ -184,4 +187,4 @@ if __name__ == "__main__":
     print(f"Map saved to '{filename}'")
 
 else:
-    logError("Did not do anything")
+    log_error("Did not do anything")

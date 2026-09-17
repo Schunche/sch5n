@@ -1,4 +1,4 @@
-from sch5n.core.item import *
+from sch5n.core.item import Block, Item, SwingTool
 
 ITEM_DATA: dict[int, Item] = {
     0: SwingTool(

@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Schunche
+"""Experimental software."""
+
 import sys
 
 if __name__ != "__main__":
@@ -10,22 +13,24 @@ import math
 import random
 from copy import deepcopy
 
-from sch5n.core.log import *
+from sch5n.core.log import log_error, log_message, log_success
 
-logSuccess("Program started")
+log_success("Program started")
 
 import pygame
 
 pygame.init()
-logMSG("Initialized pygame")
+log_message("Initialized pygame")
 
 from sch5n.core.animation import Animation
 from sch5n.core.cloud import Clouds
-from sch5n.core.floatingItem import FloatingItem
+from sch5n.core.floating_item import FloatingItem
 from sch5n.core.gui import Button, renderText
-from sch5n.core.item import *
+from sch5n.core.item import Item, Tool
+from sch5n.core.item_surface import ITEM_IMAGE
 from sch5n.core.loader import (
     FIX_STGS,
+    NAME_SPACE,
     STGS,
     loadDirectory,
     loadImage,
@@ -39,7 +44,7 @@ from sch5n.core.player import Player
 from sch5n.core.table import SAME_LOOT_TILE
 from sch5n.core.tilemap import Tilemap
 
-logMSG("Loaded local dependency from script")
+log_message("Loaded local dependency from script")
 
 # INITIAL INPUTS HERE
 GAME_MODE: str = "admin"
@@ -92,32 +97,32 @@ class Main:
             pygame.display.set_caption(FIX_STGS["windowName"])
             pygame.display.set_icon(self.assets["icon"]["main"])
             self.scroll: list[float] = [0, 0]
-            logMSG("Created main window")
+            log_message("Created main window")
 
             # Tilemap
             self.assets["tile"] = loadTiles("tile")
             self.assets["tileBreakage"] = {
                 int(key): resizeImage(
-                    surf, (STGS["tileSize"], STGS["tileSize"])
+                    surf, (STGS["tile_size"], STGS["tile_size"])
                 )
                 for key, surf in loadDirectory("tileBreakage").items()
             }
-            logMSG("Loaded tile assets")
+            log_message("Loaded tile assets")
 
             self.tilemap: Tilemap = Tilemap(assets=self.assets, mapName="map1")
-            logMSG("Created tilemap")
+            log_message("Created tilemap")
             self.floatingItems: list[FloatingItem] = []
 
             # Clouds
             self.assets["cloud"] = loadImagesAsList("cloud")
 
             self.windSpeed: float = random.random() * 2 - 1
-            logMSG(f"Starting wind speed: {round(self.windSpeed, 2)}")
-            logMSG(
+            log_message(f"Starting wind speed: {round(self.windSpeed, 2)}")
+            log_message(
                 f"Starting wind direction: {"west" if self.windSpeed < 0 else "east"}"
             )
             self.clouds = Clouds(self.assets["cloud"], count=2**4)
-            logMSG("Generated clouds")
+            log_message("Generated clouds")
 
             # Player
             self.assets["mob"]["player"]["idle"] = Animation(
@@ -142,7 +147,7 @@ class Main:
                 pos=[STGS["windowWidth"] / 2, STGS["windowHeight"] / 2],
                 gameMode=GAME_MODE,
             )
-            logMSG("Created player")
+            log_message("Created player")
 
             # Particles
             self.assets["particle"]["leaf"] = Animation(
@@ -175,8 +180,8 @@ class Main:
                             pygame.Rect(
                                 spawner[0][0],
                                 spawner[0][1],
-                                STGS["tileSize"],
-                                STGS["tileSize"],
+                                STGS["tile_size"],
+                                STGS["tile_size"],
                             )
                         )
                     else:
@@ -184,8 +189,8 @@ class Main:
                             pygame.Rect(
                                 spawner[0][0],
                                 spawner[0][1],
-                                STGS["tileSize"],
-                                STGS["tileSize"],
+                                STGS["tile_size"],
+                                STGS["tile_size"],
                             )
                         ]
 
@@ -199,8 +204,8 @@ class Main:
                                 pygame.Rect(
                                     spawner[0][0],
                                     spawner[0][1],
-                                    STGS["tileSize"],
-                                    STGS["tileSize"],
+                                    STGS["tile_size"],
+                                    STGS["tile_size"],
                                 )
                             )
                         else:
@@ -208,15 +213,15 @@ class Main:
                                 pygame.Rect(
                                     spawner[0][0],
                                     spawner[0][1],
-                                    STGS["tileSize"],
-                                    STGS["tileSize"],
+                                    STGS["tile_size"],
+                                    STGS["tile_size"],
                                 )
                             ]
 
-            logMSG(
+            log_message(
                 "Loaded and generated particles, and their respective spawning tiles"
             )
-            logMSG(
+            log_message(
                 f"Currently {sum([len(rectList) for rectList in self.particleSpawnerTiles.values()])} tiles emit particles"
             )
 
@@ -241,7 +246,7 @@ class Main:
                             - FIX_STGS["GUI"]["outerWindowPadding"],
                         ),
                         text="Settings",
-                        alignBy="bottomRight",
+                        align_by="bottomRight",
                     )
                 },
                 "mainMenu": {
@@ -251,7 +256,7 @@ class Main:
                             int(STGS["windowHeight"] * 0.5),
                         ),
                         text="Play",
-                        alignBy="center",
+                        align_by="center",
                     ),
                     "settings": Button(
                         pos=(
@@ -260,7 +265,7 @@ class Main:
                             + FIX_STGS["GUI"]["mainMenu"]["buttonPadding"],
                         ),
                         text="Settings",
-                        alignBy="center",
+                        align_by="center",
                     ),
                     "exit": Button(
                         pos=(
@@ -269,7 +274,7 @@ class Main:
                             + FIX_STGS["GUI"]["mainMenu"]["buttonPadding"] * 2,
                         ),
                         text="Exit",
-                        alignBy="center",
+                        align_by="center",
                     ),
                 },
                 "settings": {},
@@ -277,13 +282,13 @@ class Main:
             }
 
         except Exception as e:
-            logError(f"An error occurred during initialization: {e}")
+            log_error(f"An error occurred during initialization: {e}")
             sys.exit(1)
 
     @staticmethod
-    def exitApp() -> None:
+    def exit_app() -> None:
         """Exit the application."""
-        logSuccess("Successfully ran program")
+        log_success("Successfully ran program")
         pygame.quit()
         sys.exit()
 
@@ -295,9 +300,9 @@ class Main:
             self.floatingItems.append(
                 FloatingItem(
                     [
-                        STGS["tileSize"] * (self.tilePosAtMouse[0] + 0.5)
+                        STGS["tile_size"] * (self.tilePosAtMouse[0] + 0.5)
                         - ITEM_IMAGE[item.id].get_width() * 0.5,
-                        STGS["tileSize"] * self.tilePosAtMouse[1],
+                        STGS["tile_size"] * self.tilePosAtMouse[1],
                     ],
                     item,
                 )
@@ -309,16 +314,16 @@ class Main:
     def setState(self, state: str) -> None:
         """Set the current state of the game."""
         self.state = state
-        logMSG(f"Set state to '{state}'")
+        log_message(f"Set state to '{state}'")
 
-    def handleEvents(self) -> None:
+    def handle_events(self) -> None:
         """Handle input game events."""
         self.mousePos: tuple[int] = pygame.mouse.get_pos()
         # pygame.key.get_pressed()[pygame.K_q]
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                self.exitApp()
+                self.exit_app()
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
@@ -421,9 +426,9 @@ class Main:
                                         case "settings":
                                             self.setState("settings")
                                         case "exit":
-                                            self.exitApp()
+                                            self.exit_app()
                                         case _:
-                                            logError(
+                                            log_error(
                                                 "Unknow button fount in existing state: Ignoring this will have consequences"
                                             )
                                 case "mainGameInventory":
@@ -431,11 +436,11 @@ class Main:
                                         case "settings":
                                             self.setState("mainGameSettings")
                                         case _:
-                                            logError(
+                                            log_error(
                                                 "Unknow button fount in existing state: Ignoring this will have consequences"
                                             )
                                 case _:
-                                    logError(
+                                    log_error(
                                         "Unknown button found in unknown state: Ignoring this may have consequences"
                                     )
 
@@ -456,7 +461,7 @@ class Main:
                                     self.player.inventory.getItemByNum(slotNum)
                                     is None
                                 ):
-                                    logMSG("'None' with 'None' lol")
+                                    log_message("'None' with 'None' lol")
 
                                 elif (
                                     self.player.inventory.getItemByNum(
@@ -474,7 +479,7 @@ class Main:
                                             slotNum
                                         ),
                                     )
-                                    logMSG("Picked up 'non-stackable' item")
+                                    log_message("Picked up 'non-stackable' item")
 
                                 else:
                                     if (
@@ -520,7 +525,7 @@ class Main:
                                             == 0
                                         ):
                                             self.player.cursorSlot.slot = None
-                                    logMSG(
+                                    log_message(
                                         "Picked up half of 'stackable' item"
                                     )
 
@@ -540,7 +545,7 @@ class Main:
                                             slotNum
                                         ),
                                     )
-                                    logMSG("Put down 'non-stackable' item")
+                                    log_message("Put down 'non-stackable' item")
 
                                 elif (
                                     self.player.inventory.getItemByNum(
@@ -557,7 +562,7 @@ class Main:
                                             slotNum
                                         ),
                                     )
-                                    logMSG("Swapped 'non-stackable' items")
+                                    log_message("Swapped 'non-stackable' items")
 
                                 else:
                                     (
@@ -569,7 +574,7 @@ class Main:
                                             slotNum
                                         ),
                                     )
-                                    logMSG(
+                                    log_message(
                                         "Put 'non-stackable' itemin the place of 'stackable' item"
                                     )
 
@@ -587,7 +592,7 @@ class Main:
                                 if self.player.cursorSlot.slot.amount == 0:
                                     self.player.cursorSlot.slot = None
 
-                                logMSG(
+                                log_message(
                                     "Put down 1 'stackable' item to empty slot"
                                 )
 
@@ -606,7 +611,7 @@ class Main:
                                         slotNum
                                     ),
                                 )
-                                logMSG(
+                                log_message(
                                     "Swapped 'non-stackable' item with 'stackable' items"
                                 )
 
@@ -627,7 +632,7 @@ class Main:
                                         slotNum
                                     ),
                                 )
-                                logMSG("Swapped 'stackable' items")
+                                log_message("Swapped 'stackable' items")
                             # ItemIDs are the same
 
                             elif (
@@ -639,7 +644,7 @@ class Main:
                                 ).maxAmount
                             ):
                                 # Item in inventpry is at max stack
-                                logMSG("Swapped 'stackable' items")
+                                log_message("Swapped 'stackable' items")
                             else:
                                 self.player.getInventory()[
                                     slotNum
@@ -652,7 +657,7 @@ class Main:
                                     self.player.cursorSlot.slot = (
                                         None
                                     )
-                                logMSG(
+                                log_message(
                                     "Put 1 'stackable' item to inventory"
                                 )
 
@@ -688,7 +693,7 @@ class Main:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     if self.state == "mainMenu":
-                        self.exitApp()
+                        self.exit_app()
                     elif self.state in ["mainGame", "mainGameInventory"]:
                         pass  # Intentional
                     elif self.state == "settings":
@@ -726,11 +731,11 @@ class Main:
         # Mouse movement based events
         if self.state in ["mainGame", "mainGameInventory"]:
             self.tilePosAtMouse = (
-                int(self.mousePos[0] + self.scroll[0]) // STGS["tileSize"],
-                int(self.mousePos[1] + self.scroll[1]) // STGS["tileSize"],
+                int(self.mousePos[0] + self.scroll[0]) // STGS["tile_size"],
+                int(self.mousePos[1] + self.scroll[1]) // STGS["tile_size"],
             )
 
-    def handleUpdates(self) -> None:
+    def update_state(self) -> None:
         """Update game state."""
         if self.state in ["mainGame", "mainGameInventory"]:
             # Camera movement
@@ -777,10 +782,10 @@ class Main:
                                 # Currenty you have the correct tool in hand
 
                                 hitTileRect = pygame.Rect(
-                                    self.tilePosAtMouse[0] * STGS["tileSize"],
-                                    self.tilePosAtMouse[1] * STGS["tileSize"],
-                                    STGS["tileSize"],
-                                    STGS["tileSize"],
+                                    self.tilePosAtMouse[0] * STGS["tile_size"],
+                                    self.tilePosAtMouse[1] * STGS["tile_size"],
+                                    STGS["tile_size"],
+                                    STGS["tile_size"],
                                 )
 
                                 if (
@@ -851,7 +856,7 @@ class Main:
 
                                 self.player.toolUsePenalty = 0
                             elif not self.frame % 10:
-                                logMSG(
+                                log_message(
                                     "Other tool is required to break this tile"
                                 )
 
@@ -903,7 +908,7 @@ class Main:
                 kill = particle.update()
                 if kill:
                     self.particles.remove(particle)
-                if particle.species in ["leaf"]:
+                if particle.species == "leaf":
                     particle.pos[0] += (
                         math.sin(particle.animation.frame * 0.035) * 0.25
                     )
@@ -940,7 +945,7 @@ class Main:
                     else:
                         self.floatingItems[index] = item
 
-    def handleRender(self) -> None:
+    def render(self) -> None:
         """Render game elements."""
         if self.state == "mainMenu":
             # Background
@@ -1003,7 +1008,7 @@ class Main:
             )
 
         # Buttons
-        for name, button in self.buttons[self.state].items():
+        for button in self.buttons[self.state].values():
             button.render(self.WINDOW, self.mousePos)
 
         # Cursor
@@ -1012,9 +1017,9 @@ class Main:
     def run(self) -> None:
         """Main game loop."""
         while True:
-            self.handleEvents()
-            self.handleUpdates()
-            self.handleRender()
+            self.handle_events()
+            self.update_state()
+            self.render()
 
             self.clock.tick(STGS["FPS"])
             pygame.display.update()

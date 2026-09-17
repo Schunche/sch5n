@@ -1,9 +1,9 @@
 import pygame
 
 from sch5n.core.item import Item
-from sch5n.core.itemSurface import ITEM_IMAGE
+from sch5n.core.item_surface import ITEM_IMAGE
 from sch5n.core.loader import FIX_STGS, STGS
-from sch5n.core.mathFunc import getHyp, playerMagnetFunc
+from sch5n.core.math_func import getHyp, playerMagnetFunc
 from sch5n.core.tilemap import Tilemap
 
 
@@ -90,16 +90,16 @@ class FloatingItem:
                 self.getCollisonRect().centerx - playerPos[0],
                 self.getCollisonRect().centery - playerPos[1],
             )
-            <= STGS["tileSize"] * FIX_STGS["reach"]
+            <= STGS["tile_size"] * FIX_STGS["reach"]
         ):
             # The item is in the range of the player
             # So it approaches the player
             appVel: tuple[float] = playerMagnetFunc((
                 (playerPos[0] - self.getCollisonRect().centerx)
-                / STGS["tileSize"]
+                / STGS["tile_size"]
                 / FIX_STGS["reach"],
                 (playerPos[1] - self.getCollisonRect().centery)
-                / STGS["tileSize"]
+                / STGS["tile_size"]
                 / FIX_STGS["reach"],
             ))
 

@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 
 import pygame
 
-from sch5n.core.itemSurface import ITEM_ICON
+from sch5n.core.item_surface import ITEM_ICON
 from sch5n.core.loader import NAME_SPACE, STGS, loadSysFont
 
 

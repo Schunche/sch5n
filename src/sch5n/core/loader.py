@@ -5,7 +5,7 @@ from typing import Any
 
 import pygame
 
-from sch5n.core.log import logError, logMSG
+from sch5n.core.log import log_error, log_message
 
 
 def loadJson(path: str) -> Any:
@@ -19,19 +19,19 @@ def loadJson(path: str) -> Any:
     try:
         with pathlib.Path(f"src/{path}.json").open() as file:
             returnFile = json.load(file)
-            logMSG(f"'src/{path}.json' found and loaded")
+            log_message(f"'src/{path}.json' found and loaded")
         return returnFile
 
     except FileNotFoundError as e:
-        logError(f"'src/{path}.json' not found: {e}")
+        log_error(f"'src/{path}.json' not found: {e}")
         return None
 
     except UnicodeDecodeError as e:
-        logError(f"'src/{path}.json' is not a valid JSON file: {e}")
+        log_error(f"'src/{path}.json' is not a valid JSON file: {e}")
         return None
 
     except Exception as e:
-        logError(f"'src/{path}.json' failed to load: {e}")
+        log_error(f"'src/{path}.json' failed to load: {e}")
         return None
 
 
@@ -58,11 +58,11 @@ def loadImage(path: str) -> pygame.Surface:
         return img
 
     except FileNotFoundError as e:
-        logError(f"'src/img/{path}.png' not found: {e}")
+        log_error(f"'src/img/{path}.png' not found: {e}")
         return loadImage("icon/_")
 
     except Exception as e:
-        logError(f"'src/img/{path}.png' failed to load: {e}")
+        log_error(f"'src/img/{path}.png' failed to load: {e}")
         return loadImage("icon/_")
 
 
@@ -142,7 +142,7 @@ def loadTiles(path: str) -> dict[int, pygame.Surface]:
             tiles[block][int(variant[: variant.index(".")])] = (
                 loadImageResized(
                     f"{path}/{block}/{variant[: variant.index(".")]}",
-                    (STGS["tileSize"], STGS["tileSize"]),
+                    (STGS["tile_size"], STGS["tile_size"]),
                 )
             )
 

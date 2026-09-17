@@ -1,5 +1,11 @@
-from sch5n.core.item import *
-from sch5n.core.itemData import ITEM_DATA
+# Copyright (c) 2026 Schunche
+"""Experimental software."""
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sch5n.core.item import Item
+from sch5n.core.item_data import ITEM_DATA
 
 # Loot tables here
 
