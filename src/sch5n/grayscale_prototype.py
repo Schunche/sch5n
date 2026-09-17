@@ -4,7 +4,12 @@ from PIL import Image
 gray_image = Image.open("gray_image.png")
 
 # Define the color you want to shade the image with
-shade_color = (255, 127, 63, 255)  # Red color, you can change this to any other color
+shade_color = (
+    255,
+    127,
+    63,
+    255,
+)  # Red color, you can change this to any other color
 trans_color = (255, 0, 254, 255)  # Transparent color
 
 # Convert the grayscale image to RGBA format
@@ -21,7 +26,12 @@ for x in range(rgba_image.width):
             shaded_pixel = (0, 0, 0, 0)
         else:
             intensity = pixel[0]  # Grayscale intensity
-            shaded_pixel = (shade_color[0], shade_color[1], shade_color[2], intensity)
+            shaded_pixel = (
+                shade_color[0],
+                shade_color[1],
+                shade_color[2],
+                intensity,
+            )
         shaded_image.putpixel((x, y), shaded_pixel)
 
 # Display or save the resulting shaded image

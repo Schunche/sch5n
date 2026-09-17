@@ -1,0 +1,83 @@
+[build-system]
+
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+
+name = "sch5n"
+version = "0.0.1"
+requires-python = ">=3.13"
+authors = [{name = "Schunche", email = "schunche.w@gmail.com"}]
+maintainers = [{name = "Schunche", email = "schunche.w@gmail.com"}]
+description = "Experimental software. Use at your own risk."
+readme = "README.md"
+license = { file = "LICENCE.txt" }
+
+dependencies = [
+    "glfw",
+    "moderngl",
+    "numba",
+    "numpy",
+    "pillow",
+    "platformdirs",
+    "pygame-ce",
+    "pyglm",
+    "python-dotenv",
+    "python-steam-api",
+    "sounddevice",
+    "steamworkspy",
+    "PyOpenAl",
+    "mypy",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+]
+
+[tool]
+
+[tool.mypy]
+mypy_path = "typings"
+python_version = "3.14"
+ignore_missing_imports = true
+warn_redundant_casts = true
+warn_unreachable = true
+strict = true
+pretty = true
+
+#[[tool.mypy.overrides]]
+#module = ["moderngl", "moderngl.*"]
+#ignore_errors = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["venv", "build", "__pycache__"]
+addopts = "-q"
+
+[tool.ruff]
+indent-width = 4
+line-length = 79
+preview = true
+target-version = "py314"
+extend-exclude = ["pyproject.toml"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+nested-string-quote-style = "preferred"
+docstring-code-format = true
+
+[tool.ruff.lint]
+future-annotations = true
+select = ["ALL"]
+ignore = [
+    "D203",  # Collides with D211
+    "D213",  # Collides with D212
+    "ERA001",  # Might remove comments (#4845)
+    "COM812",  # Allow missing trailing comma
+    "TD002",  # TODO does not need author
+    "TD003",  # TODOs dont always need to show issue link
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 5

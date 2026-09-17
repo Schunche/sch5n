@@ -1,47 +1,54 @@
-import pygame
 import math
-
 from dataclasses import dataclass, field
 
-from src.script.loader import loadSysFont, NAME_SPACE, STGS, FIX_STGS
-from src.fixData.itemSurface import ITEM_ICON, ITEM_IMAGE
+import pygame
 
-@dataclass(repr = False)
+from sch5n.core.itemSurface import ITEM_ICON
+from sch5n.core.loader import NAME_SPACE, STGS, loadSysFont
+
+
+@dataclass(repr=False)
 class Item:
     """Basic item class"""
+
     id: int
     name: str
-    description: str | None = field(default = None)
-    useTime: int = field(default = int(STGS["FPS"] // 2))
-    amount: int = field(default = 1)
-    maxAmount: int = field(default = 2 ** 10)
+    description: str | None = field(default=None)
+    useTime: int = field(default=int(STGS["FPS"] // 2))
+    amount: int = field(default=1)
+    maxAmount: int = field(default=2**10)
 
     def getName(self) -> str:
         return self.name.title()
-    
+
     def renderIcon(self, surface: pygame.Surface, pos: tuple[int]) -> None:
         surface.blit(ITEM_ICON[self.id], pos)
 
         # The amount number
         if self.maxAmount != 1:
             font: pygame.font = loadSysFont("arial")
-            
-            textRendered = font.render(str(self.amount), True, NAME_SPACE["color"]["text"])
+
+            textRendered = font.render(
+                str(self.amount), True, NAME_SPACE["color"]["text"]
+            )
             textRect: pygame.Rect = textRendered.get_rect()
-            textRect.bottomright = (pos[0] + STGS["guiSize"], pos[1] + STGS["guiSize"])
+            textRect.bottomright = (
+                pos[0] + STGS["guiSize"],
+                pos[1] + STGS["guiSize"],
+            )
 
             surface.blit(textRendered, textRect)
 
+
 @dataclass
 class Weapon(Item):
+    damage: int = field(default=5)  # This is strange
+    knockback: int | None = field(default=5)
 
-    damage: int = field(default = 5) # This is strange
-    knockback: int | None = field(default = 5)
 
 @dataclass
 class ReforgeableItem(Item):
-
-    reforge: str | None = field(default = None)
+    reforge: str | None = field(default=None)
 
     def __post_init__(self) -> None:
         self.amount: int = 1
@@ -52,14 +59,14 @@ class ReforgeableItem(Item):
             return super().getName()
         return f"{self.reforge.title()} {super().getName()}"
 
+
 @dataclass
 class Tool(Item):
+    toolType: dict[str, int] = field(default_factory={"pickaxe": 5})
 
-    toolType: dict[str, int] = field(default_factory = {"pickaxe": 5})
 
 @dataclass
 class SwingWeapon(Weapon, ReforgeableItem):
-
     def __post_init__(self) -> None:
         super().__post_init__()
 
@@ -74,15 +81,18 @@ class SwingWeapon(Weapon, ReforgeableItem):
             self.angle = self.minAngle + (self.maxAngle - self.minAngle) * self.frame
         """
 
-@dataclass(kw_only = True)
+
+@dataclass(kw_only=True)
 class SwingTool(SwingWeapon, Tool):
     pass
+
 
 @dataclass
 class PlaceableItem(Item):
     def getName(self) -> str:
-        return f"{super().getName()} (x{str(self.amount)})"
+        return f"{super().getName()} (x{self.amount!s})"
 
-@dataclass(kw_only = True)
+
+@dataclass(kw_only=True)
 class Block(PlaceableItem):
     pass

@@ -1,8 +1,9 @@
-test.py
-*.pyc
-imageResizer.py
-note.txt
-projectile.py
-fresh/
-trash/
-map/
+dev/
+venv/
+temp/
+__pycache__/
+
+.ruff_cache/
+*.egg-info/
+
+__temp*__.py
