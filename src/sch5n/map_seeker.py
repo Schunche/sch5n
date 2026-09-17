@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Schunche
+"""Game and player management package."""
+
 import sys
 
 if __name__ != "__main__":
@@ -20,30 +23,29 @@ logMSG("Loaded all local dependency script")
 
 
 class Main:
-    """Main class to manage the game loop and handle game events.
-    """
+    """Main class to manage the game loop and handle game events."""
 
-    def __init__(self, tileSize: int = 1) -> None:
+    def __init__(self, tile_size: int = 1) -> None:
         """Initialize the game.
 
         Args:
-            tileSize (int, optional): Size of the tiles. Defaults to 2.
+            tile_size (int, optional): Size of the tiles. Defaults to 2.
 
         """
         try:
             self.STGS: dict[str, str | int] = loadJson("data/settings")
-            self.tileSize: int = tileSize
+            self.tile_size: int = tile_size
 
             self.assets: dict[str, dict[str, pygame.Surface]] = {}
             self.assets["tiles"] = loadTilesResized(
-                "src/img/bit", tileSize=self.tileSize
+                "src/img/bit", tileSize=self.tile_size
             )
             logMSG("Loaded tile assets")
 
             self.tilemap: Tilemap = Tilemap(
                 assets=self.assets["tiles"],
                 mapName="procedural",
-                tileSize=self.tileSize,
+                tileSize=self.tile_size,
             )
             logMSG("Created tilemap")
 
@@ -94,7 +96,7 @@ class Main:
                 if event.key == pygame.K_s:
                     self.movementInput["down"] = True
                 if event.key == pygame.K_r:
-                    self.pos = [self.tileSize, self.tileSize * 0]
+                    self.pos = [self.tile_size, self.tile_size * 0]
 
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_a:
