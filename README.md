@@ -10,6 +10,12 @@ Experimental software
     source venv/bin/activate
     python -m pip install -e .
 
+### Windows
+
+    python -m venv venv
+    (Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; .\venv\Scripts\Activate.ps1
+    python -m pip install -e .
+
 ## Dependencies
 
 - [Python](https://www.python.org/)
