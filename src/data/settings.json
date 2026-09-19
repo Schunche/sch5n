@@ -1,7 +1,7 @@
 {
-    "windowWidth": 1280,
-    "windowHeight": 720,
+    "window_width": 1280,
+    "window_height": 720,
     "FPS": 60,
     "tile_size": 32,
-    "guiSize": 24
+    "gui_size": 24
 }

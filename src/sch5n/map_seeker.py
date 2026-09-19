@@ -8,7 +8,7 @@ if __name__ != "__main__":
 
 import pygame
 
-from sch5n.core.loader import loadJson
+from sch5n.core.loader import load_json
 from sch5n.core.log import log_error, log_message, log_success
 from sch5n.core.tilemap import Tilemap
 
@@ -31,7 +31,7 @@ class Main:
 
         """
         try:
-            self.STGS: dict[str, str | int] = loadJson("data/settings")
+            self.SETTINGS: dict[str, str | int] = load_json("data/settings")
             self.tile_size: int = tile_size
 
             self.assets: dict[str, dict[str, pygame.Surface]] = {}
@@ -50,15 +50,15 @@ class Main:
             self.clock: pygame.time.Clock = pygame.time.Clock()
 
             self.WINDOW: pygame.Surface = pygame.display.set_mode([
-                self.STGS["windowWidth"],
-                self.STGS["windowHeight"],
+                self.SETTINGS["window_width"],
+                self.SETTINGS["window_height"],
             ])
             pygame.display.set_caption(
-                f"{self.STGS["windowName"]} von Map Seeker"
+                f"{self.SETTINGS["windowName"]} von Map Seeker"
             )
 
             self.pos: list[float] = [0, 0]
-            self.movementInput: dict[str, bool] = {
+            self.movement_input: dict[str, bool] = {
                 "left": False,
                 "right": False,
                 "up": False,
@@ -93,28 +93,28 @@ class Main:
                     self.exit_app()
 
                 if event.key in keys:
-                    self.movementInput[keys[event.key]] = True
+                    self.movement_input[keys[event.key]] = True
 
                 if event.key == pygame.K_r:
                     self.pos = [self.tile_size, self.tile_size * 0]
 
             if (event.type == pygame.KEYUP) and (event.key in keys):
-                self.movementInput[keys[event.key]] = False
+                self.movement_input[keys[event.key]] = False
 
     def update_state(self) -> None:
         """Handle game updates."""
         self.pos[0] += (
-            self.movementInput["right"] - self.movementInput["left"]
+            self.movement_input["right"] - self.movement_input["left"]
         ) * 5
         self.pos[1] += (
-            self.movementInput["down"] - self.movementInput["up"]
+            self.movement_input["down"] - self.movement_input["up"]
         ) * 5
 
     def render(self) -> None:
         """Handle rendering of game objects."""
         self.WINDOW.fill([0, 0, 0])
 
-        self.tilemap.renderSeek(self.WINDOW, offset=self.pos)
+        self.tilemap.render_seek(self.WINDOW, offset=self.pos)
 
     def run(self) -> None:
         """Run the game loop."""
@@ -123,7 +123,7 @@ class Main:
             self.update_state()
             self.render()
 
-            self.clock.tick(int(self.STGS["FPS"] / 4))
+            self.clock.tick(int(self.SETTINGS["FPS"] / 4))
             pygame.display.update()
 
 

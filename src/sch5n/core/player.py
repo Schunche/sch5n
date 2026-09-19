@@ -46,19 +46,19 @@ class Player(Mob):
         self.inventory: Inventory = Inventory(
             deepcopy(ITEM_DATA[0]), deepcopy(ITEM_DATA[1])
         )
-        self.hotbarNum: int = 0
-        self.cursorSlot: CursorSlot = CursorSlot()
+        self.hotbar_num: int = 0
+        self.cursor_slot: CursorSlot = CursorSlot()
 
-        self.toolUsePenalty: int = 0
+        self.tool_use_penalty: int = 0
 
-    def getItemInHand(self) -> Item | None:
+    def get_item_in_hand(self) -> Item | None:
         return (
-            self.inventory.getItemByNum(self.hotbarNum)
-            if self.cursorSlot.getItem() is None
-            else self.cursorSlot.getItem()
+            self.inventory.get_item_by_num(self.hotbar_num)
+            if self.cursor_slot.get_item() is None
+            else self.cursor_slot.get_item()
         )
 
-    def getInventory(self) -> dict[int, Item]:
+    def get_inventory(self) -> dict[int, Item]:
         """You can only assingn to this for some reason"""
         return self.inventory.inventory
 
@@ -117,15 +117,15 @@ class Player(Mob):
             self.jumps -= 1
             self.airTime = 5
 
-    def isAbleToBreak(self, block: str) -> bool:
+    def is_able_to_break(self, block: str) -> bool:
         """Returns whether the player is able to break the given block with the given tool.
         """
-        for toolType in self.getItemInHand().toolType:
-            if block in NAME_SPACE["toolRequired"][toolType].keys():
+        for tool_type in self.get_item_in_hand().tool_type:
+            if block in NAME_SPACE["toolRequired"][tool_type]:
                 return True
         return False
 
-    def breakTileWith(self, block: str) -> str:
+    def break_tile_with(self, block: str) -> str:
         """Returns the tool type the player is able to break the given block with.
 
         Args:
@@ -135,7 +135,7 @@ class Player(Mob):
             str: The tool type if the player is able to break the tile.
 
         """
-        for toolType in self.getItemInHand().toolType:
-            if block in NAME_SPACE["toolRequired"][toolType].keys():
-                return toolType
+        for tool_type in self.get_item_in_hand().tool_type:
+            if block in NAME_SPACE["toolRequired"][tool_type]:
+                return tool_type
         return "pickaxe"

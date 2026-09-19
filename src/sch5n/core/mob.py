@@ -1,7 +1,7 @@
 import pygame
 
 from sch5n.core.animation import Animation
-from sch5n.core.loader import STGS
+from sch5n.core.loader import SETTINGS
 from sch5n.core.tilemap import Tilemap
 
 
@@ -12,15 +12,15 @@ class Mob:
         pos (list[float]): The position of the mob as a list containing x and y coordinates.
         width (int): The width of the mob's hitbox.
         height (int): The height of the mob's hitbox.
-        pivot (tuple[int]): Vector from TopLeft of posxy to TopLeft of hitboxWH.
+        pivot (tuple[int, int]): Vector from TopLeft of posxy to TopLeft of hitboxWH.
         hitBoxWidth (int): The width of the mob's hitbox.
         hitBoxHeight (int): The height of the mob's hitbox.
         species: The species of the mob.
         assets (dict[str, dict[str, Animation]]): Dictionary mapping species names to dictionaries containing action names and Animation objects.
-        movementInput (dict[str, bool]): Dictionary mapping movement direction keys to boolean values indicating if the key is pressed.
+        movement_input (dict[str, bool]): Dictionary mapping movement direction keys to boolean values indicating if the key is pressed.
         velocity (list[float]): The velocity of the mob in the x and y directions.
         action (str): The current action of the mob.
-        animationOffset (tuple[int]): Offset to adjust the position of the mob's animation.
+        animationOffset (tuple[int, int]): Offset to adjust the position of the mob's animation.
         flip (bool): Flag indicating if the mob's sprite should be flipped horizontally.
 
     """
@@ -43,7 +43,7 @@ class Mob:
         self.width: int = 48
         self.height: int = 48
 
-        self.pivot: tuple[int] = (
+        self.pivot: tuple[int, int] = (
             0,
             0,
         )  # Vector from TopLeft of posxy to TopLeft of hitboxWH
@@ -52,7 +52,7 @@ class Mob:
 
         self.species = species
         self.assets: dict[str, dict[str, Animation]] = assets
-        self.movementInput: dict[str, bool] = {
+        self.movement_input: dict[str, bool] = {
             "left": False,
             "right": False,
             "up": False,
@@ -62,7 +62,7 @@ class Mob:
         self.velocity: list[float] = [0, 0]
 
         self.action: str = ""
-        self.animationOffset: tuple[int] = (0, 0)
+        self.animationOffset: tuple[int, int] = (0, 0)
         self.flip: bool = False
 
         self.setAction("idle")
@@ -89,12 +89,12 @@ class Mob:
                 self.action
             ].copy()
 
-    def update(self, tilemap: Tilemap, movement: tuple[int] = (0, 0)) -> None:
+    def update(self, tilemap: Tilemap, movement: tuple[int, int] = (0, 0)) -> None:
         """Update the mob's position and handle collisions with the tilemap.
 
         Args:
             tilemap (Tilemap): The tilemap the mob interacts with.
-            movement (tuple[int], optional): The movement vector. Defaults to (0, 0).
+            movement (tuple[int, int], optional): The movement vector. Defaults to (0, 0).
 
         """
         self.collisions: dict[str, bool] = {
@@ -153,7 +153,7 @@ class Mob:
         else:
             self.velocity[0] = 0
 
-        self.velocity[1] = min(STGS["tile_size"] / 8, self.velocity[1] + 0.1)
+        self.velocity[1] = min(SETTINGS["tile_size"] / 8, self.velocity[1] + 0.1)
         if self.collisions["down"] or self.collisions["up"]:
             self.velocity[1] = 0
 

@@ -2,7 +2,7 @@ import pygame
 
 from sch5n.core.item import Item
 from sch5n.core.item_surface import ITEM_IMAGE
-from sch5n.core.loader import FIX_STGS, STGS
+from sch5n.core.loader import FIX_SETTINGS, SETTINGS
 from sch5n.core.math_func import getHyp, playerMagnetFunc
 from sch5n.core.tilemap import Tilemap
 
@@ -13,7 +13,7 @@ class FloatingItem:
         self.item: Item = item
         self.velocity: list[float] = [0, 0]
 
-    def getCollisonRect(self) -> pygame.Rect:
+    def get_collision_rect(self) -> pygame.Rect:
         return pygame.Rect(
             self.pos[0] + ITEM_IMAGE[self.item.id].get_width() * 0.25,
             self.pos[1] + ITEM_IMAGE[self.item.id].get_height() * 0.25,
@@ -40,7 +40,7 @@ class FloatingItem:
         frameMovement: tuple[float] = (self.velocity[0], self.velocity[1])
 
         self.pos[0] += frameMovement[0]
-        itemRect: pygame.Rect = self.getCollisonRect()
+        itemRect: pygame.Rect = self.get_collision_rect()
         for tileRect in tilemap.physicsRectsAround((
             int(itemRect.x + itemRect.w * 0.5),
             int(itemRect.y + itemRect.h * 0.5),
@@ -61,7 +61,7 @@ class FloatingItem:
                 )
 
         self.pos[1] += frameMovement[1]
-        itemRect: pygame.Rect = self.getCollisonRect()
+        itemRect: pygame.Rect = self.get_collision_rect()
         for tileRect in tilemap.physicsRectsAround((
             int(itemRect.x + itemRect.w * 0.5),
             int(itemRect.y + itemRect.h * 0.5),
@@ -78,29 +78,29 @@ class FloatingItem:
                 )
 
         # Slow down the item
-        if self.velocity[0] > FIX_STGS["airResistHorizontal"]:
-            self.velocity[0] -= FIX_STGS["airResistHorizontal"]
-        elif self.velocity[0] < -FIX_STGS["airResistHorizontal"]:
-            self.velocity[0] += FIX_STGS["airResistHorizontal"]
+        if self.velocity[0] > FIX_SETTINGS["airResistHorizontal"]:
+            self.velocity[0] -= FIX_SETTINGS["airResistHorizontal"]
+        elif self.velocity[0] < -FIX_SETTINGS["airResistHorizontal"]:
+            self.velocity[0] += FIX_SETTINGS["airResistHorizontal"]
         else:
             self.velocity[0] = 0
 
         if (
             getHyp(
-                self.getCollisonRect().centerx - playerPos[0],
-                self.getCollisonRect().centery - playerPos[1],
+                self.get_collision_rect().centerx - playerPos[0],
+                self.get_collision_rect().centery - playerPos[1],
             )
-            <= STGS["tile_size"] * FIX_STGS["reach"]
+            <= SETTINGS["tile_size"] * FIX_SETTINGS["reach"]
         ):
             # The item is in the range of the player
             # So it approaches the player
             appVel: tuple[float] = playerMagnetFunc((
-                (playerPos[0] - self.getCollisonRect().centerx)
-                / STGS["tile_size"]
-                / FIX_STGS["reach"],
-                (playerPos[1] - self.getCollisonRect().centery)
-                / STGS["tile_size"]
-                / FIX_STGS["reach"],
+                (playerPos[0] - self.get_collision_rect().centerx)
+                / SETTINGS["tile_size"]
+                / FIX_SETTINGS["reach"],
+                (playerPos[1] - self.get_collision_rect().centery)
+                / SETTINGS["tile_size"]
+                / FIX_SETTINGS["reach"],
             ))
 
             # -------#####
@@ -118,23 +118,23 @@ class FloatingItem:
             self.velocity[1] += appVel[1] * 0.15
             if not self.collisions["down"] and not self.collisions["up"]:
                 self.velocity[1] -= (
-                    FIX_STGS["gravityStrength"] * abs(appVel[1]) * 0.5
+                    FIX_SETTINGS["gravityStrength"] * abs(appVel[1]) * 0.5
                 )
 
         # Terminal velocity
-        if self.velocity[0] > FIX_STGS["floatingItemTermVel"]:
-            self.velocity[0] = FIX_STGS["floatingItemTermVel"]
-        elif self.velocity[0] < -FIX_STGS["floatingItemTermVel"]:
-            self.velocity[0] = -FIX_STGS["floatingItemTermVel"]
+        if self.velocity[0] > FIX_SETTINGS["floatingItemTermVel"]:
+            self.velocity[0] = FIX_SETTINGS["floatingItemTermVel"]
+        elif self.velocity[0] < -FIX_SETTINGS["floatingItemTermVel"]:
+            self.velocity[0] = -FIX_SETTINGS["floatingItemTermVel"]
 
-        if self.velocity[1] > FIX_STGS["floatingItemTermVel"]:
-            self.velocity[1] = FIX_STGS["floatingItemTermVel"]
-        elif self.velocity[1] < -FIX_STGS["floatingItemTermVel"]:
-            self.velocity[1] = -FIX_STGS["floatingItemTermVel"]
+        if self.velocity[1] > FIX_SETTINGS["floatingItemTermVel"]:
+            self.velocity[1] = FIX_SETTINGS["floatingItemTermVel"]
+        elif self.velocity[1] < -FIX_SETTINGS["floatingItemTermVel"]:
+            self.velocity[1] = -FIX_SETTINGS["floatingItemTermVel"]
 
         self.velocity[1] = min(
-            FIX_STGS["floatingItemTermVel"],
-            self.velocity[1] + FIX_STGS["gravityStrength"],
+            FIX_SETTINGS["floatingItemTermVel"],
+            self.velocity[1] + FIX_SETTINGS["gravityStrength"],
         )
         if self.collisions["down"] or self.collisions["up"]:
             self.velocity[1] = 0

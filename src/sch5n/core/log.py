@@ -1,11 +1,17 @@
+# Copyright (c) 2026 Schunche
+"""Experimental software."""
+
+import logging
 import time
+from typing import ClassVar
+
+logger = logging.getLogger(__name__)
 
 
 class Color:
-    """Utility class for applying ANSI color codes to text.
-    """
+    """Utility class for applying ANSI color codes to text."""
 
-    color_codes: dict[str, str] = {
+    COLOR_CODES: ClassVar[dict[str, str]] = {
         "black": "\033[30m",
         "red": "\033[31m",
         "green": "\033[32m",
@@ -29,8 +35,8 @@ class Color:
             str: The colorized text.
 
         """
-        color_code = cls.color_codes.get(color_name, "")
-        return f"{color_code}{text}{cls.color_codes["reset"]}"
+        color_code = cls.COLOR_CODES.get(color_name, "")
+        return f"{color_code}{text}{cls.COLOR_CODES["reset"]}"
 
 
 def log_message(msg: str) -> None:
@@ -41,6 +47,7 @@ def log_message(msg: str) -> None:
 
     """
     print(Color.apply(f"{time.asctime()} :> {msg}", "white"))
+    logger.debug(msg)
 
 
 def log_error(msg: str) -> None:
@@ -51,6 +58,7 @@ def log_error(msg: str) -> None:
 
     """
     print(Color.apply(f"{time.asctime()} :> ERROR - {msg}", "red"))
+    logger.error(msg)
 
 
 def log_success(msg: str) -> None:
@@ -61,3 +69,4 @@ def log_success(msg: str) -> None:
 
     """
     print(Color.apply(f"{time.asctime()} :> {msg}", "green"))
+    logger.warning(msg)

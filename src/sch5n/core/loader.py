@@ -7,9 +7,13 @@ import pygame
 
 from sch5n.core.log import log_error, log_message
 
+pygame.init()
 
-def loadJson(path: str) -> Any:
-    """Arguments:
+
+def load_json(path: str) -> Any:
+    """Load json file.
+
+    Arguments:
         path (str): directory path from 'src/' to '.json' WITHOUT the said
 
     Returns:
@@ -17,10 +21,10 @@ def loadJson(path: str) -> Any:
 
     """
     try:
-        with pathlib.Path(f"src/{path}.json").open() as file:
-            returnFile = json.load(file)
+        with pathlib.Path(f"src/{path}.json").open(encoding="utf-8") as file:
+            return_file = json.load(file)
             log_message(f"'src/{path}.json' found and loaded")
-        return returnFile
+            return return_file
 
     except FileNotFoundError as e:
         log_error(f"'src/{path}.json' not found: {e}")
@@ -35,18 +39,20 @@ def loadJson(path: str) -> Any:
         return None
 
 
-STGS = loadJson("data/settings")
-FIX_STGS: dict = loadJson("fixData/fixSettings")
+SETTINGS = load_json("data/settings")
+FIX_SETTINGS: dict[str,
+    int | float | str | dict[str,
+    int | float | str | dict[str, int]]] = load_json("fixData/fixSettings")
 
-NAME_SPACE = loadJson("fixData/nameSpace")
+NAME_SPACE = load_json("fixData/nameSpace")
 TRANSPARENT_COLOR: list[int] = NAME_SPACE["color"]["toBeTransparent"]
 
 
-def loadImage(path: str) -> pygame.Surface:
-    """Loads a '.png' image from a file.
+def load_image(path: str) -> pygame.Surface:
+    """Load a '.png' image from a file.
 
     Args:
-        path (str): The path to the image file: from 'src/img/' to '.png' WITHOUT the said
+        path (str): The path to the image file: from 'src/img/' to '.png'
 
     Returns:
         pygame.Surface: The loaded image.
@@ -59,55 +65,61 @@ def loadImage(path: str) -> pygame.Surface:
 
     except FileNotFoundError as e:
         log_error(f"'src/img/{path}.png' not found: {e}")
-        return loadImage("icon/_")
+        return load_image("icon/_")
 
     except Exception as e:
         log_error(f"'src/img/{path}.png' failed to load: {e}")
-        return loadImage("icon/_")
+        return load_image("icon/_")
 
 
-def loadImageResized(path: str, size: tuple[int]) -> pygame.Surface:
+def load_image_resized(path: str, size: tuple[int, int]) -> pygame.Surface:
     """Load an image from a file, and resizes it.
 
     Args:
         path (str): The path to the image file.
-        size (tuple[int]): The new size of the image file.
+        size (tuple[int, int]): The new size of the image file.
 
     Returns:
         pygame.Surface: The resized image.
 
-    """
-    assert size[0] > 0 and size[1] > 0, (
-        "The new size must be an integer greater than 0"
-    )
+    Raises:
+        ValueError: invalid size
 
-    img: pygame.Surface = loadImage(path)
-    returnImage: pygame.Surface = pygame.transform.scale(
+    """
+    if size[0] < 0:
+        msg = "The new width must be an integer greater than 0"
+        raise ValueError(msg)
+    if size[1] < 0:
+        msg = "The new height must be an integer greater than 0"
+        raise ValueError(msg)
+
+    img: pygame.Surface = load_image(path)
+    return_image: pygame.Surface = pygame.transform.scale(
         img, (size[0], size[1])
     )
-    returnImage.set_colorkey(TRANSPARENT_COLOR)
-    return returnImage
+    return_image.set_colorkey(TRANSPARENT_COLOR)
+    return return_image
 
 
-def loadDirectory(path: str) -> dict[str, pygame.Surface]:
+def load_dir(path: str) -> dict[str, pygame.Surface]:
     """Load images from a directory.
 
     Args:
         path (str): The path to the directory containing images.
 
     Returns:
-        dict[str, pygame.Surface]: A dictionary containing image names and their corresponding surfaces.
+        dict[str, pygame.Surface]: A dictionary containing images to surfaces.
 
     """
     images: dict[str, pygame.Surface] = {}
-    for imageName in os.listdir(f"src/img/{path}"):
-        images[imageName[: imageName.index(".")]] = loadImage(
-            f"{path}/{imageName[: imageName.index(".")]}"
+    for image_name in os.listdir(f"src/img/{path}"):
+        images[image_name[: image_name.index(".")]] = load_image(
+            f"{path}/{image_name[: image_name.index(".")]}"
         )
     return images
 
 
-def loadImagesAsList(path: str) -> list[pygame.Surface]:
+def load_images_as_list(path: str) -> list[pygame.Surface]:
     """Load images from a directory into a list of pygame Surface objects.
 
     Args:
@@ -118,38 +130,37 @@ def loadImagesAsList(path: str) -> list[pygame.Surface]:
 
     """
     images: list[pygame.Surface] = []
-    for imageName in sorted(os.listdir(f"src/img/{path}")):
-        images.append(loadImage(f"{path}/{imageName[: imageName.index(".")]}"))
+    for image_name in sorted(os.listdir(f"src/img/{path}")):
+        images.append(load_image(f"{path}/{image_name[: image_name.index(".")]}"))
     return images
 
 
-def loadTiles(path: str) -> dict[int, pygame.Surface]:
-    """Load tiles from a directory structure into a dictionary of pygame Surface objects.
-    Resized by default
+def load_tiles(path: str) -> dict[str, dict[int, pygame.surface.Surface]]:
+    """Load tiles from a directory structure into a dictionary of Surface.
 
     Args:
-        path (str): The directory path containing the tile images organized by block and variant.
+        path (str): Path containing the tile images by block and variant.
 
     Returns:
-        dict[str, dict[int, pygame.Surface]]: A dictionary mapping block names or variant numbers to pygame Surface objects representing the loaded tiles.
+        dict[str, dict[int, pygame.Surface]]: A dictionary mapping Surfaces.
 
     """
-    tiles: dict[str, dict[int, pygame.Surface]] = {}
+    tiles: dict[str, dict[int, pygame.surface.Surface]] = {}
     for block in os.listdir(f"src/img/{path}"):
         if block not in tiles:
             tiles[block] = {}
         for variant in os.listdir(f"src/img/{path}/{block}"):
             tiles[block][int(variant[: variant.index(".")])] = (
-                loadImageResized(
+                load_image_resized(
                     f"{path}/{block}/{variant[: variant.index(".")]}",
-                    (STGS["tile_size"], STGS["tile_size"]),
+                    (SETTINGS["tile_size"], SETTINGS["tile_size"]),
                 )
             )
 
     return tiles
 
 
-def getBit(block: str = "_") -> str:
+def get_bit(block: str = "_") -> str:
     # key <- value
     if block == "_":
         return "_"
@@ -159,19 +170,19 @@ def getBit(block: str = "_") -> str:
     return "_"
 
 
-def loadSysFont(
+def load_sys_font(
     name: str, size: int = 16, bold: bool = False, italic: bool = False
-) -> pygame.font:
+) -> pygame.font.Font:
     return pygame.font.SysFont(name=name, size=size, bold=bold, italic=italic)
 
 
-def loadIcon(path: str) -> pygame.Surface:
+def load_icon(path: str) -> pygame.Surface:
     """Load an icon from a file.
     """
-    return loadImageResized(path, (STGS["guiSize"], STGS["guiSize"]))
+    return load_image_resized(path, (SETTINGS["gui_size"], SETTINGS["gui_size"]))
 
 
-def resizeImage(image: pygame.Surface, size: tuple[int]) -> pygame.Surface:
+def resize_image(image: pygame.Surface, size: tuple[int, int]) -> pygame.Surface:
     """Resize an image.
     """
     return pygame.transform.scale(image, size)

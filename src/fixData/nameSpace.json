@@ -1,5 +1,5 @@
 {
-    "instantMinedBlocks": [
+    "instant_mined_blocks": [
         
     ], "ores": [
         "copper",
@@ -31,7 +31,7 @@
             "oakLogLeaf"
         ]
     }, "color": {
-        "mainTheme": [7, 7, 7],
+        "main_theme": [7, 7, 7],
         "toBeTransparent": [255, 0, 254],
         "black" : [0, 0, 0],
         "white" : [255, 255, 255],
@@ -59,7 +59,7 @@
         ],
         "oakLog": ["oakLog"],
         "oakLeaf": ["oakLeaf", "oakLogLeaf"]
-    }, "durabilityOfTile": {
+    }, "durability_of_tile": {
         "_": 100,
         "dirt": 50,
         "oakLog": 200,

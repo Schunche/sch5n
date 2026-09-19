@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 import pygame
 
 from sch5n.core.item_surface import ITEM_ICON
-from sch5n.core.loader import NAME_SPACE, STGS, loadSysFont
+from sch5n.core.loader import NAME_SPACE, SETTINGS, load_sys_font
 
 
 @dataclass(repr=False)
@@ -14,30 +14,30 @@ class Item:
     id: int
     name: str
     description: str | None = field(default=None)
-    useTime: int = field(default=int(STGS["FPS"] // 2))
+    use_time: int = field(default=int(SETTINGS["FPS"] // 2))
     amount: int = field(default=1)
-    maxAmount: int = field(default=2**10)
+    max_amount: int = field(default=2**10)
 
     def getName(self) -> str:
         return self.name.title()
 
-    def renderIcon(self, surface: pygame.Surface, pos: tuple[int]) -> None:
+    def renderIcon(self, surface: pygame.Surface, pos: tuple[int, int]) -> None:
         surface.blit(ITEM_ICON[self.id], pos)
 
         # The amount number
-        if self.maxAmount != 1:
-            font: pygame.font = loadSysFont("arial")
+        if self.max_amount != 1:
+            font: pygame.font = load_sys_font("arial")
 
-            textRendered = font.render(
+            text_rendered = font.render(
                 str(self.amount), True, NAME_SPACE["color"]["text"]
             )
-            textRect: pygame.Rect = textRendered.get_rect()
-            textRect.bottomright = (
-                pos[0] + STGS["guiSize"],
-                pos[1] + STGS["guiSize"],
+            text_rect: pygame.Rect = text_rendered.get_rect()
+            text_rect.bottom_right = (
+                pos[0] + SETTINGS["gui_size"],
+                pos[1] + SETTINGS["gui_size"],
             )
 
-            surface.blit(textRendered, textRect)
+            surface.blit(text_rendered, text_rect)
 
 
 @dataclass
@@ -52,7 +52,7 @@ class ReforgeableItem(Item):
 
     def __post_init__(self) -> None:
         self.amount: int = 1
-        self.maxAmount: int = 1
+        self.max_amount: int = 1
 
     def getName(self) -> str:
         if self.reforge is None:
@@ -62,7 +62,7 @@ class ReforgeableItem(Item):
 
 @dataclass
 class Tool(Item):
-    toolType: dict[str, int] = field(default_factory={"pickaxe": 5})
+    tool_type: dict[str, int] = field(default_factory={"pickaxe": 5})
 
 
 @dataclass

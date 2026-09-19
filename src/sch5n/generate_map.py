@@ -9,7 +9,7 @@ import random
 from sch5n.core.log import log_error, log_message
 
 
-def saveMap(tilemap: dict[str, dict[str, str | int]], alias: str) -> None:
+def save_map(tilemap: dict[str, dict[str, str | int]], alias: str) -> None:
     with pathlib.Path(f"src/map/{alias}/tilemap.json").open(mode="w") as file:
         json.dump(tilemap, file, indent=4)
 
@@ -56,7 +56,7 @@ def generateMap(
 
     # Draw strokes of dirt/stone
     def drawPatchStroke(
-        point: tuple[int],
+        point: tuple[int, int],
         block: str,
         count: int = 0,
         radius: float = int(random.randint(9, 50) / random.randint(9, 12)),
@@ -97,7 +97,7 @@ def generateMap(
 
         if count < patchesInStroke:
             shiftDirection: float = math.pi * (1 + random.random())
-            nextPoint: tuple[int] = (
+            nextPoint: tuple[int, int] = (
                 int(
                     point[0]
                     + randomSign(radius / 2 * math.cos(shiftDirection))
@@ -123,7 +123,7 @@ def generateMap(
     )
     print(f"Stone strokes in dirt: {numOfPatches}")
     for _ in range(numOfPatches):
-        point: tuple[int] = (
+        point: tuple[int, int] = (
             xLeft + int(random.random() * (xRight - xLeft)),
             yTop + int(random.random() * (tilDirtY - yTop)),
         )
@@ -135,7 +135,7 @@ def generateMap(
     )
     print(f"Dirt strokes in stone: {numOfPatches}")
     for _ in range(numOfPatches):
-        point: tuple[int] = (
+        point: tuple[int, int] = (
             xLeft + int(random.random() * (xRight - xLeft)),
             tilDirtY + int(random.random() * (yBottom - tilDirtY)),
         )
@@ -183,7 +183,7 @@ if __name__ == "__main__":
         xLeft=mapLeft, xRight=mapRight, yTop=mapTop, yBottom=mapBottom
     )
 
-    saveMap(generatedMap, filename)
+    save_map(generatedMap, filename)
     print(f"Map saved to '{filename}'")
 
 else:

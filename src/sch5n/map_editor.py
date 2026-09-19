@@ -8,13 +8,14 @@ if __name__ != "__main__":
 
 import pygame
 
-pygame.init()
+from sch5n.core.loader import load_json, load_tiles
 from sch5n.core.log import log_error, log_message, log_success
+from sch5n.core.tilemap import Tilemap
+
+pygame.init()
 
 log_message("Initialized pygame")
 
-from sch5n.core.loader import loadJson, loadTiles
-from sch5n.core.tilemap import Tilemap
 
 log_message("Loaded all local dependency script")
 
@@ -36,33 +37,32 @@ class Main:
 
         """
         try:
-            self.STGS: dict[str, str | int] = loadJson("data/settings")
+            self.SETTINGS: dict[str, str | int] = load_json("data/settings")
             self.tile_size: int = tile_size
 
             self.assets: dict[str, dict[str, pygame.Surface]] = {}
-            self.assets["tiles"] = loadTiles("src/img/tile")
+            self.assets["tiles"] = load_tiles("src/img/tile")
             log_message("Loaded tile assets")
 
             self.tilemap: Tilemap = Tilemap(
                 assets=self.assets["tiles"],
-                mapName="map1",
-                tile_size=self.tile_size,
+                mapName="map1"
             )
             log_message("Created tilemap")
 
             self.clock: pygame.time.Clock = pygame.time.Clock()
 
             self.WINDOW: pygame.Surface = pygame.display.set_mode([
-                self.STGS["windowWidth"],
-                self.STGS["windowHeight"],
+                self.SETTINGS["window_width"],
+                self.SETTINGS["window_height"],
             ])
             pygame.display.set_caption(
-                f"{self.STGS["windowName"]} von Map Editor"
+                f"{self.SETTINGS["windowName"]} von Map Editor"
             )
             self.scroll: list[float] = [0, 0]
 
             self.pos: list[float] = [0, 0]
-            self.movementInput: dict[str, bool] = {
+            self.movement_input: dict[str, bool] = {
                 "left": False,
                 "right": False,
                 "up": False,
@@ -98,10 +98,10 @@ class Main:
 
     def handle_events(self) -> None:
         """Handle input game events."""
-        self.mousePos: tuple[int] = pygame.mouse.get_pos()
+        self.mouse_pos: tuple[int, int] = pygame.mouse.get_pos()
         self.tilePos = (
-            int(self.mousePos[0] + self.pos[0]) // self.tile_size,
-            int(self.mousePos[1] + self.pos[1]) // self.tile_size,
+            int(self.mouse_pos[0] + self.pos[0]) // self.tile_size,
+            int(self.mouse_pos[1] + self.pos[1]) // self.tile_size,
         )
 
         for event in pygame.event.get():
@@ -133,37 +133,37 @@ class Main:
                     self.clicking["down"] = False
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    self.tilemap.saveMap()
+                    self.tilemap.save_map()
                     self.exit_app()
 
                 if event.key == pygame.K_a:
-                    self.movementInput["left"] = True
+                    self.movement_input["left"] = True
                 if event.key == pygame.K_d:
-                    self.movementInput["right"] = True
+                    self.movement_input["right"] = True
                 if event.key == pygame.K_w:
-                    self.movementInput["up"] = True
+                    self.movement_input["up"] = True
                 if event.key == pygame.K_s:
-                    self.movementInput["down"] = True
+                    self.movement_input["down"] = True
                 if event.key == pygame.K_r:
                     self.pos = [self.tile_size, self.tile_size * 0]
 
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_a:
-                    self.movementInput["left"] = False
+                    self.movement_input["left"] = False
                 if event.key == pygame.K_d:
-                    self.movementInput["right"] = False
+                    self.movement_input["right"] = False
                 if event.key == pygame.K_w:
-                    self.movementInput["up"] = False
+                    self.movement_input["up"] = False
                 if event.key == pygame.K_s:
-                    self.movementInput["down"] = False
+                    self.movement_input["down"] = False
 
     def update_state(self) -> None:
         """Handle game updates."""
         self.pos[0] += (
-            self.movementInput["right"] - self.movementInput["left"]
+            self.movement_input["right"] - self.movement_input["left"]
         ) * 5
         self.pos[1] += (
-            self.movementInput["down"] - self.movementInput["up"]
+            self.movement_input["down"] - self.movement_input["up"]
         ) * 5
 
         if self.clicking["left"]:
@@ -175,7 +175,7 @@ class Main:
                 },
             )
 
-        if self.clicking["right"] and self.tilemap.isTileAt(self.tilePos):
+        if self.clicking["right"] and self.tilemap.is_tile_at(self.tilePos):
             log_message(f"Tile deleted at {self.tilePos}")
             self.tilemap.deleteTile(self.tilePos)
 
@@ -209,7 +209,7 @@ class Main:
             self.update_state()
             self.render()
 
-            self.clock.tick(self.STGS["FPS"])
+            self.clock.tick(self.SETTINGS["FPS"])
             pygame.display.update()
 
 
