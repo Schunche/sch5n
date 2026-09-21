@@ -3,12 +3,32 @@
 
 import logging
 import time
+from pathlib import Path
 from typing import ClassVar
 
-logger = logging.getLogger(__name__)
+from sch5n.core.path import Directories
 
 
-class Color:
+class Logging:
+    """Static log class."""
+
+    _FILE_DIR: ClassVar[Path] = Directories.user_log()
+    _FILE_DIR.mkdir(parents=True, exist_ok=True)
+
+    _logger: ClassVar[logging.Logger] = logging.getLogger(__name__)
+    logging.basicConfig(level=logging.DEBUG)
+
+    @classmethod
+    def fatal(cls, message: str) -> None:
+        """Log fatal log message."""
+        cls._logger.fatal(message)
+
+
+def fatal(message: str) -> None:
+    Logging.fatal(message)
+
+
+class ConsoleColor:
     """Utility class for applying ANSI color codes to text."""
 
     COLOR_CODES: ClassVar[dict[str, str]] = {
@@ -46,8 +66,8 @@ def log_message(msg: str) -> None:
         msg (str): The message to log.
 
     """
-    print(Color.apply(f"{time.asctime()} :> {msg}", "white"))
-    logger.debug(msg)
+    print(ConsoleColor.apply(f"{time.asctime()} :> {msg}", "white"))
+    Logging.debug(msg)
 
 
 def log_error(msg: str) -> None:
@@ -57,8 +77,8 @@ def log_error(msg: str) -> None:
         msg (str): The error message to log.
 
     """
-    print(Color.apply(f"{time.asctime()} :> ERROR - {msg}", "red"))
-    logger.error(msg)
+    print(ConsoleColor.apply(f"{time.asctime()} :> ERROR - {msg}", "red"))
+    Logging.error(msg)
 
 
 def log_success(msg: str) -> None:
@@ -68,5 +88,5 @@ def log_success(msg: str) -> None:
         msg (str): The error message to log.
 
     """
-    print(Color.apply(f"{time.asctime()} :> {msg}", "green"))
-    logger.warning(msg)
+    print(ConsoleColor.apply(f"{time.asctime()} :> {msg}", "green"))
+    Logging.warning(msg)
