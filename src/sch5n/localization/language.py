@@ -55,7 +55,7 @@ class _LanguageDictionary:
 
         """
         if check and (lang not in cls._DICTIONARY):
-            msg = "Tried to target unknown language."
+            msg = f"Tried to target unknown language: {lang}"
             raise _UnknownLanguageError(msg)
 
         cls._language = lang
