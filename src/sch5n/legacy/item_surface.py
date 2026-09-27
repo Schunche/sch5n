@@ -1,4 +1,4 @@
-from sch5n.core.loader import (
+from sch5n.legacy.loader import (
     SETTINGS,
     load_icon,
     load_image,

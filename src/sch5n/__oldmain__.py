@@ -17,7 +17,7 @@ import secrets
 from copy import deepcopy
 
 from sch5n.core.log import log_error, log_message, log_success
-from sch5n.core.random import randf
+from sch5n.port.random import randf
 
 log_success("Program started")
 
@@ -26,13 +26,13 @@ import pygame
 pygame.init()
 log_message("Initialized pygame")
 
-from sch5n.core.animation import Animation
-from sch5n.core.cloud import Clouds
-from sch5n.core.floating_item import FloatingItem
-from sch5n.core.gui import Button, render_text
-from sch5n.core.item import Item, Tool
-from sch5n.core.item_surface import ITEM_IMAGE
-from sch5n.core.loader import (
+from sch5n.legacy.animation import Animation
+from sch5n.legacy.cloud import Clouds
+from sch5n.legacy.floating_item import FloatingItem
+from sch5n.legacy.gui import Button, render_text
+from sch5n.legacy.item import Item, Tool
+from sch5n.legacy.item_surface import ITEM_IMAGE
+from sch5n.legacy.loader import (
     FIX_SETTINGS,
     NAME_SPACE,
     SETTINGS,
@@ -43,10 +43,10 @@ from sch5n.core.loader import (
     load_tiles,
     resize_image,
 )
-from sch5n.core.particle import Particle
-from sch5n.core.player import Player
-from sch5n.core.table import SAME_LOOT_TILE
-from sch5n.core.tilemap import Tilemap
+from sch5n.legacy.particle import Particle
+from sch5n.legacy.player import Player
+from sch5n.legacy.table import SAME_LOOT_TILE
+from sch5n.legacy.tilemap import Tilemap
 
 log_message("Loaded local dependency from script")
 

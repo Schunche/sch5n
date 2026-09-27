@@ -4,8 +4,8 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from sch5n.core.item import Item
-from sch5n.core.item_data import ITEM_DATA
+    from sch5n.legacy.item import Item
+from sch5n.legacy.item_data import ITEM_DATA
 
 # Loot tables here
 

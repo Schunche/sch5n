@@ -15,10 +15,9 @@ class Program:
         pass
 
     def launch_game(self, args: argparse.Namespace) -> None:
+        pass
 
     def process_launch_args(self, args: argparse.Namespace) -> bool:
-        is_server = False
-
         self.launch_args = args
 
         is_server = self.launch_args.server

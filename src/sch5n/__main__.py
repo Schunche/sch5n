@@ -5,11 +5,12 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import platform
 
 from sch5n import __package__ as _package
+from sch5n.core.environment import EnvironmentFlag
 from sch5n.core.game import Game
-from sch5n.core.path import Directories
 
 
 def main() -> None:
@@ -26,15 +27,14 @@ def main() -> None:
         epilog=None,
         suggest_on_error=True
     )
-
     parser.add_argument("-server", "--server", action="store_true")
 
     args = parser.parse_args()
 
-    Directories.set_developer()
-    Directories.make()
+    if args.server:
+        os.environ[EnvironmentFlag.SERVER] = "1"
 
-    game = Game(Program())
+    Game()
 
 
 if __name__ == "__main__":

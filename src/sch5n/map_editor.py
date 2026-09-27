@@ -8,9 +8,9 @@ if __name__ != "__main__":
 
 import pygame
 
-from sch5n.core.loader import load_json, load_tiles
+from sch5n.legacy.loader import load_json, load_tiles
 from sch5n.core.log import log_error, log_message, log_success
-from sch5n.core.tilemap import Tilemap
+from sch5n.legacy.tilemap import Tilemap
 
 pygame.init()
 

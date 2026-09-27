@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 
 import pygame
 
-from sch5n.core.item_surface import ITEM_ICON
-from sch5n.core.loader import NAME_SPACE, SETTINGS, load_sys_font
+from sch5n.legacy.item_surface import ITEM_ICON
+from sch5n.legacy.loader import NAME_SPACE, SETTINGS, load_sys_font
 
 
 @dataclass(repr=False)

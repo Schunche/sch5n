@@ -1,10 +1,10 @@
 import pygame
 
-from sch5n.core.item import Item
-from sch5n.core.item_surface import ITEM_IMAGE
-from sch5n.core.loader import FIX_SETTINGS, SETTINGS
-from sch5n.core.math_func import getHyp, playerMagnetFunc
-from sch5n.core.tilemap import Tilemap
+from sch5n.legacy.item import Item
+from sch5n.legacy.item_surface import ITEM_IMAGE
+from sch5n.legacy.loader import FIX_SETTINGS, SETTINGS
+from sch5n.legacy.math_func import getHyp, playerMagnetFunc
+from sch5n.legacy.tilemap import Tilemap
 
 
 class FloatingItem:

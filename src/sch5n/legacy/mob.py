@@ -1,8 +1,8 @@
 import pygame
 
-from sch5n.core.animation import Animation
-from sch5n.core.loader import SETTINGS
-from sch5n.core.tilemap import Tilemap
+from sch5n.legacy.animation import Animation
+from sch5n.legacy.loader import SETTINGS
+from sch5n.legacy.tilemap import Tilemap
 
 
 class Mob:

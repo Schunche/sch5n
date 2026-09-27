@@ -10,10 +10,6 @@ from sch5n import __author__, __version__
 from sch5n import __package__ as _package
 
 
-class Directories:
-    """Platform specific directories."""
-
-    _is_developer: ClassVar[bool | None] = None
 
     _PLATFORM_DIRS = _pd.PlatformDirs(_package, __author__, __version__)
 

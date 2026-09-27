@@ -1,11 +1,11 @@
 from copy import deepcopy
 
-from sch5n.core.animation import Animation
-from sch5n.core.gui import CursorSlot, Inventory
-from sch5n.core.item import Item
-from sch5n.core.item_data import ITEM_DATA
-from sch5n.core.loader import NAME_SPACE
-from sch5n.core.mob import Mob
+from sch5n.legacy.animation import Animation
+from sch5n.legacy.gui import CursorSlot, Inventory
+from sch5n.legacy.item import Item
+from sch5n.legacy.item_data import ITEM_DATA
+from sch5n.legacy.loader import NAME_SPACE
+from sch5n.legacy.mob import Mob
 
 
 class Player(Mob):

@@ -1,6 +1,6 @@
 import pygame
 
-from sch5n.core.animation import Animation
+from sch5n.legacy.animation import Animation
 
 
 class Particle:

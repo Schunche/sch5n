@@ -1,7 +1,7 @@
 import pygame
 
-from sch5n.core.item import Item
-from sch5n.core.loader import FIX_SETTINGS, NAME_SPACE, SETTINGS, load_sys_font
+from sch5n.legacy.item import Item
+from sch5n.legacy.loader import FIX_SETTINGS, NAME_SPACE, SETTINGS, load_sys_font
 from sch5n.core.log import log_error
 
 # https://fonts.google.com/specimen/Pixelify+Sans?query=pixel

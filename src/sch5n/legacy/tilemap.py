@@ -3,7 +3,7 @@ import pathlib
 
 import pygame
 
-from sch5n.core.loader import NAME_SPACE, SETTINGS, get_bit
+from sch5n.legacy.loader import NAME_SPACE, SETTINGS, get_bit
 from sch5n.core.log import *
 
 NEIGHBOR_OFFSETS: list[tuple[int, int]] = [

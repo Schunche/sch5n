@@ -159,22 +159,21 @@ class _LanguageDictionary:
         return count
 
 
-_initialized: bool = False
+_is_initialized: bool = False
 
 
 def _init() -> None:
     """Initialize translation tools."""
-    global _initialized  # ruff: ignore[global-statement]
+    global _is_initialized  # ruff: ignore[global-statement]
 
-    if not _initialized:
+    if not _is_initialized:
         _LanguageDictionary.read_localization()
-        _initialized = True
+        _is_initialized = True
 
 
 def set_language(lang: Language) -> None:
     """Set target language for translation."""
-    if not _initialized:
-        _init()
+    _init()
 
     _LanguageDictionary.set_target_language(lang, check=True)
 
@@ -186,8 +185,7 @@ def get_language() -> Language:
         Language: Target language.
 
     """
-    if not _initialized:
-        _init()
+    _init()
 
     return _LanguageDictionary.get_target_language()
 
@@ -199,7 +197,6 @@ def translate(key: str) -> str:
         str: Translation.
 
     """
-    if not _initialized:
-        _init()
+    _init()
 
     return _LanguageDictionary.translate(key)

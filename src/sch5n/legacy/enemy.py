@@ -1,6 +1,6 @@
-from sch5n.core.animation import Animation
-from sch5n.core.item import Weapon
-from sch5n.core.mob import Mob
+from sch5n.legacy.animation import Animation
+from sch5n.legacy.item import Weapon
+from sch5n.legacy.mob import Mob
 
 
 class Enemy(Mob):
