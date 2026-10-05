@@ -11,6 +11,7 @@ class ModSide(Enum):
     SERVER = 0b10
     BOTH = 0b11
 
+
 class Mod:
     def __init__(
         self,

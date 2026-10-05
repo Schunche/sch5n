@@ -48,7 +48,7 @@ class Animation:
     def update(self) -> None:
         """Update the animation frame.
 
-        If loop is True, the animation loops continuously.
+        If loop is True, the animation loops continously.
         If loop is False, the animation stops when it reaches the last frame.
         """
         if self.loop:
