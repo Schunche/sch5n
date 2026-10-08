@@ -9,6 +9,7 @@ import os
 import platform
 
 from sch5n import __package__ as _package
+from sch5n.__oldmain__ import Main
 from sch5n.core.environment import EnvironmentFlag
 from sch5n.core.game import Game
 
@@ -25,7 +26,7 @@ def main() -> None:
         prog=_package,
         description="Experiental software.",
         epilog=None,
-        suggest_on_error=True
+        suggest_on_error=True,
     )
     parser.add_argument("-server", "--server", action="store_true")
 
@@ -34,6 +35,8 @@ def main() -> None:
     if args.server:
         os.environ[EnvironmentFlag.SERVER] = "1"
 
+    m = Main()
+    m.run()
     Game()
 
 

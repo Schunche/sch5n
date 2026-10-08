@@ -2,8 +2,8 @@
 """Experimental software."""
 # noqa: file
 
-import pygame.mixer as pg_mixer
 import pygame.constants as pgcons
+import pygame.mixer as pg_mixer
 
 
 class Sound(pg_mixer.Sound):

@@ -1,8 +1,13 @@
 import pygame
 
-from sch5n.legacy.item import Item
-from sch5n.legacy.loader import FIX_SETTINGS, NAME_SPACE, SETTINGS, load_sys_font
 from sch5n.core.log import log_error
+from sch5n.legacy.item import Item
+from sch5n.legacy.loader import (
+    FIX_SETTINGS,
+    NAME_SPACE,
+    SETTINGS,
+    load_sys_font,
+)
 
 # https://fonts.google.com/specimen/Pixelify+Sans?query=pixel
 
@@ -15,8 +20,7 @@ def render_text(
     font_name: str = "arial",
     font_size: int = 16,
 ) -> None:
-    """Renders text to the specified surface.
-    """
+    """Renders text to the specified surface."""
     font: pygame.font.Font = load_sys_font(font_name, size=font_size)
     text_rendered: pygame.Surface = font.render(
         text, antialias=True, color=NAME_SPACE["color"][color]
@@ -33,8 +37,8 @@ class Button:
         text: str,
         *,
         size: tuple[int, int] = (
-            FIX_SETTINGS["GUI"]["standardButtonWidth"],
-            FIX_SETTINGS["GUI"]["standardButtonHeight"],
+            FIX_SETTINGS.GUI.standardButtonWidth,
+            FIX_SETTINGS.GUI.standardButtonHeight,
         ),
         align_by: str = "topLeft",
         is_solid: bool = True,
@@ -42,22 +46,27 @@ class Button:
         text_color: str = "text",
         hover_color: str = "buttonHover",
         border_color: str = "buttonBorder",
-        font: pygame.font.Font = load_sys_font("arial"),
-        border_width: int = FIX_SETTINGS["GUI"]["buttonBorderWidth"],
-        border_radius: int = FIX_SETTINGS["GUI"]["buttonBorderRadius"],
+        font: pygame.font.Font | None = None,
+        border_width: int = FIX_SETTINGS.GUI.buttonBorderWidth,
+        border_radius: int = FIX_SETTINGS.GUI.buttonBorderRadius,
     ) -> None:
         """TODO: is_solid
         Initializes a new instance of the `Button` class.
         """
-        assert inner_color in NAME_SPACE["color"], (
-            f"Invalid background color: {inner_color}"
-        )
-        assert text_color in NAME_SPACE["color"], (
-            f"Invalid text color: {text_color}"
-        )
-        assert hover_color in NAME_SPACE["color"], (
-            f"Invalid hover color: {hover_color}"
-        )
+        if inner_color not in NAME_SPACE["color"]:
+            msg = f"Invalid background color: {inner_color}"
+            raise ValueError(msg)
+
+        if text_color not in NAME_SPACE["color"]:
+            msg = f"Invalid text color: {text_color}"
+            raise ValueError(msg)
+
+        if hover_color not in NAME_SPACE["color"]:
+            msg = f"Invalid hover color: {hover_color}"
+            raise ValueError(msg)
+
+        if font is None:
+            font = load_sys_font("arial")
 
         self.pos: tuple[int, int] = pos
         self.size: tuple[int, int] = size
@@ -79,8 +88,9 @@ class Button:
                 self.pos[0], self.pos[1], self.size[0], self.size[1]
             )
             self.text_rendered = self.font.render(
-                self.text, antialias=True,
-                color=NAME_SPACE["color"][self.text_color]
+                self.text,
+                antialias=True,
+                color=NAME_SPACE["color"][self.text_color],
             )
             self.text_rect = self.text_rendered.get_rect()
             self.text_rect.center = (
@@ -102,12 +112,13 @@ class Button:
                 self.size[1],
             )
             self.text_rendered: pygame.Surface = self.font.render(
-                self.text, True, NAME_SPACE["color"][self.text_color]
+                self.text, antialias=True, color=NAME_SPACE["color"][self.text_color]
             )
             self.text_rect: pygame.Rect = self.text_rendered.get_rect()
             self.text_rect.center = (
                 self.pos[0],
-                self.pos[1] - FIX_SETTINGS["GUI"]["buttonTextVerticalOffError"],
+                self.pos[1]
+                - FIX_SETTINGS.GUI.buttonTextVerticalOffError,
             )
 
         elif align_by == "bottom_right":
@@ -143,9 +154,10 @@ class Button:
 
         return True
 
-    def render(self, surface: pygame.Surface, mouse_pos: tuple[int, int]) -> None:
-        """Render the button to the specified surface.
-        """
+    def render(
+        self, surface: pygame.Surface, mouse_pos: tuple[int, int]
+    ) -> None:
+        """Render the button to the specified surface."""
         is_hovered: bool = False
         if self.border_rect.collidepoint(*mouse_pos):
             is_hovered = True
@@ -173,7 +185,12 @@ class Button:
 class Inventory:
     def __init__(self, *args) -> None:
 
-        self.inventory: dict[int, Item] = dict.fromkeys(range(FIX_SETTINGS["inventory_column"] * FIX_SETTINGS["inventory_row"]))
+        self.inventory: dict[int, Item] = dict.fromkeys(
+            range(
+                FIX_SETTINGS["inventory_column"]
+                * FIX_SETTINGS["inventory_row"]
+            )
+        )
         for index, item in enumerate(args):
             self.inventory[index] = item
 
@@ -243,7 +260,10 @@ class Inventory:
         return True
 
     def render_hotbar(
-        self, surface: pygame.Surface, hotbar_num: int, mouse_pos: tuple[int, int]
+        self,
+        surface: pygame.Surface,
+        hotbar_num: int,
+        mouse_pos: tuple[int, int],
     ) -> None:
         # Actual inventory
         for slot_num in range(10):  # The number of slots in a row
@@ -289,7 +309,10 @@ class Inventory:
                 )
 
     def render_full_inventory(
-        self, surface: pygame.Surface, hotbar_num: int, mouse_pos: tuple[int, int]
+        self,
+        surface: pygame.Surface,
+        hotbar_num: int,
+        mouse_pos: tuple[int, int],
     ) -> None:
         # Actual inventory
         for slot_num, item in self.inventory.items():
@@ -398,7 +421,7 @@ class Inventory:
 
             # So there is some bonus amount
             return item
-                # So it has empty slots
+            # So it has empty slots
 
         log_error("Not all cases have been covered, in inventory adding")
 

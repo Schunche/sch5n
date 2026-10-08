@@ -8,8 +8,8 @@ if __name__ != "__main__":
 
 import pygame
 
-from sch5n.legacy.loader import load_json, load_tiles
 from sch5n.core.log import log_error, log_message, log_success
+from sch5n.legacy.loader import load_json, load_tiles
 from sch5n.legacy.tilemap import Tilemap
 
 pygame.init()
@@ -45,8 +45,7 @@ class Main:
             log_message("Loaded tile assets")
 
             self.tilemap: Tilemap = Tilemap(
-                assets=self.assets["tiles"],
-                mapName="map1"
+                assets=self.assets["tiles"], mapName="map1"
             )
             log_message("Created tilemap")
 

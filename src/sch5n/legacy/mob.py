@@ -89,7 +89,9 @@ class Mob:
                 self.action
             ].copy()
 
-    def update(self, tilemap: Tilemap, movement: tuple[int, int] = (0, 0)) -> None:
+    def update(
+        self, tilemap: Tilemap, movement: tuple[int, int] = (0, 0)
+    ) -> None:
         """Update the mob's position and handle collisions with the tilemap.
 
         Args:
@@ -153,7 +155,9 @@ class Mob:
         else:
             self.velocity[0] = 0
 
-        self.velocity[1] = min(SETTINGS["tile_size"] / 8, self.velocity[1] + 0.1)
+        self.velocity[1] = min(
+            SETTINGS["tile_size"] / 8, self.velocity[1] + 0.1
+        )
         if self.collisions["down"] or self.collisions["up"]:
             self.velocity[1] = 0
 

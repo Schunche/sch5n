@@ -13,11 +13,7 @@ class ModSide(Enum):
 
 
 class Mod:
-    def __init__(
-        self,
-        name: str,
-        side: ModSide
-    ) -> None:
+    def __init__(self, name: str, side: ModSide) -> None:
         self._name: str = name
 
     @property

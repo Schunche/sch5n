@@ -3,8 +3,8 @@ import pathlib
 
 import pygame
 
-from sch5n.legacy.loader import NAME_SPACE, SETTINGS, get_bit
 from sch5n.core.log import *
+from sch5n.legacy.loader import NAME_SPACE, SETTINGS, get_bit
 
 NEIGHBOR_OFFSETS: list[tuple[int, int]] = [
     (i, j) for j in range(-2, 3) for i in range(-2, 3)
@@ -92,7 +92,9 @@ class Tilemap:
 
         return matches
 
-    def insertTile(self, pos: tuple[int, int], tile: dict[str, str | int]) -> None:
+    def insertTile(
+        self, pos: tuple[int, int], tile: dict[str, str | int]
+    ) -> None:
         """Insert a tile into the tilemap.
 
         Args:
@@ -164,7 +166,9 @@ class Tilemap:
             f"{key[0]};{key[1]}": value for key, value in self.tilemap.items()
         }
 
-        with pathlib.Path(f"src/map/{alias}/tilemap.json").open(mode="w") as file:
+        with pathlib.Path(f"src/map/{alias}/tilemap.json").open(
+            mode="w"
+        ) as file:
             json.dump(strKeysTilemap, file, indent=4)
 
         log_success(f"Tilemap saved to '{alias}/tilemap.json'")
@@ -236,7 +240,8 @@ class Tilemap:
         ):
             for y in range(
                 offset[1] // SETTINGS["tile_size"] - 1,
-                (offset[1] + surface.get_height()) // SETTINGS["tile_size"] + 1,
+                (offset[1] + surface.get_height()) // SETTINGS["tile_size"]
+                + 1,
             ):
                 location: tuple[int, int] = (x, y)
                 if location in self.tilemap:
@@ -305,7 +310,8 @@ class Tilemap:
         ):
             for y in range(
                 offset[1] // SETTINGS["tile_size"] - 1,
-                (offset[1] + surface.get_height()) // SETTINGS["tile_size"] + 1
+                (offset[1] + surface.get_height()) // SETTINGS["tile_size"]
+                + 1,
             ):
                 location: tuple[int, int] = (x, y)
                 if location in self.tilemap:
@@ -338,7 +344,8 @@ class Tilemap:
         ):
             for y in range(
                 offset[1] // SETTINGS["tile_size"] - 1,
-                (offset[1] + surface.get_height()) // SETTINGS["tile_size"] + 1,
+                (offset[1] + surface.get_height()) // SETTINGS["tile_size"]
+                + 1,
             ):
                 location: tuple[int, int] = (x, y)
                 if location in self.tilemap:

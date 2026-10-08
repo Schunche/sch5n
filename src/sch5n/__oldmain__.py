@@ -1,31 +1,14 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-import sys
-
-print(__package__)
-if __name__ != "__main__":
-    sys.exit()
-import logging
-import os
-
-os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
-logging.basicConfig(level=logging.DEBUG)
-
 import math
 import secrets
+import sys
 from copy import deepcopy
-
-from sch5n.core.log import log_error, log_message, log_success
-from sch5n.port.random import randf
-
-log_success("Program started")
 
 import pygame
 
-pygame.init()
-log_message("Initialized pygame")
-
+from sch5n.core.log import log_error, log_message, log_success
 from sch5n.legacy.animation import Animation
 from sch5n.legacy.cloud import Clouds
 from sch5n.legacy.floating_item import FloatingItem
@@ -47,6 +30,23 @@ from sch5n.legacy.particle import Particle
 from sch5n.legacy.player import Player
 from sch5n.legacy.table import SAME_LOOT_TILE
 from sch5n.legacy.tilemap import Tilemap
+from sch5n.port.random import randf
+
+if __name__ != "__main__":
+    sys.exit()
+import logging
+import os
+
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
+logging.basicConfig(level=logging.DEBUG)
+
+
+log_success("Program started")
+
+
+pygame.init()
+log_message("Initialized pygame")
+
 
 log_message("Loaded local dependency from script")
 
@@ -54,132 +54,161 @@ log_message("Loaded local dependency from script")
 GAME_MODE: str = "admin"
 
 
+def exit_app() -> None:
+    """Exit the application."""
+    log_success("Successfully ran program")
+    pygame.quit()
+    sys.exit()
+
+
 class Main:
     """Main class responsible for managing the game."""
 
     def __init__(self) -> None:
-        """Initialize the game with specified tile size and settings.
+        """Initialize the game with specified tile size and settings."""
+        # Base initialization
+        self.frame = 0
 
-        Raises:
-            Exception: If an error occurs during initialization.
+        # State
+        self.state = "main_menu"
+        pygame.mouse.set_visible(False)
 
-        """
-        try:
-            # Base initialization
-            self.frame = 0
-
-            # State
-            self.state = "main_menu"
-            pygame.mouse.set_visible(False)
-
-            # Main assets
-            # tile/block/int
-            # mob/species/action/int
-            # paricle/species/int
-            # cloud/int
-            self.assets: dict[
+        # Main assets
+        # tile/block/int
+        # mob/species/action/int
+        # paricle/species/int
+        # cloud/int
+        self.assets: dict[
+            str,
+            dict[
                 str,
-                dict[
-                    str,
-                    dict[str | int, pygame.Surface | Animation] | Animation,
-                ],
-            ] = {
-                "mob": {"player": {}},
-                "particle": {},
-                "icon": {
-                    "main": load_image("icon/main"),
-                    "cursor": load_image("icon/cursor"),
-                },
-            }
+                dict[str | int, pygame.Surface | Animation] | Animation,
+            ],
+        ] = {
+            "mob": {"player": {}},
+            "particle": {},
+            "icon": {
+                "main": load_image("icon/main"),
+                "cursor": load_image("icon/cursor"),
+            },
+        }
 
-            # Main window, timer, camera offset
-            self.clock: pygame.time.Clock = pygame.time.Clock()
-            self.WINDOW: pygame.Surface = pygame.display.set_mode([
-                SETTINGS["window_width"],
-                SETTINGS["window_height"],
-            ])
-            pygame.display.set_caption(FIX_SETTINGS["windowName"])
-            pygame.display.set_icon(self.assets["icon"]["main"])
-            self.scroll: list[float] = [0, 0]
-            log_message("Created main window")
+        # Main window, timer, camera offset
+        self.clock: pygame.time.Clock = pygame.time.Clock()
+        self.WINDOW: pygame.Surface = pygame.display.set_mode([
+            SETTINGS["window_width"],
+            SETTINGS["window_height"],
+        ])
+        pygame.display.set_caption(FIX_SETTINGS["windowName"])
+        pygame.display.set_icon(self.assets["icon"]["main"])
+        self.scroll: list[float] = [0, 0]
+        log_message("Created main window")
 
-            # Tilemap
-            self.assets["tile"] = load_tiles("tile")
-            self.assets["tileBreakage"] = {
-                int(key): resize_image(
-                    surf, (SETTINGS["tile_size"], SETTINGS["tile_size"])
-                )
-                for key, surf in load_dir("tileBreakage").items()
-            }
-            log_message("Loaded tile assets")
-
-            self.tilemap: Tilemap = Tilemap(assets=self.assets, mapName="map1")
-            log_message("Created tilemap")
-            self.floating_items: list[FloatingItem] = []
-
-            # Clouds
-            self.assets["cloud"] = load_images_as_list("cloud")
-
-            self.wind_speed: float = randf() * 2 - 1
-            log_message(f"Starting wind speed: {round(self.wind_speed, 2)}")
-            log_message(
-                f"Starting wind direction: {
-                    "west" if self.wind_speed < 0 else "east"}"
+        # Tilemap
+        self.assets["tile"] = load_tiles("tile")
+        self.assets["tileBreakage"] = {
+            int(key): resize_image(
+                surf, (SETTINGS["tile_size"], SETTINGS["tile_size"])
             )
-            self.clouds = Clouds(self.assets["cloud"], count=2**4)
-            log_message("Generated clouds")
+            for key, surf in load_dir("tileBreakage").items()
+        }
+        log_message("Loaded tile assets")
 
-            # Player
-            self.assets["mob"]["player"]["idle"] = Animation(
-                load_images_as_list("mob/player/idle"), imageDuration=6
-            )
-            self.assets["mob"]["player"]["run"] = Animation(
-                load_images_as_list("mob/player/run"), imageDuration=4
-            )
-            self.assets["mob"]["player"]["jump"] = Animation(
-                load_images_as_list("mob/player/jump"),
-                imageDuration=SETTINGS["FPS"] / 6,
-            )
-            self.assets["mob"]["player"]["slide"] = Animation(
-                load_images_as_list("mob/player/slide")
-            )
-            self.assets["mob"]["player"]["wallSlide"] = Animation(
-                load_images_as_list("mob/player/wallSlide")
-            )
+        self.tilemap: Tilemap = Tilemap(assets=self.assets, mapName="map1")
+        log_message("Created tilemap")
+        self.floating_items: list[FloatingItem] = []
 
-            self.player: Player = Player(
-                self.assets["mob"],
-                pos=[SETTINGS["window_width"] / 2, SETTINGS["window_height"] / 2],
-                gameMode=GAME_MODE,
-            )
-            log_message("Created player")
+        # Clouds
+        self.assets["cloud"] = load_images_as_list("cloud")
 
-            # Particles
-            self.assets["particle"]["leaf"] = Animation(
-                load_images_as_list("particle/leaf"),
-                imageDuration=SETTINGS["FPS"] // 2,
-                loop=False,
-            )
-            self.particles: list[
-                Particle
-            ] = []  # List of all existing particles at a given moment
+        self.wind_speed: float = randf() * 2 - 1
+        log_message(f"Starting wind speed: {round(self.wind_speed, 2)}")
+        log_message(
+            f"Starting wind direction: {
+                "west" if self.wind_speed < 0 else "east"
+            }"
+        )
+        self.clouds = Clouds(self.assets["cloud"], count=2**4)
+        log_message("Generated clouds")
 
-            # Any tile that spawns particles
-            self.particleTilePairs: dict[str, list[tuple[str | int]]] = (
-                NAME_SPACE["idPairParticleSpawners"]
-            )
+        # Player
+        self.assets["mob"]["player"]["idle"] = Animation(
+            load_images_as_list("mob/player/idle"), imageDuration=6
+        )
+        self.assets["mob"]["player"]["run"] = Animation(
+            load_images_as_list("mob/player/run"), imageDuration=4
+        )
+        self.assets["mob"]["player"]["jump"] = Animation(
+            load_images_as_list("mob/player/jump"),
+            imageDuration=SETTINGS["FPS"] / 6,
+        )
+        self.assets["mob"]["player"]["slide"] = Animation(
+            load_images_as_list("mob/player/slide")
+        )
+        self.assets["mob"]["player"]["wallSlide"] = Animation(
+            load_images_as_list("mob/player/wallSlide")
+        )
 
-            # Any tile thats any variant spawns particles
-            self.particleTiles: dict[str, list[str]] = NAME_SPACE[
-                "anyVariantParticleSpawners"
-            ]
+        self.player: Player = Player(
+            self.assets["mob"],
+            pos=[
+                SETTINGS["window_width"] / 2,
+                SETTINGS["window_height"] / 2,
+            ],
+            gameMode=GAME_MODE,
+        )
+        log_message("Created player")
 
-            # Format: {"leaf": [rects], "": [rects]} ~ dict[particle] = rectsOfTilesThatEmit{particle}
-            # This contains all the rects of tiles, that emit particles
-            self.particle_spawner_tiles: dict[str, list[pygame.Rect]] = {}
+        # Particles
+        self.assets["particle"]["leaf"] = Animation(
+            load_images_as_list("particle/leaf"),
+            imageDuration=SETTINGS["FPS"] // 2,
+            loop=False,
+        )
+        self.particles: list[
+            Particle
+        ] = []  # List of all existing particles at a given moment
 
-            for particle_str, spawnerPairs in self.particleTilePairs.items():
-                for spawner in self.tilemap.extract(spawnerPairs, keep=True):
+        # Any tile that spawns particles
+        self.particleTilePairs: dict[str, list[tuple[str | int]]] = NAME_SPACE[
+            "idPairParticleSpawners"
+        ]
+
+        # Any tile thats any variant spawns particles
+        self.particleTiles: dict[str, list[str]] = NAME_SPACE[
+            "anyVariantParticleSpawners"
+        ]
+
+        # Format: {"leaf": [rects], "": [rects]} ~ dict[particle] = rectsOfTilesThatEmit{particle}
+        # This contains all the rects of tiles, that emit particles
+        self.particle_spawner_tiles: dict[str, list[pygame.Rect]] = {}
+
+        for particle_str, spawnerPairs in self.particleTilePairs.items():
+            for spawner in self.tilemap.extract(spawnerPairs, keep=True):
+                if particle_str in self.particle_spawner_tiles:
+                    self.particle_spawner_tiles[particle_str].append(
+                        pygame.Rect(
+                            spawner[0][0],
+                            spawner[0][1],
+                            SETTINGS["tile_size"],
+                            SETTINGS["tile_size"],
+                        )
+                    )
+                else:
+                    self.particle_spawner_tiles[particle_str] = [
+                        pygame.Rect(
+                            spawner[0][0],
+                            spawner[0][1],
+                            SETTINGS["tile_size"],
+                            SETTINGS["tile_size"],
+                        )
+                    ]
+
+        for particle_str, blockList in self.particleTiles.items():
+            for block in blockList:
+                for spawner in self.tilemap.extractAnyVariant(
+                    block, keep=True
+                ):
                     if particle_str in self.particle_spawner_tiles:
                         self.particle_spawner_tiles[particle_str].append(
                             pygame.Rect(
@@ -199,103 +228,69 @@ class Main:
                             )
                         ]
 
-            for particle_str, blockList in self.particleTiles.items():
-                for block in blockList:
-                    for spawner in self.tilemap.extractAnyVariant(
-                        block, keep=True
-                    ):
-                        if particle_str in self.particle_spawner_tiles:
-                            self.particle_spawner_tiles[particle_str].append(
-                                pygame.Rect(
-                                    spawner[0][0],
-                                    spawner[0][1],
-                                    SETTINGS["tile_size"],
-                                    SETTINGS["tile_size"],
-                                )
-                            )
-                        else:
-                            self.particle_spawner_tiles[particle_str] = [
-                                pygame.Rect(
-                                    spawner[0][0],
-                                    spawner[0][1],
-                                    SETTINGS["tile_size"],
-                                    SETTINGS["tile_size"],
-                                )
-                            ]
+        log_message(
+            "Loaded and generated particles, and their respective spawning tiles"
+        )
+        log_message(
+            f"Currently {sum([len(rect_list) for rect_list in self.particle_spawner_tiles.values()])} tiles emit particles"
+        )
 
-            log_message(
-                "Loaded and generated particles, and their respective spawning tiles"
-            )
-            log_message(
-                f"Currently {sum([len(rect_list) for rect_list in self.particle_spawner_tiles.values()])} tiles emit particles"
-            )
+        self.clicking: dict[str, bool] = {
+            "left": False,
+            "middle": False,
+            "right": False,
+            "up": False,
+            "down": False,
+        }
 
-            self.clicking: dict[str, bool] = {
-                "left": False,
-                "middle": False,
-                "right": False,
-                "up": False,
-                "down": False,
-            }
-
-            self.buttons: dict[str, dict[str, Button]] = {
-                "main_game": {
-                    # Nothing here lol
-                },
-                "main_game_inventory": {
-                    "settings": Button(
-                        pos=(
-                            SETTINGS["window_width"]
-                            - FIX_SETTINGS["GUI"]["outer_window_padding"],
-                            SETTINGS["window_height"]
-                            - FIX_SETTINGS["GUI"]["outer_window_padding"],
-                        ),
-                        text="Settings",
-                        align_by="bottom_right",
-                    )
-                },
-                "main_menu": {
-                    "play": Button(
-                        pos=(
-                            int(SETTINGS["window_width"] * 0.5),
-                            int(SETTINGS["window_height"] * 0.5),
-                        ),
-                        text="Play",
-                        align_by="center",
+        self.buttons: dict[str, dict[str, Button]] = {
+            "main_game": {
+                # Nothing here lol
+            },
+            "main_game_inventory": {
+                "settings": Button(
+                    pos=(
+                        SETTINGS["window_width"]
+                        - FIX_SETTINGS["GUI"]["outer_window_padding"],
+                        SETTINGS["window_height"]
+                        - FIX_SETTINGS["GUI"]["outer_window_padding"],
                     ),
-                    "settings": Button(
-                        pos=(
-                            int(SETTINGS["window_width"] * 0.5),
-                            int(SETTINGS["window_height"] * 0.5)
-                            + FIX_SETTINGS["GUI"]["main_menu"]["buttonPadding"],
-                        ),
-                        text="Settings",
-                        align_by="center",
+                    text="Settings",
+                    align_by="bottom_right",
+                )
+            },
+            "main_menu": {
+                "play": Button(
+                    pos=(
+                        int(SETTINGS["window_width"] * 0.5),
+                        int(SETTINGS["window_height"] * 0.5),
                     ),
-                    "exit": Button(
-                        pos=(
-                            int(SETTINGS["window_width"] * 0.5),
-                            int(SETTINGS["window_height"] * 0.5)
-                            + FIX_SETTINGS["GUI"]["main_menu"]["buttonPadding"] * 2,
-                        ),
-                        text="Exit",
-                        align_by="center",
+                    text="Play",
+                    align_by="center",
+                ),
+                "settings": Button(
+                    pos=(
+                        int(SETTINGS["window_width"] * 0.5),
+                        int(SETTINGS["window_height"] * 0.5)
+                        + FIX_SETTINGS["GUI"]["main_menu"]["buttonPadding"],
                     ),
-                },
-                "settings": {},
-                "main_game_settings": {},
-            }
-
-        except Exception as e:
-            log_error(f"An error occurred during initialization: {e}")
-            sys.exit(1)
-
-    @staticmethod
-    def exit_app() -> None:
-        """Exit the application."""
-        log_success("Successfully ran program")
-        pygame.quit()
-        sys.exit()
+                    text="Settings",
+                    align_by="center",
+                ),
+                "exit": Button(
+                    pos=(
+                        int(SETTINGS["window_width"] * 0.5),
+                        int(SETTINGS["window_height"] * 0.5)
+                        + FIX_SETTINGS["GUI"]["main_menu"]["buttonPadding"]
+                        * 2,
+                    ),
+                    text="Exit",
+                    align_by="center",
+                ),
+            },
+            "settings": {},
+            "main_game_settings": {},
+        }
 
     def spawn_floating_item(
         self, item: Item, spawn_type: str = "tile_broke"
@@ -305,7 +300,8 @@ class Main:
             self.floating_items.append(
                 FloatingItem(
                     [
-                        SETTINGS["tile_size"] * (self.tile_pos_at_mouse[0] + 0.5)
+                        SETTINGS["tile_size"]
+                        * (self.tile_pos_at_mouse[0] + 0.5)
                         - ITEM_IMAGE[item.id].get_width() * 0.5,
                         SETTINGS["tile_size"] * self.tile_pos_at_mouse[1],
                     ],
@@ -328,7 +324,7 @@ class Main:
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                self.exit_app()
+                exit_app()
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
@@ -417,7 +413,9 @@ class Main:
                                 self.player.cursor_slot.slot,
                             ) = (
                                 self.player.cursor_slot.get_item(),
-                                self.player.inventory.get_item_by_num(slot_num),
+                                self.player.inventory.get_item_by_num(
+                                    slot_num
+                                ),
                             )
 
                     # Changing states via buttons
@@ -431,7 +429,7 @@ class Main:
                                         case "settings":
                                             self.set_state("settings")
                                         case "exit":
-                                            self.exit_app()
+                                            exit_app()
                                         case _:
                                             log_error(
                                                 "Unknow button fount in existing state: Ignoring this will have consequences"
@@ -439,7 +437,9 @@ class Main:
                                 case "main_game_inventory":
                                     match name:
                                         case "settings":
-                                            self.set_state("main_game_settings")
+                                            self.set_state(
+                                                "main_game_settings"
+                                            )
                                         case _:
                                             log_error(
                                                 "Unknow button fount in existing state: Ignoring this will have consequences"
@@ -463,7 +463,9 @@ class Main:
 
                             if self.player.cursor_slot.get_item() is None:
                                 if (
-                                    self.player.inventory.get_item_by_num(slot_num)
+                                    self.player.inventory.get_item_by_num(
+                                        slot_num
+                                    )
                                     is None
                                 ):
                                     log_message("'None' with 'None' lol")
@@ -484,7 +486,9 @@ class Main:
                                             slot_num
                                         ),
                                     )
-                                    log_message("Picked up 'non-stackable' item")
+                                    log_message(
+                                        "Picked up 'non-stackable' item"
+                                    )
 
                                 else:
                                     if (
@@ -535,10 +539,13 @@ class Main:
                                     )
 
                             elif (
-                                self.player.cursor_slot.get_item().max_amount == 1
+                                self.player.cursor_slot.get_item().max_amount
+                                == 1
                             ):
                                 if (
-                                    self.player.inventory.get_item_by_num(slot_num)
+                                    self.player.inventory.get_item_by_num(
+                                        slot_num
+                                    )
                                     is None
                                 ):
                                     (
@@ -550,7 +557,9 @@ class Main:
                                             slot_num
                                         ),
                                     )
-                                    log_message("Put down 'non-stackable' item")
+                                    log_message(
+                                        "Put down 'non-stackable' item"
+                                    )
 
                                 elif (
                                     self.player.inventory.get_item_by_num(
@@ -567,7 +576,9 @@ class Main:
                                             slot_num
                                         ),
                                     )
-                                    log_message("Swapped 'non-stackable' items")
+                                    log_message(
+                                        "Swapped 'non-stackable' items"
+                                    )
 
                                 else:
                                     (
@@ -627,9 +638,7 @@ class Main:
                                 != self.player.cursor_slot.get_item().id
                             ):
                                 (
-                                    self.player.get_inventory()[
-                                        slot_num
-                                    ],
+                                    self.player.get_inventory()[slot_num],
                                     self.player.cursor_slot.slot,
                                 ) = (
                                     self.player.cursor_slot.get_item(),
@@ -655,13 +664,8 @@ class Main:
                                     slot_num
                                 ].amount += 1
                                 self.player.cursor_slot.slot.amount -= 1
-                                if (
-                                    self.player.cursor_slot.slot.amount
-                                    == 0
-                                ):
-                                    self.player.cursor_slot.slot = (
-                                        None
-                                    )
+                                if self.player.cursor_slot.slot.amount == 0:
+                                    self.player.cursor_slot.slot = None
                                 log_message(
                                     "Put 1 'stackable' item to inventory"
                                 )
@@ -698,7 +702,7 @@ class Main:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     if self.state == "main_menu":
-                        self.exit_app()
+                        exit_app()
                     elif self.state in ["main_game", "main_game_inventory"]:
                         pass  # Intentional
                     elif self.state == "settings":
@@ -736,10 +740,10 @@ class Main:
         # Mouse movement based events
         if self.state in {"main_game", "main_game_inventory"}:
             self.tile_pos_at_mouse = (
-                int(self.mouse_pos[0]
-                    + self.scroll[0]) // SETTINGS["tile_size"],
-                int(self.mouse_pos[1]
-                    + self.scroll[1]) // SETTINGS["tile_size"],
+                int(self.mouse_pos[0] + self.scroll[0])
+                // SETTINGS["tile_size"],
+                int(self.mouse_pos[1] + self.scroll[1])
+                // SETTINGS["tile_size"],
             )
 
     def update_state(self) -> None:
@@ -783,14 +787,20 @@ class Main:
                             self.player.tool_use_penalty
                             >= self.player.get_item_in_hand().use_time
                         ):
-                            tile = self.tilemap.get_tile_at(self.tile_pos_at_mouse)
+                            tile = self.tilemap.get_tile_at(
+                                self.tile_pos_at_mouse
+                            )
 
-                            if self.player.is_able_to_break(block=tile["block"]):
+                            if self.player.is_able_to_break(
+                                block=tile["block"]
+                            ):
                                 # Currenty you have the correct tool in hand
 
                                 hit_tile_rect = pygame.Rect(
-                                    self.tile_pos_at_mouse[0] * SETTINGS["tile_size"],
-                                    self.tile_pos_at_mouse[1] * SETTINGS["tile_size"],
+                                    self.tile_pos_at_mouse[0]
+                                    * SETTINGS["tile_size"],
+                                    self.tile_pos_at_mouse[1]
+                                    * SETTINGS["tile_size"],
                                     SETTINGS["tile_size"],
                                     SETTINGS["tile_size"],
                                 )
@@ -821,9 +831,7 @@ class Main:
                                     # Tile has full durability
                                     if (
                                         tile["block"]
-                                        in NAME_SPACE[
-                                            "durability_of_tile"
-                                        ]
+                                        in NAME_SPACE["durability_of_tile"]
                                     ):
                                         tile["durability"] = NAME_SPACE[
                                             "durability_of_tile"
@@ -839,7 +847,9 @@ class Main:
                                     )
 
                                 if tile["durability"] <= 0:
-                                    self.tilemap.break_tile(self.tile_pos_at_mouse)
+                                    self.tilemap.break_tile(
+                                        self.tile_pos_at_mouse
+                                    )
 
                                     # Spawn particles TODO
 
@@ -872,14 +882,15 @@ class Main:
 
             # Particles
             # Spawn particles
-            rects_on_window: list[pygame.Rect] = self.tilemap.get_rects_on_window(
-                self.WINDOW, self.render_scroll
+            rects_on_window: list[pygame.Rect] = (
+                self.tilemap.get_rects_on_window(
+                    self.WINDOW, self.render_scroll
+                )
             )
             for rect in rects_on_window:
                 for particle_str, rects in self.particle_spawner_tiles.items():
                     if rect in rects and (
-                        randf() * 49999 * 4
-                        < rect.width * rect.height
+                        randf() * 49999 * 4 < rect.width * rect.height
                     ):
                         pos: tuple[float] = (
                             rect.x + randf() * rect.width,
@@ -958,7 +969,8 @@ class Main:
             self.WINDOW.fill(NAME_SPACE["color"]["main_theme"])
             self.WINDOW.blit(
                 load_image_resized(
-                    "icon/lolBG", (SETTINGS["window_width"], SETTINGS["window_height"])
+                    "icon/lolBG",
+                    (SETTINGS["window_width"], SETTINGS["window_height"]),
                 ),
                 (0, 0),
             )
@@ -986,12 +998,16 @@ class Main:
             # Inventory
             if self.state == "main_game":
                 self.player.inventory.render_hotbar(
-                    self.WINDOW, self.player.hotbar_num, mouse_pos=self.mouse_pos
+                    self.WINDOW,
+                    self.player.hotbar_num,
+                    mouse_pos=self.mouse_pos,
                 )
 
             elif self.state == "main_game_inventory":
                 self.player.inventory.render_full_inventory(
-                    self.WINDOW, self.player.hotbar_num, mouse_pos=self.mouse_pos
+                    self.WINDOW,
+                    self.player.hotbar_num,
+                    mouse_pos=self.mouse_pos,
                 )
                 self.player.cursor_slot.render_item_at_cursor(
                     self.WINDOW, self.mouse_pos

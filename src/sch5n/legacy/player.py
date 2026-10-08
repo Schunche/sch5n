@@ -118,8 +118,7 @@ class Player(Mob):
             self.airTime = 5
 
     def is_able_to_break(self, block: str) -> bool:
-        """Returns whether the player is able to break the given block with the given tool.
-        """
+        """Returns whether the player is able to break the given block with the given tool."""
         for tool_type in self.get_item_in_hand().tool_type:
             if block in NAME_SPACE["toolRequired"][tool_type]:
                 return True

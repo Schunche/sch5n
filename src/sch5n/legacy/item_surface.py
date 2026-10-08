@@ -1,3 +1,8 @@
+# Copyright (c) 2026 Schunche
+"""Experimental software."""
+
+from typing import TYPE_CHECKING
+
 from sch5n.legacy.loader import (
     SETTINGS,
     load_icon,
@@ -5,14 +10,17 @@ from sch5n.legacy.loader import (
     load_image_resized,
 )
 
-ITEM_ICON: dict = {
+if TYPE_CHECKING:
+    import pygame
+
+ITEM_ICON: dict[int, pygame.surface.Surface] = {
     0: load_icon("tool/copperPickaxe"),
     1: load_icon("tool/copperAxe"),
     2: load_icon("tile/dirt/0"),
     3: load_icon("tile/oakLog/0"),
 }
 
-ITEM_IMAGE: dict = {
+ITEM_IMAGE: dict[int, pygame.surface.Surface] = {
     0: load_image("tool/copperPickaxe"),
     1: load_image("tool/copperAxe"),
     2: load_image_resized(

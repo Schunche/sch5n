@@ -2,9 +2,7 @@
 """Experimental software."""
 
 import argparse
-import threading
 from dataclasses import dataclass
-from typing import Any, ClassVar
 
 
 @dataclass
@@ -22,12 +20,10 @@ class Program:
 
         is_server = self.launch_args.server
 
+
 PROGRAM = Program()
 
-class Game:
 
-    def __init__(
-        self,
-        program: Game.Program
-    ) -> None:
+class Game:
+    def __init__(self, program: Game.Program) -> None:
         pass

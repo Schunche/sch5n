@@ -8,8 +8,8 @@ if __name__ != "__main__":
 
 import pygame
 
-from sch5n.legacy.loader import load_json
 from sch5n.core.log import log_error, log_message, log_success
+from sch5n.legacy.loader import load_json
 from sch5n.legacy.tilemap import Tilemap
 
 log_success("Program started")

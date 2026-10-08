@@ -43,10 +43,7 @@ class _LanguageDictionary:
 
     @classmethod
     def set_target_language(
-        cls,
-        lang: Language,
-        *,
-        check: bool = False
+        cls, lang: Language, *, check: bool = False
     ) -> None:
         """Set target language for translation.
 

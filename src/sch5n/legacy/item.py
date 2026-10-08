@@ -21,7 +21,9 @@ class Item:
     def getName(self) -> str:
         return self.name.title()
 
-    def renderIcon(self, surface: pygame.Surface, pos: tuple[int, int]) -> None:
+    def renderIcon(
+        self, surface: pygame.Surface, pos: tuple[int, int]
+    ) -> None:
         surface.blit(ITEM_ICON[self.id], pos)
 
         # The amount number

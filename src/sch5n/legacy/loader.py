@@ -1,8 +1,12 @@
+# Copyright (c) 2026 Schunche
+"""Experimental software."""
+
 import json
 import os
 import pathlib
 from typing import Any
 
+import pydantic
 import pygame
 
 from sch5n.core.log import log_error, log_message
@@ -40,9 +44,35 @@ def load_json(path: str) -> Any:
 
 
 SETTINGS = load_json("data/settings")
-FIX_SETTINGS: dict[str,
-    int | float | str | dict[str,
-    int | float | str | dict[str, int]]] = load_json("fixData/fixSettings")
+
+class FixGuiMainMenuSettings(pydantic.BaseModel):
+    buttonPadding: int
+
+class FixGuiSettings(pydantic.BaseModel):
+    buttonBorderWidth: int
+    buttonBorderRadius: int
+    slotBorderWidth: int
+    outer_window_padding: int
+    slotPadding: int
+    standardButtonHeight: int
+    standardButtonWidth: int
+    buttonTextVerticalOffError: int
+    slotTransparency: int
+    main_menu: FixGuiMainMenuSettings
+
+class FixSettings(pydantic.BaseModel):
+    windowName: str
+    reach: int
+    inventory_column: int
+    inventory_row: int
+    floatingItemTermVel: int
+    gravityStrength: float
+    airResistHorizontal: float
+    GUI: FixGuiSettings
+
+
+# FIX_SETTINGS: FixSettings = load_json("fixData/fixSettings")
+FIX_SETTINGS: FixSettings = FixSettings.model_validate_json(pathlib.Path("src/fixData/fixSettings.json").read_text(encoding="utf-8"))
 
 NAME_SPACE = load_json("fixData/nameSpace")
 TRANSPARENT_COLOR: list[int] = NAME_SPACE["color"]["toBeTransparent"]
@@ -131,7 +161,9 @@ def load_images_as_list(path: str) -> list[pygame.Surface]:
     """
     images: list[pygame.Surface] = []
     for image_name in sorted(os.listdir(f"src/img/{path}")):
-        images.append(load_image(f"{path}/{image_name[: image_name.index(".")]}"))
+        images.append(
+            load_image(f"{path}/{image_name[: image_name.index(".")]}")
+        )
     return images
 
 
@@ -177,12 +209,14 @@ def load_sys_font(
 
 
 def load_icon(path: str) -> pygame.Surface:
-    """Load an icon from a file.
-    """
-    return load_image_resized(path, (SETTINGS["gui_size"], SETTINGS["gui_size"]))
+    """Load an icon from a file."""
+    return load_image_resized(
+        path, (SETTINGS["gui_size"], SETTINGS["gui_size"])
+    )
 
 
-def resize_image(image: pygame.Surface, size: tuple[int, int]) -> pygame.Surface:
-    """Resize an image.
-    """
+def resize_image(
+    image: pygame.Surface, size: tuple[int, int]
+) -> pygame.Surface:
+    """Resize an image."""
     return pygame.transform.scale(image, size)
