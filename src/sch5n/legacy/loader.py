@@ -45,8 +45,10 @@ def load_json(path: str) -> Any:
 
 SETTINGS = load_json("data/settings")
 
+
 class FixGuiMainMenuSettings(pydantic.BaseModel):
     buttonPadding: int
+
 
 class FixGuiSettings(pydantic.BaseModel):
     buttonBorderWidth: int
@@ -60,6 +62,7 @@ class FixGuiSettings(pydantic.BaseModel):
     slotTransparency: int
     main_menu: FixGuiMainMenuSettings
 
+
 class FixSettings(pydantic.BaseModel):
     windowName: str
     reach: int
@@ -72,7 +75,9 @@ class FixSettings(pydantic.BaseModel):
 
 
 # FIX_SETTINGS: FixSettings = load_json("fixData/fixSettings")
-FIX_SETTINGS: FixSettings = FixSettings.model_validate_json(pathlib.Path("src/fixData/fixSettings.json").read_text(encoding="utf-8"))
+FIX_SETTINGS: FixSettings = FixSettings.model_validate_json(
+    pathlib.Path("src/fixData/fixSettings.json").read_text(encoding="utf-8")
+)
 
 NAME_SPACE = load_json("fixData/nameSpace")
 TRANSPARENT_COLOR: list[int] = NAME_SPACE["color"]["toBeTransparent"]

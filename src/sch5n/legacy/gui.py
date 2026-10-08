@@ -112,13 +112,14 @@ class Button:
                 self.size[1],
             )
             self.text_rendered: pygame.Surface = self.font.render(
-                self.text, antialias=True, color=NAME_SPACE["color"][self.text_color]
+                self.text,
+                antialias=True,
+                color=NAME_SPACE["color"][self.text_color],
             )
             self.text_rect: pygame.Rect = self.text_rendered.get_rect()
             self.text_rect.center = (
                 self.pos[0],
-                self.pos[1]
-                - FIX_SETTINGS.GUI.buttonTextVerticalOffError,
+                self.pos[1] - FIX_SETTINGS.GUI.buttonTextVerticalOffError,
             )
 
         elif align_by == "bottom_right":
