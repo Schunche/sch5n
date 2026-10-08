@@ -210,6 +210,16 @@ def is_server() -> bool:
     return os.environ.get(EnvironmentFlag.SERVER, "0") == "1"
 
 
+def is_developer() -> bool:
+    """Determine whether this is a developer.
+
+    Returns:
+        bool: -//-
+
+    """
+    return os.environ.get(EnvironmentFlag.DEVELOPER, "0") == "1"
+
+
 def get_platformdirs() -> platformdirs.api.PlatformDirsABC:
     """Get platformdirs. Use it wisely.
 
@@ -217,4 +227,4 @@ def get_platformdirs() -> platformdirs.api.PlatformDirsABC:
         platformdirs.api.PlatformDirs: -//-
 
     """
-    return _SERVER_PLATFORM_DIRS if is_server() else _CLIENT_PLATFORM_DIRS
+    return _SERVER_PLATFORM_DIRS if is_developer() else _CLIENT_PLATFORM_DIRS

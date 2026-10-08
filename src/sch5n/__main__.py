@@ -29,11 +29,14 @@ def main() -> None:
         suggest_on_error=True,
     )
     parser.add_argument("-server", "--server", action="store_true")
+    parser.add_argument("-dev", "--developer", action="store_true")
 
     args = parser.parse_args()
 
     if args.server:
         os.environ[EnvironmentFlag.SERVER] = "1"
+    if args.dev:
+        os.environ[EnvironmentFlag.DEVELOPER] = "1"
 
     m = Main()
     m.run()
