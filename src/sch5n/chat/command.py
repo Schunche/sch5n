@@ -1,13 +1,15 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-from sch5n.port.dataclass import dataclass
+from dataclasses import dataclass
 
 
 class ChatCommandParseError(Exception):

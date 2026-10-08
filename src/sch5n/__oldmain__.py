@@ -99,7 +99,7 @@ class Main:
             SETTINGS["window_width"],
             SETTINGS["window_height"],
         ])
-        pygame.display.set_caption(FIX_SETTINGS["windowName"])
+        pygame.display.set_caption(FIX_SETTINGS.windowName)
         pygame.display.set_icon(self.assets["icon"]["main"])
         self.scroll: list[float] = [0, 0]
         log_message("Created main window")
