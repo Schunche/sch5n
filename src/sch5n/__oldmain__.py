@@ -251,9 +251,9 @@ class Main:
                 "settings": Button(
                     pos=(
                         SETTINGS["window_width"]
-                        - FIX_SETTINGS["GUI"]["outer_window_padding"],
+                        - FIX_SETTINGS.GUI.outer_window_padding,
                         SETTINGS["window_height"]
-                        - FIX_SETTINGS["GUI"]["outer_window_padding"],
+                        - FIX_SETTINGS.GUI.outer_window_padding,
                     ),
                     text="Settings",
                     align_by="bottom_right",
@@ -272,7 +272,7 @@ class Main:
                     pos=(
                         int(SETTINGS["window_width"] * 0.5),
                         int(SETTINGS["window_height"] * 0.5)
-                        + FIX_SETTINGS["GUI"]["main_menu"]["buttonPadding"],
+                        + FIX_SETTINGS.GUI.main_menu.buttonPadding,
                     ),
                     text="Settings",
                     align_by="center",
@@ -281,7 +281,7 @@ class Main:
                     pos=(
                         int(SETTINGS["window_width"] * 0.5),
                         int(SETTINGS["window_height"] * 0.5)
-                        + FIX_SETTINGS["GUI"]["main_menu"]["buttonPadding"]
+                        + FIX_SETTINGS.GUI.main_menu.buttonPadding
                         * 2,
                     ),
                     text="Exit",

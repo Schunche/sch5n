@@ -22,13 +22,13 @@ class FloatingItem:
         )
 
     def update(
-        self, tilemap: Tilemap, playerPos: tuple[float] = (0, 0)
+        self, tilemap: Tilemap, player_pos: tuple[float, float] = (0.0, 0.0)
     ) -> None:
         """Update the item's position and handle collisions with the tilemap.
 
         Args:
             tilemap (Tilemap): The tilemap the item collides with.
-            playerPos (tuple[float], optional)
+            player_pos (tuple[float], optional)
 
         """
         self.collisions: dict[str, bool] = {
@@ -78,29 +78,29 @@ class FloatingItem:
                 )
 
         # Slow down the item
-        if self.velocity[0] > FIX_SETTINGS["airResistHorizontal"]:
-            self.velocity[0] -= FIX_SETTINGS["airResistHorizontal"]
-        elif self.velocity[0] < -FIX_SETTINGS["airResistHorizontal"]:
-            self.velocity[0] += FIX_SETTINGS["airResistHorizontal"]
+        if self.velocity[0] > FIX_SETTINGS.airResistHorizontal:
+            self.velocity[0] -= FIX_SETTINGS.airResistHorizontal
+        elif self.velocity[0] < -FIX_SETTINGS.airResistHorizontal:
+            self.velocity[0] += FIX_SETTINGS.airResistHorizontal
         else:
             self.velocity[0] = 0
 
         if (
             getHyp(
-                self.get_collision_rect().centerx - playerPos[0],
-                self.get_collision_rect().centery - playerPos[1],
+                self.get_collision_rect().centerx - player_pos[0],
+                self.get_collision_rect().centery - player_pos[1],
             )
-            <= SETTINGS["tile_size"] * FIX_SETTINGS["reach"]
+            <= SETTINGS["tile_size"] * FIX_SETTINGS.reach
         ):
             # The item is in the range of the player
             # So it approaches the player
             appVel: tuple[float] = playerMagnetFunc((
-                (playerPos[0] - self.get_collision_rect().centerx)
+                (player_pos[0] - self.get_collision_rect().centerx)
                 / SETTINGS["tile_size"]
-                / FIX_SETTINGS["reach"],
-                (playerPos[1] - self.get_collision_rect().centery)
+                / FIX_SETTINGS.reach,
+                (player_pos[1] - self.get_collision_rect().centery)
                 / SETTINGS["tile_size"]
-                / FIX_SETTINGS["reach"],
+                / FIX_SETTINGS.reach,
             ))
 
             # -------#####
@@ -118,23 +118,23 @@ class FloatingItem:
             self.velocity[1] += appVel[1] * 0.15
             if not self.collisions["down"] and not self.collisions["up"]:
                 self.velocity[1] -= (
-                    FIX_SETTINGS["gravityStrength"] * abs(appVel[1]) * 0.5
+                    FIX_SETTINGS.gravityStrength * abs(appVel[1]) * 0.5
                 )
 
         # Terminal velocity
-        if self.velocity[0] > FIX_SETTINGS["floatingItemTermVel"]:
-            self.velocity[0] = FIX_SETTINGS["floatingItemTermVel"]
-        elif self.velocity[0] < -FIX_SETTINGS["floatingItemTermVel"]:
-            self.velocity[0] = -FIX_SETTINGS["floatingItemTermVel"]
+        if self.velocity[0] > FIX_SETTINGS.floatingItemTermVel:
+            self.velocity[0] = FIX_SETTINGS.floatingItemTermVel
+        elif self.velocity[0] < -FIX_SETTINGS.floatingItemTermVel:
+            self.velocity[0] = -FIX_SETTINGS.floatingItemTermVel
 
-        if self.velocity[1] > FIX_SETTINGS["floatingItemTermVel"]:
-            self.velocity[1] = FIX_SETTINGS["floatingItemTermVel"]
-        elif self.velocity[1] < -FIX_SETTINGS["floatingItemTermVel"]:
-            self.velocity[1] = -FIX_SETTINGS["floatingItemTermVel"]
+        if self.velocity[1] > FIX_SETTINGS.floatingItemTermVel:
+            self.velocity[1] = FIX_SETTINGS.floatingItemTermVel
+        elif self.velocity[1] < -FIX_SETTINGS.floatingItemTermVel:
+            self.velocity[1] = -FIX_SETTINGS.floatingItemTermVel
 
         self.velocity[1] = min(
-            FIX_SETTINGS["floatingItemTermVel"],
-            self.velocity[1] + FIX_SETTINGS["gravityStrength"],
+            FIX_SETTINGS.floatingItemTermVel,
+            self.velocity[1] + FIX_SETTINGS.gravityStrength,
         )
         if self.collisions["down"] or self.collisions["up"]:
             self.velocity[1] = 0

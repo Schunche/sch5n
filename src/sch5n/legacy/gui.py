@@ -1,3 +1,5 @@
+from typing import cast
+
 import pygame
 
 from sch5n.core.log import log_error
@@ -184,12 +186,12 @@ class Button:
 
 
 class Inventory:
-    def __init__(self, *args) -> None:
+    def __init__(self, *args: Item) -> None:
 
-        self.inventory: dict[int, Item] = dict.fromkeys(
+        self.inventory: dict[int, Item | None] = dict.fromkeys(
             range(
-                FIX_SETTINGS["inventory_column"]
-                * FIX_SETTINGS["inventory_row"]
+                FIX_SETTINGS.inventory_column
+                * FIX_SETTINGS.inventory_row
             )
         )
         for index, item in enumerate(args):
@@ -198,12 +200,12 @@ class Inventory:
         inner_rect_size: int = SETTINGS["gui_size"] * 1.5
         self.inner_rects: list[pygame.Rect] = [
             pygame.Rect(
-                FIX_SETTINGS["GUI"]["outer_window_padding"]
-                + (i % FIX_SETTINGS["inventory_column"])
-                * (inner_rect_size + FIX_SETTINGS["GUI"]["slotPadding"]),
-                FIX_SETTINGS["GUI"]["outer_window_padding"]
-                + (i // FIX_SETTINGS["inventory_column"])
-                * (inner_rect_size + FIX_SETTINGS["GUI"]["slotPadding"]),
+                FIX_SETTINGS.GUI.outer_window_padding
+                + (i % FIX_SETTINGS.inventory_column)
+                * (inner_rect_size + FIX_SETTINGS.GUI.slotPadding),
+                FIX_SETTINGS.GUI.outer_window_padding
+                + (i // FIX_SETTINGS.inventory_column)
+                * (inner_rect_size + FIX_SETTINGS.GUI.slotPadding),
                 inner_rect_size,
                 inner_rect_size,
             )
@@ -214,7 +216,7 @@ class Inventory:
         )
         self.not_hovered_inner.fill((
             *NAME_SPACE["color"]["buttonInner"],
-            FIX_SETTINGS["GUI"]["slotTransparency"],
+            FIX_SETTINGS.GUI.slotTransparency,
         ))
 
         self.hovered_inner = pygame.Surface(
@@ -222,21 +224,21 @@ class Inventory:
         )
         self.hovered_inner.fill((
             *NAME_SPACE["color"]["buttonHover"],
-            FIX_SETTINGS["GUI"]["slotTransparency"],
+            FIX_SETTINGS.GUI.slotTransparency,
         ))
 
         self.border_rects: list[pygame.rect.Rect] = [
             pygame.Rect(
-                FIX_SETTINGS["GUI"]["outer_window_padding"]
-                - FIX_SETTINGS["GUI"]["slotBorderWidth"]
-                + (i % FIX_SETTINGS["inventory_column"])
-                * (inner_rect_size + FIX_SETTINGS["GUI"]["slotPadding"]),
-                FIX_SETTINGS["GUI"]["outer_window_padding"]
-                - FIX_SETTINGS["GUI"]["slotBorderWidth"]
-                + (i // FIX_SETTINGS["inventory_column"])
-                * (inner_rect_size + FIX_SETTINGS["GUI"]["slotPadding"]),
-                inner_rect_size + 2 * FIX_SETTINGS["GUI"]["slotBorderWidth"],
-                inner_rect_size + 2 * FIX_SETTINGS["GUI"]["slotBorderWidth"],
+                FIX_SETTINGS.GUI.outer_window_padding
+                - FIX_SETTINGS.GUI.slotBorderWidth
+                + (i % FIX_SETTINGS.inventory_column)
+                * (inner_rect_size + FIX_SETTINGS.GUI.slotPadding),
+                FIX_SETTINGS.GUI.outer_window_padding
+                - FIX_SETTINGS.GUI.slotBorderWidth
+                + (i // FIX_SETTINGS.inventory_column)
+                * (inner_rect_size + FIX_SETTINGS.GUI.slotPadding),
+                inner_rect_size + 2 * FIX_SETTINGS.GUI.slotBorderWidth,
+                inner_rect_size + 2 * FIX_SETTINGS.GUI.slotBorderWidth,
             )
             for i in range(len(self.inventory))
         ]
@@ -287,8 +289,8 @@ class Inventory:
                     else "buttonBorder"
                 ],
                 self.border_rects[slot_num],
-                width=FIX_SETTINGS["GUI"]["buttonBorderWidth"],
-                border_radius=FIX_SETTINGS["GUI"]["buttonBorderRadius"],
+                width=FIX_SETTINGS.GUI.buttonBorderWidth,
+                border_radius=FIX_SETTINGS.GUI.buttonBorderRadius,
             )
 
             item = self.inventory[slot_num]
@@ -334,8 +336,8 @@ class Inventory:
                     else "buttonBorder"
                 ],
                 self.border_rects[slot_num],
-                width=FIX_SETTINGS["GUI"]["buttonBorderWidth"],
-                border_radius=FIX_SETTINGS["GUI"]["buttonBorderRadius"],
+                width=FIX_SETTINGS.GUI.buttonBorderWidth,
+                border_radius=FIX_SETTINGS.GUI.buttonBorderRadius,
             )
 
             item = self.inventory[slot_num]
@@ -363,7 +365,7 @@ class Inventory:
         return False
 
     def get_slot_num(self, mouse_pos: tuple[int, int]) -> int | None:
-        for slot_num, item in self.inventory.items():
+        for slot_num in self.inventory:
             if self.border_rects[slot_num].collidepoint(mouse_pos):
                 return slot_num
 
@@ -404,7 +406,8 @@ class Inventory:
 
         else:
             # Inventory is full
-            for key, slot in self.inventory.items():
+            for slot in self.inventory.values():
+                slot = cast("Item", slot)
                 if slot.id == item.id:
                     # Slot is full
                     if slot.amount == slot.max_amount:
@@ -425,6 +428,7 @@ class Inventory:
             # So it has empty slots
 
         log_error("Not all cases have been covered, in inventory adding")
+        return None
 
 
 class CursorSlot:

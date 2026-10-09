@@ -28,13 +28,13 @@ class Item:
 
         # The amount number
         if self.max_amount != 1:
-            font: pygame.font = load_sys_font("arial")
+            font: pygame.font.Font = load_sys_font("arial")
 
             text_rendered = font.render(
                 str(self.amount), True, NAME_SPACE["color"]["text"]
             )
             text_rect: pygame.Rect = text_rendered.get_rect()
-            text_rect.bottom_right = (
+            text_rect.bottomright = (
                 pos[0] + SETTINGS["gui_size"],
                 pos[1] + SETTINGS["gui_size"],
             )
@@ -64,7 +64,7 @@ class ReforgeableItem(Item):
 
 @dataclass
 class Tool(Item):
-    tool_type: dict[str, int] = field(default_factory={"pickaxe": 5})
+    tool_type: dict[str, int] = field(default_factory=lambda: {"pickaxe": 5})
 
 
 @dataclass
