@@ -1,6 +1,5 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
-# noqa: file
 
 import pygame.constants as pgcons
 import pygame.mixer as pg_mixer

@@ -1,54 +1,44 @@
+# Copyright (c) 2026 Schunche
+"""Experimental software."""
+
+from typing import TYPE_CHECKING
+
 import pygame
 
-from sch5n.legacy.animation import Animation
+from sch5n.common.vector import FloatTuple2, IntTuple2
 from sch5n.legacy.loader import SETTINGS
-from sch5n.legacy.tilemap import Tilemap
+
+if TYPE_CHECKING:
+    from sch5n.legacy.animation import Animation
+    from sch5n.legacy.tilemap import Tilemap
 
 
 class Mob:
-    """A class representing a mobile entity in a game.
-
-    Attributes:
-        pos (list[float]): The position of the mob as a list containing x and y coordinates.
-        width (int): The width of the mob's hitbox.
-        height (int): The height of the mob's hitbox.
-        pivot (tuple[int, int]): Vector from TopLeft of posxy to TopLeft of hitboxWH.
-        hitBoxWidth (int): The width of the mob's hitbox.
-        hitBoxHeight (int): The height of the mob's hitbox.
-        species: The species of the mob.
-        assets (dict[str, dict[str, Animation]]): Dictionary mapping species names to dictionaries containing action names and Animation objects.
-        movement_input (dict[str, bool]): Dictionary mapping movement direction keys to boolean values indicating if the key is pressed.
-        velocity (list[float]): The velocity of the mob in the x and y directions.
-        action (str): The current action of the mob.
-        animationOffset (tuple[int, int]): Offset to adjust the position of the mob's animation.
-        flip (bool): Flag indicating if the mob's sprite should be flipped horizontally.
-
-    """
+    """A class representing a mobile entity in a game."""
 
     def __init__(
         self,
         species: str,
         assets: dict[str, dict[str, Animation]],
-        pos: list[float],
+        pos: FloatTuple2,
     ) -> None:
         """Initialize a Mob object.
 
         Args:
             species (str): The species of the mob.
-            assets (dict[str, dict[str, Animation]]): Dictionary mapping species names to dictionaries containing action names and Animation objects.
-            pos (list[float]): The initial position of the mob as a list containing x and y coordinates.
+            assets (dict[str, dict[str, Animation]]): Dictionary mapping.
+            pos (tuple[float, float]): The initial position.
 
         """
-        self.pos: list[float] = pos
+        self.pos: FloatTuple2 = pos
         self.width: int = 48
         self.height: int = 48
 
-        self.pivot: tuple[int, int] = (
-            0,
-            0,
-        )  # Vector from TopLeft of posxy to TopLeft of hitboxWH
-        self.hitBoxWidth: int = 48
-        self.hitBoxHeight: int = 48
+        # Vector from TopLeft of posxy to TopLeft of hitboxWH
+        self.pivot: FloatTuple2 = FloatTuple2(0, 0)
+
+        self.hitbox_width: int = 48
+        self.hitbox_height: int = 48
 
         self.species = species
         self.assets: dict[str, dict[str, Animation]] = assets
@@ -59,24 +49,24 @@ class Mob:
             "down": False,
             "space": False,
         }
-        self.velocity: list[float] = [0, 0]
+        self.velocity: FloatTuple2 = FloatTuple2(0, 0)
 
-        self.action: str = ""
-        self.animationOffset: tuple[int, int] = (0, 0)
+        self.action: str
+        self.animation_offset: IntTuple2 = IntTuple2(0, 0)
         self.flip: bool = False
 
-        self.setAction("idle")
+        self.set_action("idle")
 
-    def rect(self) -> pygame.Rect:
+    def rect(self) -> pygame.rect.Rect:
         """Return the rectangular hitbox of the mob."""
         return pygame.Rect(
-            self.pos[0] + self.pivot[0],
-            self.pos[1] + self.pivot[1],
-            self.hitBoxWidth,
-            self.hitBoxHeight,
+            self.pos.x + self.pivot.x,
+            self.pos.y + self.pivot.y,
+            self.hitbox_width,
+            self.hitbox_height,
         )
 
-    def setAction(self, action: str) -> None:
+    def set_action(self, action: str) -> None:
         """Set the action of the mob.
 
         Args:
@@ -90,55 +80,59 @@ class Mob:
             ].copy()
 
     def update(
-        self, tilemap: Tilemap, movement: tuple[int, int] = (0, 0)
+        self, tilemap: Tilemap, movement: IntTuple2 | None = None
     ) -> None:
         """Update the mob's position and handle collisions with the tilemap.
 
         Args:
             tilemap (Tilemap): The tilemap the mob interacts with.
-            movement (tuple[int, int], optional): The movement vector. Defaults to (0, 0).
+            movement (IntTuple2, optional): The movement vector.
 
         """
+        if movement is None:
+            movement = IntTuple2(0, 0)
+
         self.collisions: dict[str, bool] = {
             "left": False,
             "right": False,
             "up": False,
             "down": False,
         }
-        frameMovement: tuple[float] = (
-            movement[0] + self.velocity[0],
-            movement[1] + self.velocity[1],
+        frame_movement: FloatTuple2 = FloatTuple2(
+            movement[0] + self.velocity[0], movement[1] + self.velocity[1]
         )
 
-        self.pos[0] += frameMovement[0]
-        mobRect: pygame.Rect = self.rect()
-        for rect in tilemap.physicsRectsAround((
-            self.pos[0] + self.pivot[0] + self.hitBoxWidth / 2,
-            self.pos[1] + self.pivot[1] + self.hitBoxHeight / 2,
+        self.pos = FloatTuple2(self.pos.x + frame_movement.x, self.pos.y)
+        mob_rect: pygame.Rect = self.rect()
+        for rect in tilemap.physics_rects_around((
+            self.pos.x + self.pivot.x + self.hitbox_width / 2,
+            self.pos.y + self.pivot.y + self.hitbox_height / 2,
         )):
-            if rect.colliderect(mobRect):
-                if frameMovement[0] > 0:
-                    mobRect.right = rect.left
+            if rect.colliderect(mob_rect):
+                if frame_movement[0] > 0:
+                    mob_rect.right = rect.left
                     self.collisions["right"] = True
-                if frameMovement[0] < 0:
-                    mobRect.left = rect.right
+                if frame_movement[0] < 0:
+                    mob_rect.left = rect.right
                     self.collisions["left"] = True
-                self.pos[0] = mobRect.x - self.pivot[0]
+                self.pos = FloatTuple2(mob_rect.x - self.pivot[0], self.pos.y)
 
-        self.pos[1] += frameMovement[1]
-        mobRect: pygame.Rect = self.rect()
-        for rect in tilemap.physicsRectsAround((
-            self.pos[0] + self.pivot[0] + self.hitBoxWidth / 2,
-            self.pos[1] + self.pivot[1] + self.hitBoxHeight / 2,
+        self.pos = FloatTuple2(self.pos.x, self.pos.y + frame_movement[1])
+        mob_rect: pygame.Rect = self.rect()
+        for rect in tilemap.physics_rects_around((
+            self.pos[0] + self.pivot[0] + self.hitbox_width / 2,
+            self.pos[1] + self.pivot[1] + self.hitbox_height / 2,
         )):
-            if rect.colliderect(mobRect):
-                if frameMovement[1] > 0:
-                    mobRect.bottom = rect.top
+            if rect.colliderect(mob_rect):
+                if frame_movement[1] > 0:
+                    mob_rect.bottom = rect.top
                     self.collisions["down"] = True
-                if frameMovement[1] < 0:
-                    mobRect.top = rect.bottom
+                if frame_movement[1] < 0:
+                    mob_rect.top = rect.bottom
                     self.collisions["up"] = True
-                self.pos[1] = mobRect.y - self.pivot[1]
+                self.pos[1] = mob_rect.y - self.pivot[1]
+
+        truncate_from_value = 0.1
 
         if movement[0] > 0:
             self.flip = False
@@ -148,35 +142,35 @@ class Mob:
             self.flip = True
             if not self.collisions["left"]:
                 self.velocity[0] = max(-2, self.velocity[0] - 0.1)
-        elif self.velocity[0] > 0.1:
+        elif self.velocity[0] > truncate_from_value:
             self.velocity[0] -= 0.1
-        elif self.velocity[0] < -0.1:
+        elif self.velocity[0] < -truncate_from_value:
             self.velocity[0] += 0.1
         else:
             self.velocity[0] = 0
 
-        self.velocity[1] = min(
-            SETTINGS["tile_size"] / 8, self.velocity[1] + 0.1
-        )
+        self.velocity[1] = min(SETTINGS.tile_size / 8, self.velocity[1] + 0.1)
         if self.collisions["down"] or self.collisions["up"]:
             self.velocity[1] = 0
 
         self.animation.update()
 
     def render(
-        self, surface: pygame.Surface, offset: tuple[float] = (0, 0)
+        self, surface: pygame.Surface, offset: tuple[float, float] = (0, 0)
     ) -> None:
         """Render the mob on the given surface with optional offset.
 
         Args:
             surface (pygame.Surface): The surface to render the mob on.
-            offset (tuple[float], optional): The offset to apply to the mob's position. Defaults to (0, 0).
+            offset (tuple[float], optional): The offset to apply to the mob.
 
         """
         surface.blit(
-            pygame.transform.flip(self.animation.img(), self.flip, False),
+            pygame.transform.flip(
+                self.animation.img(), flip_x=self.flip, flip_y=False
+            ),
             (
-                self.pos[0] - offset[0] + self.animationOffset[0],
-                self.pos[1] - offset[1] + self.animationOffset[1],
+                self.pos[0] - offset[0] + self.animation_offset[0],
+                self.pos[1] - offset[1] + self.animation_offset[1],
             ),
         )

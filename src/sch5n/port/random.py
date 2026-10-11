@@ -2,6 +2,10 @@
 """Experimental software."""
 
 import secrets
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def randf() -> float:
@@ -12,3 +16,29 @@ def randf() -> float:
 
     """
     return secrets.randbits(53) / 2**53
+
+
+randbelow: Callable[[int], int] = secrets.randbelow
+
+
+def randint(a: int, b: int) -> int:
+    """Generate a random float in the range [a, b].
+
+    Returns:
+        int: Generated number
+
+    """
+    if a > b:
+        return randint(b, a)
+
+    return randbelow(b - a + 1) + a
+
+
+def choice[T](iterable: list[T]) -> T:
+    """Choose a random element from a non-empty sequence.
+
+    Returns:
+        T: Random item.
+
+    """
+    return secrets.choice(iterable)

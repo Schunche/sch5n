@@ -52,7 +52,7 @@ def log_message(msg: str) -> None:
         msg (str): The message to log.
 
     """
-    print(ConsoleColor.apply(f"{time.asctime()} :> {msg}", "white"))
+    print(ConsoleColor.apply(f"{time.asctime()} :> {msg}", "white"))  # ruff: ignore[print]
     _logger.debug(msg)
 
 
@@ -63,7 +63,7 @@ def log_error(msg: str) -> None:
         msg (str): The error message to log.
 
     """
-    print(ConsoleColor.apply(f"{time.asctime()} :> ERROR - {msg}", "red"))
+    print(ConsoleColor.apply(f"{time.asctime()} :> ERROR - {msg}", "red"))  # ruff: ignore[print]
     _logger.error(msg)
 
 
@@ -74,5 +74,5 @@ def log_success(msg: str) -> None:
         msg (str): The error message to log.
 
     """
-    print(ConsoleColor.apply(f"{time.asctime()} :> {msg}", "green"))
+    print(ConsoleColor.apply(f"{time.asctime()} :> {msg}", "green"))  # ruff: ignore[print]
     _logger.warning(msg)

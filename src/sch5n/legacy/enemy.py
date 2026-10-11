@@ -1,6 +1,13 @@
-from sch5n.legacy.animation import Animation
-from sch5n.legacy.item import Weapon
+# Copyright (c) 2026 Schunche
+"""Experimental software."""
+
+from typing import TYPE_CHECKING
+
 from sch5n.legacy.mob import Mob
+
+if TYPE_CHECKING:
+    from sch5n.legacy.animation import Animation
+    from sch5n.legacy.item import Weapon
 
 
 class Enemy(Mob):

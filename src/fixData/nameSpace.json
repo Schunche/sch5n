@@ -12,7 +12,7 @@
         "tungsten"
     ], "gems": [
         "diamond"
-    ], "physicsTiles": [
+    ], "physics_tiles": [
         "dirt",
         "stone",
         "copper",

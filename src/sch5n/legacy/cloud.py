@@ -1,29 +1,39 @@
-import random
+# Copyright (c) 2026 Schunche
+"""Experimental software."""
 
-import pygame
+from typing import TYPE_CHECKING
+
+from sch5n.port.random import choice, randf
+
+if TYPE_CHECKING:
+    import pygame
 
 
 class Cloud:
     """A class representing a cloud in a side-scrolling game.
 
     Attributes:
-        pos (list[float]): The position of the cloud as a list containing x and y coordinates.
+        pos (list[float]): The position of the cloud.
         img (pygame.Surface): The image representing the cloud.
         speed (float): The speed at which the cloud moves horizontally.
-        depth (float): The depth of the cloud, affecting its parallax scrolling effect.
+        depth (float): The depth of the cloud, for parallax scrolling effect.
 
     """
 
     def __init__(
-        self, pos: list[float], img: pygame.Surface, speed: float, depth: float
+        self,
+        pos: tuple[float, float],
+        img: pygame.Surface,
+        speed: float,
+        depth: float,
     ) -> None:
         """Initialize a Cloud object.
 
         Args:
-            pos (list[float]): The position of the cloud as a list containing x and y coordinates.
+            pos (list[float]): The position of the cloud.
             img (pygame.Surface): The image representing the cloud.
             speed (float): The speed at which the cloud moves horizontally.
-            depth (float): The depth of the cloud, affecting its parallax scrolling effect.
+            depth (float): The depth of the cloud, affecting parallax effect.
 
         """
         self.pos: list[float] = list(pos)
@@ -36,25 +46,25 @@ class Cloud:
         self.pos[0] += self.speed * wind_speed
 
     def render(
-        self, surface: pygame.Surface, offset: tuple[float] = (0, 0)
+        self, surface: pygame.Surface, offset: tuple[float, float] = (0, 0)
     ) -> None:
         """Render the cloud on the given surface with optional offset.
 
         Args:
-            surface (pygame.Surface): The pygame surface to render the cloud on.
-            offset (tuple[float], optional): The offset to apply to the cloud's position. Defaults to (0, 0).
+            surface (pygame.Surface): The pygame surface to render on.
+            offset (tuple[float], optional): The offset to apply to the cloud.
 
         """
-        renderPos: tuple[float] = (
+        render_pos: tuple[float, float] = (
             self.pos[0] - offset[0] * self.depth,
             self.pos[1] - offset[1] * self.depth,
         )
         surface.blit(
             self.img,
             (
-                renderPos[0] % (surface.get_width() + self.img.get_width())
+                render_pos[0] % (surface.get_width() + self.img.get_width())
                 - self.img.get_width(),
-                renderPos[1] % (surface.get_height() + self.img.get_height())
+                render_pos[1] % (surface.get_height() + self.img.get_height())
                 - self.img.get_height(),
             ),
         )
@@ -64,18 +74,18 @@ class Clouds:
     """A class representing a collection of clouds in a side-scrolling game.
 
     Attributes:
-        clouds (list[Cloud]): List of Cloud objects representing the clouds in the scene.
+        clouds (list[Cloud]): List of Cloud objects representing the clouds.
 
     """
 
     def __init__(
-        self, cloudImages: list[pygame.Surface], count: int = 2**4
+        self, cloud_images: list[pygame.Surface], count: int = 2**4
     ) -> None:
         """Initialize Clouds object with random clouds.
 
         Args:
-            cloudImages (list[pygame.Surface]): List of pygame Surface objects representing different cloud images.
-            count (int, optional): The number of clouds to generate. Defaults to 16.
+            cloud_images (list[pygame.Surface]): Different cloud images.
+            count (int, optional): The number of clouds to generate.
 
         """
         self.clouds: list[Cloud] = []
@@ -83,10 +93,10 @@ class Clouds:
         for _ in range(count):
             self.clouds.append(
                 Cloud(
-                    (random.random() * 99999, random.random() * 99999),
-                    random.choice(cloudImages),
-                    random.random() * 0.05 + 0.05,
-                    random.random() * 0.6 + 0.2,
+                    (randf() * 99999, randf() * 99999),
+                    choice(cloud_images),
+                    randf() * 0.05 + 0.05,
+                    randf() * 0.6 + 0.2,
                 )
             )
 
@@ -98,13 +108,13 @@ class Clouds:
             cloud.update(wind_speed=wind_speed)
 
     def render(
-        self, surface: pygame.Surface, offset: tuple[float] = (0, 0)
+        self, surface: pygame.Surface, offset: tuple[float, float] = (0, 0)
     ) -> None:
         """Render all clouds on the given surface with optional offset.
 
         Args:
-            surface (pygame.Surface): The pygame surface to render the clouds on.
-            offset (tuple[float], optional): The offset to apply to the clouds' positions. Defaults to (0, 0).
+            surface (pygame.Surface): The pygame surface to render on.
+            offset (tuple[float], optional): The offset to apply to the clouds.
 
         """
         for cloud in self.clouds:

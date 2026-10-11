@@ -1,6 +1,12 @@
-import pygame
+# Copyright (c) 2026 Schunche
+"""Experimental software."""
 
-from sch5n.legacy.animation import Animation
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import pygame
+
+    from sch5n.legacy.animation import Animation
 
 
 class Particle:
@@ -8,10 +14,10 @@ class Particle:
 
     Attributes:
         species (str): The species of the particle.
-        pos (list[float]): The position of the particle as a list containing x and y coordinates.
-        velocity (list[float]): The velocity of the particle in the x and y directions.
+        pos (list[float]): The position of the particle.
+        velocity (list[float]): The velocity of the particle.
         frame (int): The current frame of the particle's animation.
-        animation (Animation): The animation object representing the particle's appearance.
+        animation (Animation): The animation object representing the particle.
 
     """
 
@@ -19,23 +25,23 @@ class Particle:
         self,
         assets: dict[str, Animation],
         species: str,
-        pos: list[float],
-        velocity: list[float] = [0, 0],
+        pos: tuple[float, float],
+        velocity: tuple[float, float] = (0, 0),
         frame: int = 0,
     ) -> None:
         """Initialize a Particle object.
 
         Args:
-            assets (dict[str, Animation]): A dictionary mapping species names to Animation objects representing different particle animations.
+            assets (dict[str, Animation]): A dictionary mapping to animations.
             species (str): The species of the particle.
-            pos (list[float]): The initial position of the particle as a list containing x and y coordinates.
-            velocity (list[float], optional): The initial velocity of the particle in the x and y directions. Defaults to [0, 0].
-            frame (int, optional): The initial frame of the particle's animation. Defaults to 0.
+            pos (list[float]): The initial position of the particle.
+            velocity (list[float], optional): Initial velocity.
+            frame (int, optional): Initial frame of the animation.
 
         """
         self.species: str = species
-        self.pos: list[float] = list(pos)
-        self.velocity: list[float] = velocity
+        self.pos: tuple[float, float] = pos
+        self.velocity: tuple[float, float] = velocity
         self.frame: int = frame
 
         self.animation: Animation = assets[species].copy()
@@ -52,19 +58,23 @@ class Particle:
         if self.animation.done:
             kill = True
 
-        self.pos[0] += self.velocity[0]
-        self.pos[1] += self.velocity[1]
+        self.pos = (
+            self.pos[0] + self.velocity[0],
+            self.pos[1] + self.velocity[1],
+        )
 
         self.animation.update()
 
         return kill
 
-    def render(self, surface: pygame.Surface, offset: list[int] = (0, 0)):
+    def render(
+        self, surface: pygame.Surface, offset: tuple[float, float] = (0, 0)
+    ) -> None:
         """Render the particle on the given surface with an optional offset.
 
         Args:
             surface (pygame.Surface): The surface to render the particle on.
-            offset (list[int], optional): The offset to apply to the particle's position. Defaults to (0, 0).
+            offset (list[int], optional): The offset to apply to the particle.
 
         """
         image: pygame.Surface = self.animation.img()

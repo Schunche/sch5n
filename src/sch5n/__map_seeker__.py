@@ -8,8 +8,8 @@ if __name__ != "__main__":
 
 import pygame
 
-from sch5n.core.log import log_error, log_message, log_success
-from sch5n.legacy.loader import load_json
+from sch5n.helper.log import log_message, log_success
+from sch5n.legacy.loader import SETTINGS, load_tiles_resized
 from sch5n.legacy.tilemap import Tilemap
 
 log_success("Program started")
@@ -21,53 +21,47 @@ log_message("Loaded all local dependency script")
 
 
 class Main:
-    """Main class to manage the game loop and handle game events."""
+    """Main class to manage the game do_loop and handle game events."""
 
     def __init__(self, tile_size: int = 1) -> None:
         """Initialize the game.
 
         Args:
-            tile_size (int, optional): Size of the tiles. Defaults to 2.
+            tile_size (int, optional): Size of the tiles.
 
         """
-        try:
-            self.SETTINGS: dict[str, str | int] = load_json("data/settings")
-            self.tile_size: int = tile_size
+        self.SETTINGS = SETTINGS
+        self.tile_size: int = tile_size
 
-            self.assets: dict[str, dict[str, pygame.Surface]] = {}
-            self.assets["tiles"] = loadTilesResized(
-                "src/img/bit", tile_size=self.tile_size
-            )
-            log_message("Loaded tile assets")
+        self.assets: dict[str, dict[str, pygame.Surface]] = {}
+        self.assets["tiles"] = load_tiles_resized(
+            "src/img/bit", self.tile_size
+        )
+        log_message("Loaded tile assets")
 
-            self.tilemap: Tilemap = Tilemap(
-                assets=self.assets["tiles"],
-                mapName="procedural",
-                tile_size=self.tile_size,
-            )
-            log_message("Created tilemap")
+        self.tilemap: Tilemap = Tilemap(
+            assets=self.assets["tiles"],
+            map_name="procedural",
+        )
+        log_message("Created tilemap")
 
-            self.clock: pygame.time.Clock = pygame.time.Clock()
+        self.clock: pygame.time.Clock = pygame.time.Clock()
 
-            self.WINDOW: pygame.Surface = pygame.display.set_mode([
-                self.SETTINGS["window_width"],
-                self.SETTINGS["window_height"],
-            ])
-            pygame.display.set_caption(
-                f"{self.SETTINGS["windowName"]} von Map Seeker"
-            )
+        self.WINDOW: pygame.Surface = pygame.display.set_mode([
+            self.SETTINGS.window_width,
+            self.SETTINGS.window_height,
+        ])
+        pygame.display.set_caption(
+            f"{self.SETTINGS["window_name"]} von Map Seeker"
+        )
 
-            self.pos: list[float] = [0, 0]
-            self.movement_input: dict[str, bool] = {
-                "left": False,
-                "right": False,
-                "up": False,
-                "down": False,
-            }
-
-        except Exception as e:
-            log_error(f"An error occurred during initialization: {e}")
-            sys.exit(1)
+        self.pos: list[float] = [0, 0]
+        self.movement_input: dict[str, bool] = {
+            "left": False,
+            "right": False,
+            "up": False,
+            "down": False,
+        }
 
     def exit_app(self) -> None:
         """Exit the application."""
@@ -117,13 +111,13 @@ class Main:
         self.tilemap.render_seek(self.WINDOW, offset=self.pos)
 
     def run(self) -> None:
-        """Run the game loop."""
+        """Run the game do_loop."""
         while True:
             self.handle_events()
             self.update_state()
             self.render()
 
-            self.clock.tick(int(self.SETTINGS["FPS"] / 4))
+            self.clock.tick(int(self.SETTINGS.FPS / 4))
             pygame.display.update()
 
 

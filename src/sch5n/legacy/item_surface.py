@@ -25,10 +25,10 @@ ITEM_IMAGE: dict[int, pygame.surface.Surface] = {
     1: load_image("tool/copperAxe"),
     2: load_image_resized(
         "tile/dirt/0",
-        (int(SETTINGS["tile_size"] * 0.5), int(SETTINGS["tile_size"] * 0.5)),
+        (int(SETTINGS.tile_size * 0.5), int(SETTINGS.tile_size * 0.5)),
     ),
     3: load_image_resized(
         "tile/oakLog/0",
-        (int(SETTINGS["tile_size"] * 0.5), int(SETTINGS["tile_size"] * 0.5)),
+        (int(SETTINGS.tile_size * 0.5), int(SETTINGS.tile_size * 0.5)),
     ),
 }

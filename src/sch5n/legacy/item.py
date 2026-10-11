@@ -1,27 +1,32 @@
+# Copyright (c) 2026 Schunche
+"""Experimental software."""
+
 import math
 from dataclasses import dataclass, field
-
-import pygame
+from typing import TYPE_CHECKING
 
 from sch5n.legacy.item_surface import ITEM_ICON
 from sch5n.legacy.loader import NAME_SPACE, SETTINGS, load_sys_font
 
+if TYPE_CHECKING:
+    import pygame
+
 
 @dataclass(repr=False)
 class Item:
-    """Basic item class"""
+    """Basic item class."""
 
     id: int
     name: str
     description: str | None = field(default=None)
-    use_time: int = field(default=int(SETTINGS["FPS"] // 2))
+    use_time: int = field(default=int(SETTINGS.FPS // 2))
     amount: int = field(default=1)
     max_amount: int = field(default=2**10)
 
-    def getName(self) -> str:
+    def get_name(self) -> str:
         return self.name.title()
 
-    def renderIcon(
+    def render_icon(
         self, surface: pygame.Surface, pos: tuple[int, int]
     ) -> None:
         surface.blit(ITEM_ICON[self.id], pos)
@@ -31,12 +36,14 @@ class Item:
             font: pygame.font.Font = load_sys_font("arial")
 
             text_rendered = font.render(
-                str(self.amount), True, NAME_SPACE["color"]["text"]
+                str(self.amount),
+                antialias=True,
+                color=NAME_SPACE["color"]["text"],
             )
             text_rect: pygame.Rect = text_rendered.get_rect()
             text_rect.bottomright = (
-                pos[0] + SETTINGS["gui_size"],
-                pos[1] + SETTINGS["gui_size"],
+                pos[0] + SETTINGS.gui_size,
+                pos[1] + SETTINGS.gui_size,
             )
 
             surface.blit(text_rendered, text_rect)
@@ -56,10 +63,10 @@ class ReforgeableItem(Item):
         self.amount: int = 1
         self.max_amount: int = 1
 
-    def getName(self) -> str:
+    def get_name(self) -> str:
         if self.reforge is None:
-            return super().getName()
-        return f"{self.reforge.title()} {super().getName()}"
+            return super().get_name()
+        return f"{self.reforge.title()} {super().get_name()}"
 
 
 @dataclass
@@ -80,7 +87,8 @@ class SwingWeapon(Weapon, ReforgeableItem):
         if self.frame is None:
             self.angle = None
         else:
-            self.angle = self.minAngle + (self.maxAngle - self.minAngle) * self.frame
+            self.angle = self.minAngle + \
+                (self.maxAngle - self.minAngle) * self.frame
         """
 
 
@@ -91,8 +99,8 @@ class SwingTool(SwingWeapon, Tool):
 
 @dataclass
 class PlaceableItem(Item):
-    def getName(self) -> str:
-        return f"{super().getName()} (x{self.amount!s})"
+    def get_name(self) -> str:
+        return f"{super().get_name()} (x{self.amount!s})"
 
 
 @dataclass(kw_only=True)

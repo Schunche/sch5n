@@ -1,46 +1,46 @@
-from copy import deepcopy
+# Copyright (c) 2026 Schunche
+"""Experimental software."""
 
-from sch5n.legacy.animation import Animation
+from copy import deepcopy
+from typing import TYPE_CHECKING
+
 from sch5n.legacy.gui import CursorSlot, Inventory
-from sch5n.legacy.item import Item
+from sch5n.legacy.item import Item, Tool
 from sch5n.legacy.item_data import ITEM_DATA
 from sch5n.legacy.loader import NAME_SPACE
 from sch5n.legacy.mob import Mob
 
+if TYPE_CHECKING:
+    from sch5n.legacy.animation import Animation
+    from sch5n.legacy.tilemap import Tilemap
+
 
 class Player(Mob):
-    """A class representing the player character in the game.
-
-    Inherits from Mob class.
-
-    Attributes:
-        airTime (int): The time the player has spent in the air since the last contact with the ground.
-
-    """
+    """A class representing the player character in the game."""
 
     def __init__(
         self,
         assets: dict[str, dict[str, Animation]],
         pos: list[float],
-        gameMode: str = "survival",
+        game_mode: str = "survival",
     ) -> None:
         """Initialize a Player object.
 
         Args:
-            assets (dict[str, dict[str, Animation]]): A dictionary containing player assets.
-            pos (list[float]): The initial position of the player as a list containing x and y coordinates.
+            assets (dict[str, dict[str, Animation]]): Player assets.
+            pos (list[float]): The initial position of the player.
 
         """
         super().__init__(species="player", assets=assets, pos=pos)
         self.airTime: int = 0
 
-        if gameMode == "admin":
-            self.maxJumps: int = 2**8
+        if game_mode == "admin":
+            self.max_jumps: int = 2**8
         else:
-            self.maxJumps: int = 1
-        self.jumps: int = self.maxJumps
+            self.max_jumps: int = 1
+        self.jumps: int = self.max_jumps
 
-        self.wallSlide = False
+        self.wall_slide = False
 
         # Inventory management
         self.inventory: Inventory = Inventory(
@@ -58,16 +58,18 @@ class Player(Mob):
             else self.cursor_slot.get_item()
         )
 
-    def get_inventory(self) -> dict[int, Item]:
-        """You can only assingn to this for some reason"""
-        return self.inventory.inventory
+    def get_inventory(self) -> dict[int, Item | None]:
+        """You can only assingn to this for some reason."""
+        return self.inventory.slots
 
-    def update(self, tilemap, movement=(0, 0)) -> None:
+    def update(
+        self, tilemap: Tilemap, movement: tuple[int, int] = (0, 0)
+    ) -> None:
         """Update the player's position and animation.
 
         Args:
             tilemap: The tilemap object representing the game's environment.
-            movement (tuple, optional): A tuple representing movement input. Defaults to (0, 0).
+            movement (tuple, optional): A tuple representing movement input.
 
         """
         # Inherit parent's .update
@@ -77,32 +79,34 @@ class Player(Mob):
         self.airTime += 1
         if self.collisions["down"]:
             self.airTime = 0
-            self.jumps = self.maxJumps
+            self.jumps = self.max_jumps
+
+        activation_time = 4
 
         # Check for wall slide
-        self.wallSlide = False
+        self.wall_slide = False
         if (
             self.collisions["left"] or self.collisions["right"]
-        ) and self.airTime > 4:
-            self.wallSlide = True
+        ) and self.airTime > activation_time:
+            self.wall_slide = True
             self.velocity[1] = min(self.velocity[1], 0.5)
             if self.collisions["right"]:
                 self.flip = False
             else:
                 self.flip = True
-            self.setAction("wallSlide")
+            self.set_action("wall_slide")
 
         # Set action
-        if not self.wallSlide:
-            if self.airTime > 4:
-                self.setAction("jump")
+        if not self.wall_slide:
+            if self.airTime > activation_time:
+                self.set_action("jump")
             elif movement[0] != 0:
-                self.setAction("run")
+                self.set_action("run")
             else:
-                self.setAction("idle")
+                self.set_action("idle")
 
     def jump(self) -> None:
-        if self.wallSlide:
+        if self.wall_slide:
             if self.flip:
                 self.velocity[0] = 3.5
             else:
@@ -118,14 +122,22 @@ class Player(Mob):
             self.airTime = 5
 
     def is_able_to_break(self, block: str) -> bool:
-        """Returns whether the player is able to break the given block with the given tool."""
-        for tool_type in self.get_item_in_hand().tool_type:
+        """Whether the player can break the given block with the given tool.
+
+        Returns:
+            bool: Whether the player can break the given block with the tool.
+
+        """
+        tool = self.get_item_in_hand()
+        if (tool is None) or (not isinstance(tool, Tool)):
+            return False
+        for tool_type in tool.tool_type:
             if block in NAME_SPACE["toolRequired"][tool_type]:
                 return True
         return False
 
-    def break_tile_with(self, block: str) -> str:
-        """Returns the tool type the player is able to break the given block with.
+    def break_tile_with(self, block: str) -> str | None:
+        """Tool type the player is able to break the given block with.
 
         Args:
             block (str): The block to check
@@ -134,7 +146,10 @@ class Player(Mob):
             str: The tool type if the player is able to break the tile.
 
         """
-        for tool_type in self.get_item_in_hand().tool_type:
+        tool = self.get_item_in_hand()
+        if (tool is None) or (not isinstance(tool, Tool)):
+            return None
+        for tool_type in tool.tool_type:
             if block in NAME_SPACE["toolRequired"][tool_type]:
                 return tool_type
         return "pickaxe"

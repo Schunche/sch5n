@@ -2,19 +2,18 @@
 """Experimental software."""
 
 import json
-import os
 import pathlib
 from typing import Any
 
 import pydantic
 import pygame
 
-from sch5n.core.log import log_error, log_message
+from sch5n.helper.log import log_error, log_message
 
 pygame.init()
 
 
-def load_json(path: str) -> Any:
+def load_json(path: str) -> Any:  # ruff: ignore[any-type]
     """Load json file.
 
     Arguments:
@@ -27,50 +26,58 @@ def load_json(path: str) -> Any:
     try:
         with pathlib.Path(f"src/{path}.json").open(encoding="utf-8") as file:
             return_file = json.load(file)
-            log_message(f"'src/{path}.json' found and loaded")
-            return return_file
 
     except FileNotFoundError as e:
         log_error(f"'src/{path}.json' not found: {e}")
-        return None
 
     except UnicodeDecodeError as e:
         log_error(f"'src/{path}.json' is not a valid JSON file: {e}")
-        return None
 
-    except Exception as e:
-        log_error(f"'src/{path}.json' failed to load: {e}")
-        return None
+    else:
+        log_message(f"'src/{path}.json' found and loaded")
+        return return_file
+
+    return None
 
 
-SETTINGS = load_json("data/settings")
+class Settings(pydantic.BaseModel):
+    window_width: int
+    window_height: int
+    FPS: int
+    tile_size: int
+    gui_size: int
+
+
+SETTINGS: Settings = Settings.model_validate_json(
+    pathlib.Path("src/data/settings.json").read_text(encoding="utf-8")
+)
 
 
 class FixGuiMainMenuSettings(pydantic.BaseModel):
-    buttonPadding: int
+    button_padding: int
 
 
 class FixGuiSettings(pydantic.BaseModel):
-    buttonBorderWidth: int
-    buttonBorderRadius: int
-    slotBorderWidth: int
+    button_border_width: int
+    button_border_radius: int
+    slot_border_width: int
     outer_window_padding: int
-    slotPadding: int
-    standardButtonHeight: int
-    standardButtonWidth: int
-    buttonTextVerticalOffError: int
-    slotTransparency: int
+    slot_padding: int
+    standard_button_height: int
+    standard_button_width: int
+    button_text_vertical_off_error: int
+    slot_transparency: int
     main_menu: FixGuiMainMenuSettings
 
 
 class FixSettings(pydantic.BaseModel):
-    windowName: str
+    window_name: str
     reach: int
     inventory_column: int
     inventory_row: int
-    floatingItemTermVel: int
-    gravityStrength: float
-    airResistHorizontal: float
+    floating_item_terminal_velocity: int
+    gravity_strength: float
+    air_resist_horizontal: float
     GUI: FixGuiSettings
 
 
@@ -95,16 +102,14 @@ def load_image(path: str) -> pygame.Surface:
     """
     try:
         img: pygame.Surface = pygame.image.load(f"src/img/{path}.png")
-        img.set_colorkey(TRANSPARENT_COLOR)
-        return img
 
     except FileNotFoundError as e:
         log_error(f"'src/img/{path}.png' not found: {e}")
+
         return load_image("icon/_")
 
-    except Exception as e:
-        log_error(f"'src/img/{path}.png' failed to load: {e}")
-        return load_image("icon/_")
+    img.set_colorkey(TRANSPARENT_COLOR)
+    return img
 
 
 def load_image_resized(path: str, size: tuple[int, int]) -> pygame.Surface:
@@ -147,7 +152,8 @@ def load_dir(path: str) -> dict[str, pygame.Surface]:
 
     """
     images: dict[str, pygame.Surface] = {}
-    for image_name in os.listdir(f"src/img/{path}"):
+    for image_namep in pathlib.Path(f"src/img/{path}").iterdir():
+        image_name = str(image_namep)
         images[image_name[: image_name.index(".")]] = load_image(
             f"{path}/{image_name[: image_name.index(".")]}"
         )
@@ -161,15 +167,15 @@ def load_images_as_list(path: str) -> list[pygame.Surface]:
         path (str): The directory path containing the images.
 
     Returns:
-        list[pygame.Surface]: A list of pygame Surface objects representing the loaded images.
+        list[pygame.Surface]: A list of pygame Surface objects.
 
     """
-    images: list[pygame.Surface] = []
-    for image_name in sorted(os.listdir(f"src/img/{path}")):
-        images.append(
-            load_image(f"{path}/{image_name[: image_name.index(".")]}")
+    return [
+        load_image(f"{path}/{image_name[: image_name.index(".")]}")
+        for image_name in sorted(
+            str(p) for p in pathlib.Path(f"src/img/{path}").iterdir()
         )
-    return images
+    ]
 
 
 def load_tiles(path: str) -> dict[str, dict[int, pygame.surface.Surface]]:
@@ -183,18 +189,30 @@ def load_tiles(path: str) -> dict[str, dict[int, pygame.surface.Surface]]:
 
     """
     tiles: dict[str, dict[int, pygame.surface.Surface]] = {}
-    for block in os.listdir(f"src/img/{path}"):
+    for blockp in pathlib.Path(f"src/img/{path}").iterdir():
+        block = blockp.name
         if block not in tiles:
             tiles[block] = {}
-        for variant in os.listdir(f"src/img/{path}/{block}"):
+        for variantp in pathlib.Path(f"src/img/{path}/{block}").iterdir():
+            variant = variantp.name
             tiles[block][int(variant[: variant.index(".")])] = (
                 load_image_resized(
                     f"{path}/{block}/{variant[: variant.index(".")]}",
-                    (SETTINGS["tile_size"], SETTINGS["tile_size"]),
+                    (SETTINGS.tile_size, SETTINGS.tile_size),
                 )
             )
 
     return tiles
+
+
+def load_tiles_resized(
+    path_dir: str, size: int
+) -> dict[str, pygame.surface.Surface]:
+    ret: dict[str, pygame.surface.Surface] = {}
+    for pathp in pathlib.Path(path_dir).iterdir():
+        path = str(pathp)
+        ret[path[: path.index(".")]] = load_image_resized(path, (size, size))
+    return ret
 
 
 def get_bit(block: str = "_") -> str:
@@ -208,20 +226,11 @@ def get_bit(block: str = "_") -> str:
 
 
 def load_sys_font(
-    name: str, size: int = 16, bold: bool = False, italic: bool = False
+    name: str, size: int = 16, *, bold: bool = False, italic: bool = False
 ) -> pygame.font.Font:
     return pygame.font.SysFont(name=name, size=size, bold=bold, italic=italic)
 
 
 def load_icon(path: str) -> pygame.Surface:
     """Load an icon from a file."""
-    return load_image_resized(
-        path, (SETTINGS["gui_size"], SETTINGS["gui_size"])
-    )
-
-
-def resize_image(
-    image: pygame.Surface, size: tuple[int, int]
-) -> pygame.Surface:
-    """Resize an image."""
-    return pygame.transform.scale(image, size)
+    return load_image_resized(path, (SETTINGS.gui_size, SETTINGS.gui_size))

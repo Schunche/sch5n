@@ -9,8 +9,8 @@ import platformdirs
 
 from sch5n import __author__, __version__
 from sch5n import __package__ as _package
+from sch5n.common.exceptions import VersionError
 from sch5n.core.environment import EnvironmentFlag
-from sch5n.error.exceptions import VersionError
 
 _TARGET_PLATFORMDIRS_VERSION = "4.11.9"
 if platformdirs.version.version != _TARGET_PLATFORMDIRS_VERSION:
@@ -26,7 +26,7 @@ _DEV_USER_DIR = _DEV_DIR / "user"
 _DEV_SITE_DIR = _DEV_DIR / "site"
 
 
-class DevPlatformDirs(platformdirs.api.PlatformDirsABC):  # ruff: ignore[too-many-public-methods, undocumented-public-class]
+class DevPlatformDirs(platformdirs.api.PlatformDirsABC):  # ruff: ignore[too-many-public-methods]
     @property
     @override
     def user_data_dir(self) -> str:
