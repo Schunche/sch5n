@@ -1,9 +1,9 @@
 dev/
 venv/
-temp/
 __pycache__/
 
 .ruff_cache/
 *.egg-info/
 
 __temp*__.py
+*.prof

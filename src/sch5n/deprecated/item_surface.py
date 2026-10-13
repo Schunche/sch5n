@@ -3,7 +3,7 @@
 
 from typing import TYPE_CHECKING
 
-from sch5n.legacy.loader import (
+from sch5n.deprecated.loader import (
     SETTINGS,
     load_icon,
     load_image,

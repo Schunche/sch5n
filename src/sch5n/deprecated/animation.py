@@ -50,7 +50,9 @@ class Animation:
             Animation: A new Animation object with the same attributes.
 
         """
-        return type(self)(self.images, self.image_duration, self.do_loop)
+        return type(self)(
+            self.images, self.image_duration, do_loop=self.do_loop
+        )
 
     def update(self) -> None:
         """Update the animation frame.

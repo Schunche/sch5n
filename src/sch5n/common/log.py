@@ -2,7 +2,6 @@
 """Experimental software."""
 
 import logging
-import time
 from typing import ClassVar
 
 _logger: logging.Logger = logging.getLogger(__name__)
@@ -52,8 +51,7 @@ def log_message(msg: str) -> None:
         msg (str): The message to log.
 
     """
-    print(ConsoleColor.apply(f"{time.asctime()} :> {msg}", "white"))  # ruff: ignore[print]
-    _logger.debug(msg)
+    _logger.info(msg)
 
 
 def log_error(msg: str) -> None:
@@ -63,16 +61,14 @@ def log_error(msg: str) -> None:
         msg (str): The error message to log.
 
     """
-    print(ConsoleColor.apply(f"{time.asctime()} :> ERROR - {msg}", "red"))  # ruff: ignore[print]
     _logger.error(msg)
 
 
-def log_success(msg: str) -> None:
+def log_info(msg: str) -> None:
     """Log a message with a timestamp in green color.
 
     Args:
         msg (str): The error message to log.
 
     """
-    print(ConsoleColor.apply(f"{time.asctime()} :> {msg}", "green"))  # ruff: ignore[print]
-    _logger.warning(msg)
+    _logger.info(msg)

@@ -3,10 +3,12 @@
 
 from typing import TYPE_CHECKING
 
+from sch5n.math.vector import FloatTuple2
+
 if TYPE_CHECKING:
     import pygame
 
-    from sch5n.legacy.animation import Animation
+    from sch5n.deprecated.animation import Animation
 
 
 class Particle:
@@ -25,8 +27,8 @@ class Particle:
         self,
         assets: dict[str, Animation],
         species: str,
-        pos: tuple[float, float],
-        velocity: tuple[float, float] = (0, 0),
+        pos: FloatTuple2,
+        velocity: FloatTuple2 | None = None,
         frame: int = 0,
     ) -> None:
         """Initialize a Particle object.
@@ -34,14 +36,17 @@ class Particle:
         Args:
             assets (dict[str, Animation]): A dictionary mapping to animations.
             species (str): The species of the particle.
-            pos (list[float]): The initial position of the particle.
-            velocity (list[float], optional): Initial velocity.
+            pos (FloatTuple2): The initial position of the particle.
+            velocity (FloatTuple2, optional): Initial velocity.
             frame (int, optional): Initial frame of the animation.
 
         """
+        if velocity is None:
+            velocity = FloatTuple2(0, 0)
+
         self.species: str = species
-        self.pos: tuple[float, float] = pos
-        self.velocity: tuple[float, float] = velocity
+        self.pos: FloatTuple2 = pos
+        self.velocity: FloatTuple2 = velocity
         self.frame: int = frame
 
         self.animation: Animation = assets[species].copy()
@@ -58,7 +63,7 @@ class Particle:
         if self.animation.done:
             kill = True
 
-        self.pos = (
+        self.pos = FloatTuple2(
             self.pos[0] + self.velocity[0],
             self.pos[1] + self.velocity[1],
         )
@@ -68,7 +73,7 @@ class Particle:
         return kill
 
     def render(
-        self, surface: pygame.Surface, offset: tuple[float, float] = (0, 0)
+        self, surface: pygame.Surface, offset: FloatTuple2 | None = None
     ) -> None:
         """Render the particle on the given surface with an optional offset.
 
@@ -77,6 +82,9 @@ class Particle:
             offset (list[int], optional): The offset to apply to the particle.
 
         """
+        if offset is None:
+            offset = FloatTuple2(0, 0)
+
         image: pygame.Surface = self.animation.img()
         surface.blit(
             image,

@@ -5,8 +5,8 @@ import math
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from sch5n.legacy.item_surface import ITEM_ICON
-from sch5n.legacy.loader import NAME_SPACE, SETTINGS, load_sys_font
+from sch5n.deprecated.item_surface import ITEM_ICON
+from sch5n.deprecated.loader import NAME_SPACE, SETTINGS, load_sys_font
 
 if TYPE_CHECKING:
     import pygame

@@ -8,9 +8,9 @@ from typing import NotRequired, TypedDict, cast
 
 import pygame
 
-from sch5n.common.vector import IntTuple2
-from sch5n.helper.log import log_error, log_message, log_success
-from sch5n.legacy.loader import NAME_SPACE, SETTINGS, get_bit
+from sch5n.common.log import log_error, log_info, log_message
+from sch5n.deprecated.loader import NAME_SPACE, SETTINGS, get_bit
+from sch5n.math.vector import FloatTuple2, IntTuple2
 
 NEIGHBOR_OFFSETS: list[tuple[int, int]] = [
     (i, j) for j in range(-2, 3) for i in range(-2, 3)
@@ -165,7 +165,7 @@ class Tilemap:
 
         self.tilemap = tuple_keys_tilemap
 
-        log_success(f"'{alias}' found and loaded as tilemap")
+        log_info(f"'{alias}' found and loaded as tilemap")
         log_message(f"'{alias}' currently has {len(self.tilemap)} tiles")
 
     def save_map(self, alias: str = "map1") -> None:
@@ -184,15 +184,15 @@ class Tilemap:
         ) as file:
             json.dump(str_keys_tilemap, file, indent=4)
 
-        log_success(f"Tilemap saved to '{alias}/tilemap.json'")
+        log_info(f"Tilemap saved to '{alias}/tilemap.json'")
 
     def tiles_around(
-        self, world_pos: IntTuple2
+        self, world_pos: FloatTuple2
     ) -> list[tuple[IntTuple2, Tile]]:
         """Get tiles around the specified position.
 
         Args:
-            world_pos (IntTuple2): The position to check.
+            world_pos (FloatTuple2): The position to check.
 
         Returns:
             list[tuple[IntTuple2, Tile]]: A list of tiles.
@@ -213,12 +213,12 @@ class Tilemap:
         return tiles
 
     def physics_rects_around(
-        self, tile_pos: IntTuple2
+        self, world_pos: IntTuple2
     ) -> list[pygame.rect.Rect]:
         """Get physics rectangles around the specified position.
 
         Args:
-            tile_pos (IntTuple2): The position to check.
+            world_pos (IntTuple2): The position to check.
 
         Returns:
             list[pygame.rect.Rect]: A list of physics rectangles.
@@ -231,7 +231,7 @@ class Tilemap:
                 SETTINGS.tile_size,
                 SETTINGS.tile_size,
             )
-            for tile in self.tiles_around(tile_pos)
+            for tile in self.tiles_around(FloatTuple2(*world_pos.as_tuple()))
             if tile[1]["block"] in PHYSICS_TILES
         ]
 
@@ -295,15 +295,18 @@ class Tilemap:
                         )
 
     def render_seek(
-        self, surface: pygame.Surface, offset: tuple[int, int] = (0, 0)
+        self, surface: pygame.Surface, offset: IntTuple2 | None = None
     ) -> None:
         """Render the tilemap on the given surface with an optional offset.
 
         Args:
             surface (pygame.Surface): The surface to render the tilemap on.
-            offset (tuple[int, int], optional) = (0, 0): The offset to apply.
+            offset (IntTuple2, optional) = (0, 0): The offset to apply.
 
         """
+        if offset is None:
+            offset = IntTuple2(0, 0)
+
         for x in range(
             offset[0] // SETTINGS.tile_size - 1,
             (offset[0] + surface.get_width()) // SETTINGS.tile_size + 1,
@@ -312,7 +315,7 @@ class Tilemap:
                 offset[1] // SETTINGS.tile_size - 1,
                 (offset[1] + surface.get_height()) // SETTINGS.tile_size + 1,
             ):
-                location: tuple[int, int] = (x, y)
+                location: IntTuple2 = IntTuple2(x, y)
                 tile = self.tilemap.get(location)
                 if tile is not None:
                     surface.blit(
@@ -357,11 +360,11 @@ class Tilemap:
                     )
         return rects
 
-    def get_tile_at(self, pos: tuple[int, int]) -> Tile | None:
+    def get_tile_at(self, pos: IntTuple2) -> Tile | None:
         """Get the tile at the specified position.
 
         Args:
-            pos (tuple[int, int]): The position to check.
+            pos (IntTuple2): The position to check.
 
         Returns:
             Tile | None: The tile at the specified position.
@@ -372,21 +375,21 @@ class Tilemap:
 
         return None
 
-    def set_tile(self, pos: tuple[int, int], tile: Tile) -> None:
+    def set_tile(self, pos: IntTuple2, tile: Tile) -> None:
         """Set the tile at the specified position to the given tile.
 
         Args:
-            pos (tuple[int, int]): The position to set the tile at.
+            pos (IntTuple2): The position to set the tile at.
             tile (dict[str, str | int]): The tile to set.
 
         """
         self.tilemap[pos] = tile
 
-    def break_tile(self, pos: tuple[int, int]) -> None:
+    def break_tile(self, pos: IntTuple2) -> None:
         """Break the tile at the specified position.
 
         Args:
-            pos (tuple[int, int]): The position to break.
+            pos (IntTuple2): The position to break.
 
         """
         tile = self.get_tile_at(pos)
@@ -402,4 +405,5 @@ class Tilemap:
             )
         else:
             self.delete_tile(pos)
-        # Spawn particles of the tile
+
+        # TODO: Spawn particles of the tile

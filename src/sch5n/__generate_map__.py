@@ -6,8 +6,8 @@ import logging
 import math
 import pathlib
 
-from sch5n.helper.log import log_error, log_message
-from sch5n.port.random import choice, randbelow, randf, randint
+from sch5n.common.log import log_error, log_message
+from sch5n.interface.random import choice, randbelow, randf, randint
 
 _logger = logging.getLogger(__name__)
 

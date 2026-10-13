@@ -3,11 +3,11 @@
 
 from typing import TYPE_CHECKING
 
-from sch5n.legacy.mob import Mob
+from sch5n.deprecated.mob import Mob
 
 if TYPE_CHECKING:
-    from sch5n.legacy.animation import Animation
-    from sch5n.legacy.item import Weapon
+    from sch5n.deprecated.animation import Animation
+    from sch5n.deprecated.item import Weapon
 
 
 class Enemy(Mob):

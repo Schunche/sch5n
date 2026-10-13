@@ -2,17 +2,18 @@
 """Experimental software."""
 
 from copy import deepcopy
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
-from sch5n.legacy.gui import CursorSlot, Inventory
-from sch5n.legacy.item import Item, Tool
-from sch5n.legacy.item_data import ITEM_DATA
-from sch5n.legacy.loader import NAME_SPACE
-from sch5n.legacy.mob import Mob
+from sch5n.deprecated.gui import CursorSlot, Inventory
+from sch5n.deprecated.item import Item, Tool
+from sch5n.deprecated.item_data import ITEM_DATA
+from sch5n.deprecated.loader import NAME_SPACE
+from sch5n.deprecated.mob import Mob
+from sch5n.math.vector import FloatTuple2
 
 if TYPE_CHECKING:
-    from sch5n.legacy.animation import Animation
-    from sch5n.legacy.tilemap import Tilemap
+    from sch5n.deprecated.animation import Animation
+    from sch5n.deprecated.tilemap import Tilemap
 
 
 class Player(Mob):
@@ -21,14 +22,14 @@ class Player(Mob):
     def __init__(
         self,
         assets: dict[str, dict[str, Animation]],
-        pos: list[float],
+        pos: FloatTuple2,
         game_mode: str = "survival",
     ) -> None:
         """Initialize a Player object.
 
         Args:
             assets (dict[str, dict[str, Animation]]): Player assets.
-            pos (list[float]): The initial position of the player.
+            pos (FloatTuple2): The initial position of the player.
 
         """
         super().__init__(species="player", assets=assets, pos=pos)
@@ -62,8 +63,9 @@ class Player(Mob):
         """You can only assingn to this for some reason."""
         return self.inventory.slots
 
+    @override
     def update(
-        self, tilemap: Tilemap, movement: tuple[int, int] = (0, 0)
+        self, tilemap: Tilemap, movement: FloatTuple2 | None = None
     ) -> None:
         """Update the player's position and animation.
 
@@ -72,6 +74,9 @@ class Player(Mob):
             movement (tuple, optional): A tuple representing movement input.
 
         """
+        if movement is None:
+            movement = FloatTuple2(0, 0)
+
         # Inherit parent's .update
         super().update(tilemap, movement=movement)
 
@@ -89,7 +94,7 @@ class Player(Mob):
             self.collisions["left"] or self.collisions["right"]
         ) and self.airTime > activation_time:
             self.wall_slide = True
-            self.velocity[1] = min(self.velocity[1], 0.5)
+            self.velocity = self.velocity.with_y(min(self.velocity[1], 0.5))
             if self.collisions["right"]:
                 self.flip = False
             else:
@@ -108,16 +113,16 @@ class Player(Mob):
     def jump(self) -> None:
         if self.wall_slide:
             if self.flip:
-                self.velocity[0] = 3.5
+                self.velocity = self.velocity.with_x(3.5)
             else:
-                self.velocity[0] = -3.5
+                self.velocity = self.velocity.with_x(-3.5)
 
-            self.velocity[1] = -2.5
+            self.velocity = self.velocity.with_y(-2.5)
             self.airTime = 5
             self.jumps = max(0, self.jumps - 1)
 
         elif self.jumps:
-            self.velocity[1] = -3
+            self.velocity = self.velocity.with_y(-3)
             self.jumps -= 1
             self.airTime = 5
 

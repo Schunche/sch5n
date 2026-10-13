@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, cast
 
 import pygame
 
-from sch5n.helper.log import log_error
-from sch5n.legacy.loader import (
+from sch5n.common.log import log_error
+from sch5n.deprecated.loader import (
     FIX_SETTINGS,
     NAME_SPACE,
     SETTINGS,
@@ -15,7 +15,7 @@ from sch5n.legacy.loader import (
 )
 
 if TYPE_CHECKING:
-    from sch5n.legacy.item import Item
+    from sch5n.deprecated.item import Item
 
 # https://fonts.google.com/specimen/Pixelify+Sans?query=pixel
 

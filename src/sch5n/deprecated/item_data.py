@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-from sch5n.legacy.item import Block, Item, SwingTool
+from sch5n.deprecated.item import Block, Item, SwingTool
 
 ITEM_DATA: dict[int, Item] = {
     0: SwingTool(

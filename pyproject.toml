@@ -33,6 +33,8 @@ dependencies = [
     "pytest-cov",
     "ruff",
     "fastapi[standard]",
+    "psutil",
+    "zeroconf",
 ]
 
 [tool]

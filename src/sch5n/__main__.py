@@ -10,7 +10,7 @@ import platform
 
 from sch5n import __package__ as _package
 from sch5n.__oldmain__ import Main
-from sch5n.core.environment import EnvironmentFlag
+from sch5n.common.environment import EnvironmentFlag
 
 
 def main() -> None:

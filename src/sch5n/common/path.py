@@ -9,8 +9,8 @@ import platformdirs
 
 from sch5n import __author__, __version__
 from sch5n import __package__ as _package
+from sch5n.common.environment import EnvironmentFlag
 from sch5n.common.exceptions import VersionError
-from sch5n.core.environment import EnvironmentFlag
 
 _TARGET_PLATFORMDIRS_VERSION = "4.11.9"
 if platformdirs.version.version != _TARGET_PLATFORMDIRS_VERSION:

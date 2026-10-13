@@ -141,9 +141,10 @@ class _LanguageDictionary:
 
             try:
                 cls._parse_file(path)
-                count += 1
             except _FileFormatError:
-                path.unlink()
+                pass
+            else:
+                count += 1
 
         if not cls._DICTIONARY:
             msg = "No localization found at all..."

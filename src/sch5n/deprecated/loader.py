@@ -8,7 +8,7 @@ from typing import Any
 import pydantic
 import pygame
 
-from sch5n.helper.log import log_error, log_message
+from sch5n.common.log import log_error, log_message
 
 pygame.init()
 
@@ -153,7 +153,7 @@ def load_dir(path: str) -> dict[str, pygame.Surface]:
     """
     images: dict[str, pygame.Surface] = {}
     for image_namep in pathlib.Path(f"src/img/{path}").iterdir():
-        image_name = str(image_namep)
+        image_name = image_namep.name
         images[image_name[: image_name.index(".")]] = load_image(
             f"{path}/{image_name[: image_name.index(".")]}"
         )
@@ -173,7 +173,7 @@ def load_images_as_list(path: str) -> list[pygame.Surface]:
     return [
         load_image(f"{path}/{image_name[: image_name.index(".")]}")
         for image_name in sorted(
-            str(p) for p in pathlib.Path(f"src/img/{path}").iterdir()
+            p.name for p in pathlib.Path(f"src/img/{path}").iterdir()
         )
     ]
 
@@ -210,7 +210,7 @@ def load_tiles_resized(
 ) -> dict[str, pygame.surface.Surface]:
     ret: dict[str, pygame.surface.Surface] = {}
     for pathp in pathlib.Path(path_dir).iterdir():
-        path = str(pathp)
+        path = pathp.name
         ret[path[: path.index(".")]] = load_image_resized(path, (size, size))
     return ret
 

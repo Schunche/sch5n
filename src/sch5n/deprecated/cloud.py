@@ -3,7 +3,7 @@
 
 from typing import TYPE_CHECKING
 
-from sch5n.port.random import choice, randf
+from sch5n.interface.random import choice, randf
 
 if TYPE_CHECKING:
     import pygame

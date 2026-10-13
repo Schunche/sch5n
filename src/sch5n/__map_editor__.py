@@ -8,9 +8,9 @@ if __name__ != "__main__":
 
 import pygame
 
-from sch5n.helper.log import log_message, log_success
-from sch5n.legacy.loader import SETTINGS, load_tiles
-from sch5n.legacy.tilemap import Tilemap
+from sch5n.common.log import log_info, log_message
+from sch5n.deprecated.loader import SETTINGS, load_tiles
+from sch5n.deprecated.tilemap import Tilemap
 
 pygame.init()
 
@@ -28,7 +28,7 @@ MOUSE_BUTTON_DOWN = 5
 
 def exit_app() -> None:
     """Exit the application."""
-    log_success("Successfully run program")
+    log_info("Successfully run program")
     pygame.quit()
     sys.exit()
 
@@ -81,7 +81,7 @@ class Main:
             "down": False,
         }
 
-        self.tile_list: list[tuple[str | int]] = []
+        self.tile_list: list[tuple[str, int]] = []
         for block in self.assets["tiles"]:
             for variant in self.assets["tiles"][block]:
                 self.tile_list.append((block, variant))

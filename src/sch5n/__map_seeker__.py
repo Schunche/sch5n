@@ -8,11 +8,11 @@ if __name__ != "__main__":
 
 import pygame
 
-from sch5n.helper.log import log_message, log_success
-from sch5n.legacy.loader import SETTINGS, load_tiles_resized
-from sch5n.legacy.tilemap import Tilemap
+from sch5n.common.log import log_info, log_message
+from sch5n.deprecated.loader import SETTINGS, load_tiles_resized
+from sch5n.deprecated.tilemap import Tilemap
 
-log_success("Program started")
+log_info("Program started")
 pygame.init()
 log_message("Initialized pygame")
 
@@ -65,7 +65,7 @@ class Main:
 
     def exit_app(self) -> None:
         """Exit the application."""
-        log_success(f"Successfully run program: {self.clock}")
+        log_info(f"Successfully run program: {self.clock}")
         pygame.quit()
         sys.exit()
 

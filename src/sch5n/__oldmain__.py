@@ -8,14 +8,14 @@ from copy import deepcopy
 
 import pygame
 
-from sch5n.helper.log import log_error, log_message, log_success
-from sch5n.legacy.animation import Animation
-from sch5n.legacy.cloud import Clouds
-from sch5n.legacy.floating_item import FloatingItem
-from sch5n.legacy.gui import Button, render_text
-from sch5n.legacy.item import Item, Tool
-from sch5n.legacy.item_surface import ITEM_IMAGE
-from sch5n.legacy.loader import (
+from sch5n.common.log import log_error, log_info, log_message
+from sch5n.deprecated.animation import Animation
+from sch5n.deprecated.cloud import Clouds
+from sch5n.deprecated.floating_item import FloatingItem
+from sch5n.deprecated.gui import Button, render_text
+from sch5n.deprecated.item import Item, Tool
+from sch5n.deprecated.item_surface import ITEM_IMAGE
+from sch5n.deprecated.loader import (
     FIX_SETTINGS,
     NAME_SPACE,
     SETTINGS,
@@ -25,12 +25,13 @@ from sch5n.legacy.loader import (
     load_images_as_list,
     load_tiles,
 )
-from sch5n.legacy.particle import Particle
-from sch5n.legacy.player import Player
-from sch5n.legacy.table import SAME_LOOT_TILE
-from sch5n.legacy.tilemap import Tilemap
-from sch5n.port.pygame import MouseButton
-from sch5n.port.random import randf
+from sch5n.deprecated.particle import Particle
+from sch5n.deprecated.player import Player
+from sch5n.deprecated.table import SAME_LOOT_TILE
+from sch5n.deprecated.tilemap import Tilemap
+from sch5n.interface.pygame import MouseButton
+from sch5n.interface.random import randf
+from sch5n.math.vector import FloatTuple2, IntTuple2
 
 if __name__ != "__main__":
     sys.exit()
@@ -41,7 +42,7 @@ os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 logging.basicConfig(level=logging.DEBUG)
 
 
-log_success("Program started")
+log_info("Program started")
 
 
 pygame.init()
@@ -56,7 +57,7 @@ GAME_MODE: str = "admin"
 
 def exit_app() -> None:
     """Exit the application."""
-    log_success("Successfully ran program")
+    log_info("Successfully ran program")
     pygame.quit()
     sys.exit()
 
@@ -151,10 +152,10 @@ class Main:
 
         self.player: Player = Player(
             self.assets["mob"],
-            pos=[
+            pos=FloatTuple2(
                 SETTINGS.window_width / 2,
                 SETTINGS.window_height / 2,
-            ],
+            ),
             game_mode=GAME_MODE,
         )
         log_message("Created player")
@@ -304,17 +305,18 @@ class Main:
         if spawn_type == "tile_broke":
             self.floating_items.append(
                 FloatingItem(
-                    [
+                    FloatTuple2(
                         SETTINGS.tile_size * (self.tile_pos_at_mouse[0] + 0.5)
                         - ITEM_IMAGE[item.id].get_width() * 0.5,
                         SETTINGS.tile_size * self.tile_pos_at_mouse[1],
-                    ],
+                    ),
                     item,
                 )
             )
             # Set .velocity to a bit side so it has a curve TODO using random
-            self.floating_items[-1].velocity[1] = -0.3 - randf() * 0.2
-            self.floating_items[-1].velocity[0] = (randf() * 2 - 1) * 2
+            self.floating_items[-1].velocity = FloatTuple2(
+                (randf() * 2 - 1) * 2, -0.3 - randf() * 0.2
+            )
 
     def set_state(self, state: str) -> None:
         """Set the current state of the game."""
@@ -916,10 +918,9 @@ class Main:
                 if kill:
                     self.particles.remove(particle)
                 if particle.species == "leaf":
-                    particle.pos = (
+                    particle.pos = particle.pos.with_x(
                         particle.pos[0]
-                        + math.sin(particle.animation.frame * 0.035) * 0.25,
-                        particle.pos[1],
+                        + math.sin(particle.animation.frame * 0.035) * 0.25
                     )
 
             # Player movement
@@ -936,7 +937,7 @@ class Main:
             for index, floating_item in enumerate(self.floating_items.copy()):
                 floating_item.update(
                     self.tilemap,
-                    (
+                    FloatTuple2(
                         self.player.pos[0]
                         + self.player.pivot[0]
                         + self.player.hitbox_width / 2,
@@ -974,7 +975,9 @@ class Main:
             self.clouds.render(self.WINDOW, offset=self.render_scroll)
 
             # Tilemap
-            self.tilemap.render(self.WINDOW, offset=self.render_scroll)
+            self.tilemap.render(
+                self.WINDOW, offset=IntTuple2(*self.render_scroll)
+            )
 
             # Mobs
             self.player.render(self.WINDOW, offset=self.render_scroll)
@@ -985,7 +988,9 @@ class Main:
 
             # Floating items
             for item in self.floating_items:
-                item.render(self.WINDOW, offset=self.render_scroll)
+                item.render(
+                    self.WINDOW, offset=FloatTuple2(*self.render_scroll)
+                )
 
             # Inventory
             if self.state == "main_game":
