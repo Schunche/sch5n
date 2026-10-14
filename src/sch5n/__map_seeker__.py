@@ -11,6 +11,7 @@ import pygame
 from sch5n.common.log import log_info, log_message
 from sch5n.deprecated.loader import SETTINGS, load_tiles_resized
 from sch5n.deprecated.tilemap import Tilemap
+from sch5n.math.vector import IntTuple2
 
 log_info("Program started")
 pygame.init()
@@ -27,21 +28,23 @@ class Main:
         """Initialize the game.
 
         Args:
-            tile_size (int, optional): Size of the tiles.
+            tile_size (int, optional): Size of the tile.
 
         """
         self.SETTINGS = SETTINGS
         self.tile_size: int = tile_size
 
         self.assets: dict[str, dict[str, pygame.Surface]] = {}
-        self.assets["tiles"] = load_tiles_resized(
+        self.assets["tile"] = load_tiles_resized(
             "src/img/bit", self.tile_size
         )
         log_message("Loaded tile assets")
 
+        map_name = "map1"
+
         self.tilemap: Tilemap = Tilemap(
-            assets=self.assets["tiles"],
-            map_name="procedural",
+            assets=self.assets,
+            map_name=map_name,
         )
         log_message("Created tilemap")
 
@@ -52,7 +55,7 @@ class Main:
             self.SETTINGS.window_height,
         ])
         pygame.display.set_caption(
-            f"{self.SETTINGS["window_name"]} von Map Seeker"
+            f"{map_name} von Map Seeker"
         )
 
         self.pos: list[float] = [0, 0]
@@ -108,7 +111,7 @@ class Main:
         """Handle rendering of game objects."""
         self.WINDOW.fill([0, 0, 0])
 
-        self.tilemap.render_seek(self.WINDOW, offset=self.pos)
+        self.tilemap.render_seek(self.WINDOW, offset=IntTuple2(*(int(n) for n in self.pos)))
 
     def run(self) -> None:
         """Run the game do_loop."""

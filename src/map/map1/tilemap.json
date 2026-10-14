@@ -35,30 +35,6 @@
         "block": "dirt",
         "variant": 0
     },
-    "30;14": {
-        "block": "dirt",
-        "variant": 0
-    },
-    "31;14": {
-        "block": "dirt",
-        "variant": 0
-    },
-    "32;14": {
-        "block": "dirt",
-        "variant": 0
-    },
-    "33;14": {
-        "block": "dirt",
-        "variant": 0
-    },
-    "34;14": {
-        "block": "dirt",
-        "variant": 0
-    },
-    "29;14": {
-        "block": "dirt",
-        "variant": 0
-    },
     "27;14": {
         "block": "dirt",
         "variant": 0
@@ -84,15 +60,15 @@
         "variant": 0
     },
     "18;15": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "19;15": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "20;15": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "21;15": {
@@ -132,23 +108,23 @@
         "variant": 0
     },
     "22;16": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "23;16": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "24;16": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "25;16": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "26;16": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "27;16": {
@@ -160,155 +136,107 @@
         "variant": 0
     },
     "29;16": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "30;16": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "31;16": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "32;16": {
-        "block": "dirt",
-        "variant": 0
-    },
-    "32;17": {
-        "block": "dirt",
-        "variant": 0
-    },
-    "33;17": {
-        "block": "dirt",
-        "variant": 0
-    },
-    "34;17": {
-        "block": "dirt",
-        "variant": 0
-    },
-    "35;17": {
-        "block": "dirt",
-        "variant": 0
-    },
-    "33;18": {
-        "block": "dirt",
-        "variant": 0
-    },
-    "32;18": {
-        "block": "dirt",
-        "variant": 0
-    },
-    "31;18": {
-        "block": "dirt",
-        "variant": 0
-    },
-    "30;18": {
-        "block": "dirt",
-        "variant": 0
-    },
-    "29;18": {
-        "block": "dirt",
-        "variant": 0
-    },
-    "28;18": {
-        "block": "dirt",
-        "variant": 0
-    },
-    "27;18": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "26;18": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "25;18": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "24;18": {
-        "block": "dirt",
-        "variant": 0
-    },
-    "31;17": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "30;17": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "29;17": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "28;17": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "27;17": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "26;17": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "25;17": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "24;17": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "23;17": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "22;17": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "21;17": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "20;17": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "19;17": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "21;16": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "20;16": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "19;16": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "18;16": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "17;16": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "16;16": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "15;16": {
-        "block": "dirt",
+        "block": "stone",
         "variant": 0
     },
     "14;16": {
@@ -344,10 +272,6 @@
         "variant": 0
     },
     "10;15": {
-        "block": "dirt",
-        "variant": 0
-    },
-    "9;15": {
         "block": "dirt",
         "variant": 0
     },
@@ -403,19 +327,7 @@
         "block": "oakLeaf",
         "variant": 0
     },
-    "16;6": {
-        "block": "oakLeaf",
-        "variant": 0
-    },
     "15;7": {
-        "block": "oakLeaf",
-        "variant": 0
-    },
-    "15;6": {
-        "block": "oakLeaf",
-        "variant": 0
-    },
-    "14;6": {
         "block": "oakLeaf",
         "variant": 0
     },
@@ -440,6 +352,166 @@
         "variant": 0
     },
     "17;8": {
+        "block": "oakLeaf",
+        "variant": 0
+    },
+    "30;15": {
+        "block": "dirt",
+        "variant": 0
+    },
+    "31;15": {
+        "block": "dirt",
+        "variant": 0
+    },
+    "23;18": {
+        "block": "stone",
+        "variant": 0
+    },
+    "22;18": {
+        "block": "stone",
+        "variant": 0
+    },
+    "18;17": {
+        "block": "stone",
+        "variant": 0
+    },
+    "17;17": {
+        "block": "stone",
+        "variant": 0
+    },
+    "16;17": {
+        "block": "stone",
+        "variant": 0
+    },
+    "29;14": {
+        "block": "dirt",
+        "variant": 0
+    },
+    "30;14": {
+        "block": "dirt",
+        "variant": 0
+    },
+    "31;14": {
+        "block": "dirt",
+        "variant": 0
+    },
+    "32;14": {
+        "block": "dirt",
+        "variant": 0
+    },
+    "33;14": {
+        "block": "dirt",
+        "variant": 0
+    },
+    "34;14": {
+        "block": "dirt",
+        "variant": 0
+    },
+    "32;15": {
+        "block": "dirt",
+        "variant": 0
+    },
+    "33;15": {
+        "block": "dirt",
+        "variant": 0
+    },
+    "11;14": {
+        "block": "dirt",
+        "variant": 0
+    },
+    "10;14": {
+        "block": "dirt",
+        "variant": 0
+    },
+    "9;14": {
+        "block": "dirt",
+        "variant": 0
+    },
+    "29;13": {
+        "block": "oakLog",
+        "variant": 0
+    },
+    "29;12": {
+        "block": "oakLog",
+        "variant": 0
+    },
+    "29;11": {
+        "block": "oakLog",
+        "variant": 0
+    },
+    "29;8": {
+        "block": "oakLeaf",
+        "variant": 0
+    },
+    "29;7": {
+        "block": "oakLeaf",
+        "variant": 0
+    },
+    "29;9": {
+        "block": "oakLogLeaf",
+        "variant": 0
+    },
+    "29;10": {
+        "block": "oakLogLeaf",
+        "variant": 0
+    },
+    "15;6": {
+        "block": "oakLeaf",
+        "variant": 0
+    },
+    "14;6": {
+        "block": "oakLeaf",
+        "variant": 0
+    },
+    "16;6": {
+        "block": "oakLeaf",
+        "variant": 0
+    },
+    "28;7": {
+        "block": "oakLeaf",
+        "variant": 0
+    },
+    "30;7": {
+        "block": "oakLeaf",
+        "variant": 0
+    },
+    "30;8": {
+        "block": "oakLeaf",
+        "variant": 0
+    },
+    "28;8": {
+        "block": "oakLeaf",
+        "variant": 0
+    },
+    "28;9": {
+        "block": "oakLeaf",
+        "variant": 0
+    },
+    "28;10": {
+        "block": "oakLeaf",
+        "variant": 0
+    },
+    "27;10": {
+        "block": "oakLeaf",
+        "variant": 0
+    },
+    "27;9": {
+        "block": "oakLeaf",
+        "variant": 0
+    },
+    "30;9": {
+        "block": "oakLeaf",
+        "variant": 0
+    },
+    "30;10": {
+        "block": "oakLeaf",
+        "variant": 0
+    },
+    "31;10": {
+        "block": "oakLeaf",
+        "variant": 0
+    },
+    "31;9": {
         "block": "oakLeaf",
         "variant": 0
     }

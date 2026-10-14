@@ -11,6 +11,7 @@ import pygame
 from sch5n.common.log import log_info, log_message
 from sch5n.deprecated.loader import SETTINGS, load_tiles
 from sch5n.deprecated.tilemap import Tilemap
+from sch5n.math.vector import FloatTuple2, IntTuple2
 
 pygame.init()
 
@@ -40,20 +41,20 @@ class Main:
         """Initialize the game.
 
         Args:
-            tile_size (int, optional): Size of the tiles. Defaults to 32.
+            tile_size (int, optional): Size of the tile. Defaults to 32.
 
         """
         self.SETTINGS = SETTINGS
         self.tile_size: int = tile_size
 
         self.assets: dict[str, dict[str, pygame.Surface]] = {}
-        self.assets["tiles"] = load_tiles("src/img/tile")
+        self.assets["tile"] = load_tiles("tile")
         log_message("Loaded tile assets")
 
         map_name = "map1"
 
         self.tilemap: Tilemap = Tilemap(
-            assets=self.assets["tiles"], map_name=map_name
+            assets=self.assets, map_name=map_name
         )
         log_message("Created tilemap")
 
@@ -82,11 +83,11 @@ class Main:
         }
 
         self.tile_list: list[tuple[str, int]] = []
-        for block in self.assets["tiles"]:
-            for variant in self.assets["tiles"][block]:
+        for block in self.assets["tile"]:
+            for variant in self.assets["tile"][block]:
                 self.tile_list.append((block, variant))
         self.tile_index: int = 0
-        self.current_tile_img: pygame.Surface = self.assets["tiles"][
+        self.current_tile_img: pygame.Surface = self.assets["tile"][
             self.tile_list[self.tile_index][0]
         ][self.tile_list[self.tile_index][1]].copy()
         self.current_tile_img.set_alpha(100)
@@ -178,7 +179,7 @@ class Main:
             log_message(f"Tile deleted at {self.tile_pos}")
             self.tilemap.delete_tile(self.tile_pos)
 
-        self.current_tile_img = self.assets["tiles"][
+        self.current_tile_img = self.assets["tile"][
             self.tile_list[self.tile_index][0]
         ][self.tile_list[self.tile_index][1]].copy()
         self.current_tile_img.set_alpha(100)
@@ -187,7 +188,7 @@ class Main:
         """Handle rendering of game objects."""
         self.WINDOW.fill([0, 0, 0])
 
-        self.tilemap.render(self.WINDOW, offset=self.pos)
+        self.tilemap.render(self.WINDOW, offset=IntTuple2(*self.pos))
 
         self.WINDOW.blit(
             self.current_tile_img,

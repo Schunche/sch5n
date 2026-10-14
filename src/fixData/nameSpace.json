@@ -70,7 +70,8 @@
         "grass": "dirt"
     }, "toolRequired": {
         "pickaxe": {
-            "dirt": 50
+            "dirt": 50,
+            "stone": 50
         }, "axe": {
         "oakLog": 20,
         "oakLeaf": 10,
