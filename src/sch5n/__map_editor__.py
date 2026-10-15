@@ -11,7 +11,7 @@ import pygame
 from sch5n.common.log import log_info, log_message
 from sch5n.deprecated.loader import SETTINGS, load_tiles
 from sch5n.deprecated.tilemap import Tilemap
-from sch5n.math.vector import FloatTuple2, IntTuple2
+from sch5n.math.vector import IntTuple2
 
 pygame.init()
 
@@ -53,9 +53,7 @@ class Main:
 
         map_name = "map1"
 
-        self.tilemap: Tilemap = Tilemap(
-            assets=self.assets, map_name=map_name
-        )
+        self.tilemap: Tilemap = Tilemap(assets=self.assets, map_name=map_name)
         log_message("Created tilemap")
 
         self.clock: pygame.time.Clock = pygame.time.Clock()

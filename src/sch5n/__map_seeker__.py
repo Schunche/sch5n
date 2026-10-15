@@ -35,9 +35,7 @@ class Main:
         self.tile_size: int = tile_size
 
         self.assets: dict[str, dict[str, pygame.Surface]] = {}
-        self.assets["tile"] = load_tiles_resized(
-            "src/img/bit", self.tile_size
-        )
+        self.assets["tile"] = load_tiles_resized("src/img/bit", self.tile_size)
         log_message("Loaded tile assets")
 
         map_name = "map1"
@@ -54,9 +52,7 @@ class Main:
             self.SETTINGS.window_width,
             self.SETTINGS.window_height,
         ])
-        pygame.display.set_caption(
-            f"{map_name} von Map Seeker"
-        )
+        pygame.display.set_caption(f"{map_name} von Map Seeker")
 
         self.pos: list[float] = [0, 0]
         self.movement_input: dict[str, bool] = {
@@ -111,7 +107,9 @@ class Main:
         """Handle rendering of game objects."""
         self.WINDOW.fill([0, 0, 0])
 
-        self.tilemap.render_seek(self.WINDOW, offset=IntTuple2(*(int(n) for n in self.pos)))
+        self.tilemap.render_seek(
+            self.WINDOW, offset=IntTuple2(*(int(n) for n in self.pos))
+        )
 
     def run(self) -> None:
         """Run the game do_loop."""

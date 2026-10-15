@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-import datetime
+import datetime as dt
 import json
 import pathlib
 from typing import NotRequired, TypedDict, cast
@@ -19,9 +19,7 @@ PHYSICS_TILES: set[str] = set(NAME_SPACE["physics_tiles"])
 
 
 def get_map_name() -> str:
-    return str(datetime.datetime.now(datetime.UTC).timestamp()).replace(
-        ".", "_"
-    )
+    return str(dt.datetime.now(dt.UTC).timestamp()).replace(".", "_")
 
 
 class Tile(TypedDict):
