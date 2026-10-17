@@ -6,8 +6,8 @@ import logging
 import math
 import pathlib
 
-from sch5n.common.log import log_error, log_message
 from sch5n.interface.random import choice, randbelow, randf, randint
+from sch5n.utility.log import log_message
 
 _logger = logging.getLogger(__name__)
 
@@ -197,6 +197,3 @@ if __name__ == "__main__":
 
     save_map(generated_map, filename)
     _logger.info("Map saved to '%s'", filename)
-
-else:
-    log_error("Did not do anything")

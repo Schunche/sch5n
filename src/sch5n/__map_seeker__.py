@@ -3,15 +3,11 @@
 
 import sys
 
-if __name__ != "__main__":
-    sys.exit()
-
 import pygame
 
-from sch5n.common.log import log_info, log_message
 from sch5n.deprecated.loader import SETTINGS, load_tiles_resized
 from sch5n.deprecated.tilemap import Tilemap
-from sch5n.math.vector import IntTuple2
+from sch5n.utility.log import log_info, log_message
 
 log_info("Program started")
 pygame.init()
@@ -107,9 +103,7 @@ class Main:
         """Handle rendering of game objects."""
         self.WINDOW.fill([0, 0, 0])
 
-        self.tilemap.render_seek(
-            self.WINDOW, offset=IntTuple2(*(int(n) for n in self.pos))
-        )
+        self.tilemap.render_seek(self.WINDOW, offset=self.pos)
 
     def run(self) -> None:
         """Run the game do_loop."""
@@ -122,5 +116,6 @@ class Main:
             pygame.display.update()
 
 
-GAME: Main = Main()
-GAME.run()
+if __name__ == "__main__":
+    GAME: Main = Main()
+    GAME.run()

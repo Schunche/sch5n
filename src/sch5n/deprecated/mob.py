@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING
 import pygame
 
 from sch5n.deprecated.loader import SETTINGS
-from sch5n.math.vector import FloatTuple2, IntTuple2
 
 if TYPE_CHECKING:
     from sch5n.deprecated.animation import Animation
     from sch5n.deprecated.tilemap import Tilemap
+    from sch5n.math.vector import FloatTuple2, IntTuple2
 
 
 class Mob:
@@ -35,7 +35,7 @@ class Mob:
         self.height: int = 48
 
         # Vector from TopLeft of posxy to TopLeft of hitboxWH
-        self.pivot: FloatTuple2 = FloatTuple2(0, 0)
+        self.pivot: FloatTuple2 = (0, 0)
 
         self.hitbox_width: int = 48
         self.hitbox_height: int = 48
@@ -49,10 +49,10 @@ class Mob:
             "down": False,
             "space": False,
         }
-        self.velocity: FloatTuple2 = FloatTuple2(0, 0)
+        self.velocity: FloatTuple2 = (0, 0)
 
         self.action: str = ""
-        self.animation_offset: IntTuple2 = IntTuple2(0, 0)
+        self.animation_offset: IntTuple2 = (0, 0)
         self.flip: bool = False
 
         self.set_action("idle")
@@ -60,8 +60,8 @@ class Mob:
     def rect(self) -> pygame.rect.Rect:
         """Return the rectangular hitbox of the mob."""
         return pygame.Rect(
-            self.pos.x + self.pivot.x,
-            self.pos.y + self.pivot.y,
+            self.pos[0] + self.pivot[0],
+            self.pos[1] + self.pivot[1],
             self.hitbox_width,
             self.hitbox_height,
         )
@@ -79,9 +79,7 @@ class Mob:
                 self.action
             ].copy()
 
-    def update(
-        self, tilemap: Tilemap, movement: FloatTuple2 | None = None
-    ) -> None:
+    def update(self, tilemap: Tilemap, movement: FloatTuple2 = (0, 0)) -> None:
         """Update the mob's position and handle collisions with the tilemap.
 
         Args:
@@ -89,27 +87,23 @@ class Mob:
             movement (FloatTuple2, optional): The movement vector.
 
         """
-        if movement is None:
-            movement = FloatTuple2(0, 0)
-
         self.collisions: dict[str, bool] = {
             "left": False,
             "right": False,
             "up": False,
             "down": False,
         }
-        frame_movement: FloatTuple2 = FloatTuple2(
-            movement[0] + self.velocity[0], movement[1] + self.velocity[1]
+        frame_movement: FloatTuple2 = (
+            movement[0] + self.velocity[0],
+            movement[1] + self.velocity[1],
         )
 
-        self.pos = FloatTuple2(self.pos.x + frame_movement.x, self.pos.y)
+        self.pos = (self.pos[0] + frame_movement[0], self.pos[1])
         mob_rect: pygame.Rect = self.rect()
-        for rect in tilemap.physics_rects_around(
-            IntTuple2(
-                int(self.pos.x + self.pivot.x + self.hitbox_width / 2),
-                int(self.pos.y + self.pivot.y + self.hitbox_height / 2),
-            )
-        ):
+        for rect in tilemap.physics_rects_around((
+            int(self.pos[0] + self.pivot[0] + self.hitbox_width / 2),
+            int(self.pos[1] + self.pivot[1] + self.hitbox_height / 2),
+        )):
             if rect.colliderect(mob_rect):
                 if frame_movement[0] > 0:
                     mob_rect.right = rect.left
@@ -117,16 +111,14 @@ class Mob:
                 if frame_movement[0] < 0:
                     mob_rect.left = rect.right
                     self.collisions["left"] = True
-                self.pos = FloatTuple2(mob_rect.x - self.pivot[0], self.pos.y)
+                self.pos = (mob_rect.x - self.pivot[0], self.pos[1])
 
-        self.pos = FloatTuple2(self.pos.x, self.pos.y + frame_movement[1])
+        self.pos = (self.pos[0], self.pos[1] + frame_movement[1])
         mob_rect: pygame.Rect = self.rect()
-        for rect in tilemap.physics_rects_around(
-            IntTuple2(
-                int(self.pos[0] + self.pivot[0] + self.hitbox_width / 2),
-                int(self.pos[1] + self.pivot[1] + self.hitbox_height / 2),
-            )
-        ):
+        for rect in tilemap.physics_rects_around((
+            int(self.pos[0] + self.pivot[0] + self.hitbox_width / 2),
+            int(self.pos[1] + self.pivot[1] + self.hitbox_height / 2),
+        )):
             if rect.colliderect(mob_rect):
                 if frame_movement[1] > 0:
                     mob_rect.bottom = rect.top
@@ -134,34 +126,37 @@ class Mob:
                 if frame_movement[1] < 0:
                     mob_rect.top = rect.bottom
                     self.collisions["up"] = True
-                self.pos = FloatTuple2(self.pos.x, mob_rect.y - self.pivot[1])
+                self.pos = (self.pos[0], mob_rect.y - self.pivot[1])
 
         truncate_from_value = 0.1
 
         if movement[0] > 0:
             self.flip = False
             if not self.collisions["right"]:
-                self.velocity = FloatTuple2(
-                    min(2, self.velocity[0] + 0.1), self.velocity.y
+                self.velocity = (
+                    min(2, self.velocity[0] + 0.1),
+                    self.velocity[1],
                 )
         elif movement[0] < 0:
             self.flip = True
             if not self.collisions["left"]:
-                self.velocity = self.velocity.with_x(
-                    max(-2, self.velocity[0] - 0.1)
+                self.velocity = (
+                    max(-2, self.velocity[0] - 0.1),
+                    self.velocity[1],
                 )
         elif self.velocity[0] > truncate_from_value:
-            self.velocity = self.velocity.with_x(self.velocity.x - 0.1)
+            self.velocity = (self.velocity[0] - 0.1, self.velocity[1])
         elif self.velocity[0] < -truncate_from_value:
-            self.velocity = self.velocity.with_x(self.velocity.x + 0.1)
+            self.velocity = (self.velocity[0] + 0.1, self.velocity[1])
         else:
-            self.velocity = self.velocity.with_x(0)
+            self.velocity = (0, self.velocity[1])
 
-        self.velocity = self.velocity.with_y(
-            min(SETTINGS.tile_size / 8, self.velocity[1] + 0.1)
+        self.velocity = (
+            self.velocity[0],
+            min(SETTINGS.tile_size / 8, self.velocity[1] + 0.1),
         )
         if self.collisions["down"] or self.collisions["up"]:
-            self.velocity = self.velocity.with_y(0)
+            self.velocity = (self.velocity[0], 0)
 
         self.animation.update()
 

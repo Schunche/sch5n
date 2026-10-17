@@ -9,11 +9,11 @@ from sch5n.deprecated.item import Item, Tool
 from sch5n.deprecated.item_data import ITEM_DATA
 from sch5n.deprecated.loader import NAME_SPACE
 from sch5n.deprecated.mob import Mob
-from sch5n.math.vector import FloatTuple2
 
 if TYPE_CHECKING:
     from sch5n.deprecated.animation import Animation
     from sch5n.deprecated.tilemap import Tilemap
+    from sch5n.math.vector import FloatTuple2
 
 
 class Player(Mob):
@@ -64,9 +64,7 @@ class Player(Mob):
         return self.inventory.slots
 
     @override
-    def update(
-        self, tilemap: Tilemap, movement: FloatTuple2 | None = None
-    ) -> None:
+    def update(self, tilemap: Tilemap, movement: FloatTuple2 = (0, 0)) -> None:
         """Update the player's position and animation.
 
         Args:
@@ -74,9 +72,6 @@ class Player(Mob):
             movement (tuple, optional): A tuple representing movement input.
 
         """
-        if movement is None:
-            movement = FloatTuple2(0, 0)
-
         # Inherit parent's .update
         super().update(tilemap, movement=movement)
 
@@ -94,7 +89,7 @@ class Player(Mob):
             self.collisions["left"] or self.collisions["right"]
         ) and self.airTime > activation_time:
             self.wall_slide = True
-            self.velocity = self.velocity.with_y(min(self.velocity[1], 0.5))
+            self.velocity = (self.velocity[0], min(self.velocity[1], 0.5))
             if self.collisions["right"]:
                 self.flip = False
             else:
@@ -113,16 +108,16 @@ class Player(Mob):
     def jump(self) -> None:
         if self.wall_slide:
             if self.flip:
-                self.velocity = self.velocity.with_x(3.5)
+                self.velocity = (3.5, self.velocity[1])
             else:
-                self.velocity = self.velocity.with_x(-3.5)
+                self.velocity = (-3.5, self.velocity[1])
 
-            self.velocity = self.velocity.with_y(-2.5)
+            self.velocity = (self.velocity[0], -2.5)
             self.airTime = 5
             self.jumps = max(0, self.jumps - 1)
 
         elif self.jumps:
-            self.velocity = self.velocity.with_y(-3)
+            self.velocity = (self.velocity[0], -3)
             self.jumps -= 1
             self.airTime = 5
 

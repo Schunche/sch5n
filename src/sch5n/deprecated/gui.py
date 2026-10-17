@@ -6,13 +6,13 @@ from typing import TYPE_CHECKING, cast
 
 import pygame
 
-from sch5n.common.log import log_error
 from sch5n.deprecated.loader import (
     FIX_SETTINGS,
     NAME_SPACE,
     SETTINGS,
     load_sys_font,
 )
+from sch5n.utility.log import log_error
 
 if TYPE_CHECKING:
     from sch5n.deprecated.item import Item

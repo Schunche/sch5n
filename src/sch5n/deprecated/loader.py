@@ -8,7 +8,7 @@ from typing import Any
 import pydantic
 import pygame
 
-from sch5n.common.log import log_error, log_message
+from sch5n.utility.log import log_error, log_message
 
 pygame.init()
 

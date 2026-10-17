@@ -9,8 +9,8 @@ import platformdirs
 
 from sch5n import __author__, __version__
 from sch5n import __package__ as _package
-from sch5n.common.environment import EnvironmentFlag
-from sch5n.common.exceptions import VersionError
+from sch5n.environment.environment import Flag
+from sch5n.utility.exceptions import VersionError
 
 _TARGET_PLATFORMDIRS_VERSION = "4.11.9"
 if platformdirs.version.version != _TARGET_PLATFORMDIRS_VERSION:
@@ -207,7 +207,7 @@ def is_server() -> bool:
         bool: -//-
 
     """
-    return os.environ.get(EnvironmentFlag.SERVER, "0") == "1"
+    return os.environ.get(Flag.SERVER, "0") == "1"
 
 
 def is_developer() -> bool:
@@ -217,7 +217,7 @@ def is_developer() -> bool:
         bool: -//-
 
     """
-    return os.environ.get(EnvironmentFlag.DEVELOPER, "0") == "1"
+    return os.environ.get(Flag.DEVELOPER, "0") == "1"
 
 
 def get_platformdirs() -> platformdirs.api.PlatformDirsABC:

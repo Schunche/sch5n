@@ -3,12 +3,11 @@
 
 from typing import TYPE_CHECKING
 
-from sch5n.math.vector import FloatTuple2
-
 if TYPE_CHECKING:
     import pygame
 
     from sch5n.deprecated.animation import Animation
+    from sch5n.math.vector import FloatTuple2
 
 
 class Particle:
@@ -28,7 +27,7 @@ class Particle:
         assets: dict[str, Animation],
         species: str,
         pos: FloatTuple2,
-        velocity: FloatTuple2 | None = None,
+        velocity: FloatTuple2 = (0, 0),
         frame: int = 0,
     ) -> None:
         """Initialize a Particle object.
@@ -41,9 +40,6 @@ class Particle:
             frame (int, optional): Initial frame of the animation.
 
         """
-        if velocity is None:
-            velocity = FloatTuple2(0, 0)
-
         self.species: str = species
         self.pos: FloatTuple2 = pos
         self.velocity: FloatTuple2 = velocity
@@ -63,7 +59,7 @@ class Particle:
         if self.animation.done:
             kill = True
 
-        self.pos = FloatTuple2(
+        self.pos = (
             self.pos[0] + self.velocity[0],
             self.pos[1] + self.velocity[1],
         )
@@ -73,7 +69,7 @@ class Particle:
         return kill
 
     def render(
-        self, surface: pygame.Surface, offset: FloatTuple2 | None = None
+        self, surface: pygame.Surface, offset: FloatTuple2 = (0, 0)
     ) -> None:
         """Render the particle on the given surface with an optional offset.
 
@@ -82,9 +78,6 @@ class Particle:
             offset (list[int], optional): The offset to apply to the particle.
 
         """
-        if offset is None:
-            offset = FloatTuple2(0, 0)
-
         image: pygame.Surface = self.animation.img()
         surface.blit(
             image,

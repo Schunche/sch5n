@@ -8,9 +8,9 @@ from typing import NotRequired, TypedDict, cast
 
 import pygame
 
-from sch5n.common.log import log_error, log_info, log_message
 from sch5n.deprecated.loader import NAME_SPACE, SETTINGS, get_bit
-from sch5n.math.vector import FloatTuple2, IntTuple2
+from sch5n.math.vector import FloatTuple2, IntTuple2, deserialize_int_tuple_2
+from sch5n.utility.log import log_error, log_info, log_message
 
 NEIGHBOR_OFFSETS: list[tuple[int, int]] = [
     (i, j) for j in range(-2, 3) for i in range(-2, 3)
@@ -72,7 +72,10 @@ class Tilemap:
         for location, tile in self.tilemap.copy().items():
             if tile["block"] == block:
                 matches.append((
-                    location.scalei(SETTINGS.tile_size),
+                    (
+                        location[0] * SETTINGS.tile_size,
+                        location[1] * SETTINGS.tile_size,
+                    ),
                     tile.copy(),
                 ))
                 if not do_keep:
@@ -159,7 +162,7 @@ class Tilemap:
 
         tuple_keys_tilemap: dict[IntTuple2, Tile] = {}
         for key, value in str_keys_tilemap.items():
-            tuple_keys_tilemap[IntTuple2.deserialize(key)] = value
+            tuple_keys_tilemap[deserialize_int_tuple_2(key)] = value
 
         self.tilemap = tuple_keys_tilemap
 
@@ -197,12 +200,12 @@ class Tilemap:
 
         """
         tiles: list[tuple[IntTuple2, Tile]] = []
-        tile_pos: IntTuple2 = IntTuple2(
+        tile_pos: IntTuple2 = (
             int(world_pos[0] // SETTINGS.tile_size),
             int(world_pos[1] // SETTINGS.tile_size),
         )
         for offset in NEIGHBOR_OFFSETS:
-            check_location: IntTuple2 = IntTuple2(
+            check_location: IntTuple2 = (
                 tile_pos[0] + offset[0],
                 tile_pos[1] + offset[1],
             )
@@ -229,12 +232,12 @@ class Tilemap:
                 SETTINGS.tile_size,
                 SETTINGS.tile_size,
             )
-            for tile in self.tiles_around(FloatTuple2(*world_pos.as_tuple()))
+            for tile in self.tiles_around((world_pos[0], world_pos[1]))
             if tile[1]["block"] in PHYSICS_TILES
         ]
 
     def render(
-        self, surface: pygame.Surface, offset: IntTuple2 | None = None
+        self, surface: pygame.Surface, offset: IntTuple2 = (0, 0)
     ) -> None:
         """Render the tilemap on the given surface with an optional offset.
 
@@ -243,21 +246,18 @@ class Tilemap:
             offset (tuple[float], optional): Offset to apply on the tilemap.
 
         """
-        if offset is None:
-            offset = IntTuple2(0, 0)
-
         for x in range(
-            offset.x // SETTINGS.tile_size - 1,
-            (offset.x + surface.width) // SETTINGS.tile_size + 1,
+            offset[0] // SETTINGS.tile_size - 1,
+            (offset[0] + surface.width) // SETTINGS.tile_size + 1,
         ):
             for y in range(
                 offset[1] // SETTINGS.tile_size - 1,
                 (offset[1] + surface.get_height()) // SETTINGS.tile_size + 1,
             ):
-                location: IntTuple2 = IntTuple2(x, y)
+                location: IntTuple2 = (x, y)
                 if location in self.tilemap:
                     tile: Tile = self.tilemap[location]
-                    world_pos: IntTuple2 = IntTuple2(
+                    world_pos: IntTuple2 = (
                         location[0] * SETTINGS.tile_size - offset[0],
                         location[1] * SETTINGS.tile_size - offset[1],
                     )
@@ -293,7 +293,7 @@ class Tilemap:
                         )
 
     def render_seek(
-        self, surface: pygame.Surface, offset: IntTuple2 | None = None
+        self, surface: pygame.Surface, offset: IntTuple2 = (0, 0)
     ) -> None:
         """Render the tilemap on the given surface with an optional offset.
 
@@ -302,9 +302,6 @@ class Tilemap:
             offset (IntTuple2, optional) = (0, 0): The offset to apply.
 
         """
-        if offset is None:
-            offset = IntTuple2(0, 0)
-
         for x in range(
             offset[0] // SETTINGS.tile_size - 1,
             (offset[0] + surface.get_width()) // SETTINGS.tile_size + 1,
@@ -313,7 +310,7 @@ class Tilemap:
                 offset[1] // SETTINGS.tile_size - 1,
                 (offset[1] + surface.get_height()) // SETTINGS.tile_size + 1,
             ):
-                location: IntTuple2 = IntTuple2(x, y)
+                location: IntTuple2 = (x, y)
                 tile = self.tilemap.get(location)
                 if tile is not None:
                     surface.blit(

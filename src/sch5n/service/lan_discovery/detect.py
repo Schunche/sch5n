@@ -1,7 +1,6 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-import socket
 import time
 
 from zeroconf import (
@@ -12,26 +11,20 @@ from zeroconf import (
     Zeroconf,
 )
 
-IPV4_BYTE_COUNT = 4
-IPV6_BYTE_COUNT = 16
-
 
 class GameServerListener(ServiceListener):
     def add_service(self, zc: Zeroconf, type_: str, name: str) -> None:
         info = zc.get_service_info(type_, name)
         if info:
             port = info.port
-            print(f" SERVER DETECTED: {name}")
-            print(f"\tPort: {port}")
-            print("\tAvailable connection routes:")
+            print(f"Server detected: {name} - on port: {port}")
+            print("Available connection routes:")
 
-            for addr_bytes in info.addresses:
-                if len(addr_bytes) == IPV4_BYTE_COUNT:
-                    ip = socket.inet_ntoa(addr_bytes)
-                    print(f"\t\t[IPv4] -> {ip}:{port}")
-                elif len(addr_bytes) == IPV6_BYTE_COUNT:
-                    ip = socket.inet_ntop(socket.AF_INET6, addr_bytes)
-                    print(f"\t\t[IPv6] -> [{ip}]:{port}")
+            for ip in info.parsed_addresses(IPVersion.All):
+                if ":" in ip:
+                    print(f"\t[IPv6] -> [{ip}]:{port}")
+                else:
+                    print(f"\t[IPv4] -> {ip}:{port}")
 
     def update_service(self, zc: Zeroconf, type_: str, name: str) -> None:
         pass

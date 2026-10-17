@@ -1,14 +1,15 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
+import logging
 import math
+import os
 import secrets
 import sys
 from copy import deepcopy
 
 import pygame
 
-from sch5n.common.log import log_error, log_info, log_message
 from sch5n.deprecated.animation import Animation
 from sch5n.deprecated.cloud import Clouds
 from sch5n.deprecated.floating_item import FloatingItem
@@ -31,12 +32,8 @@ from sch5n.deprecated.table import SAME_LOOT_TILE
 from sch5n.deprecated.tilemap import Tilemap
 from sch5n.interface.pygame import MouseButton
 from sch5n.interface.random import randf
-from sch5n.math.vector import FloatTuple2, IntTuple2
-
-if __name__ != "__main__":
-    sys.exit()
-import logging
-import os
+from sch5n.math.vector import FloatTuple2
+from sch5n.utility.log import log_error, log_info, log_message
 
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 logging.basicConfig(level=logging.DEBUG)
@@ -152,7 +149,7 @@ class Main:
 
         self.player: Player = Player(
             self.assets["mob"],
-            pos=FloatTuple2(
+            pos=(
                 SETTINGS.window_width / 2,
                 SETTINGS.window_height / 2,
             ),
@@ -305,7 +302,7 @@ class Main:
         if spawn_type == "tile_broke":
             self.floating_items.append(
                 FloatingItem(
-                    FloatTuple2(
+                    (
                         SETTINGS.tile_size * (self.tile_pos_at_mouse[0] + 0.5)
                         - ITEM_IMAGE[item.id].get_width() * 0.5,
                         SETTINGS.tile_size * self.tile_pos_at_mouse[1],
@@ -314,8 +311,9 @@ class Main:
                 )
             )
             # Set .velocity to a bit side so it has a curve TODO using random
-            self.floating_items[-1].velocity = FloatTuple2(
-                (randf() * 2 - 1) * 2, -0.3 - randf() * 0.2
+            self.floating_items[-1].velocity = (
+                (randf() * 2 - 1) * 2,
+                -0.3 - randf() * 0.2,
             )
 
     def set_state(self, state: str) -> None:
@@ -918,9 +916,10 @@ class Main:
                 if kill:
                     self.particles.remove(particle)
                 if particle.species == "leaf":
-                    particle.pos = particle.pos.with_x(
+                    particle.pos = (
                         particle.pos[0]
-                        + math.sin(particle.animation.frame * 0.035) * 0.25
+                        + math.sin(particle.animation.frame * 0.035) * 0.25,
+                        particle.pos[1],
                     )
 
             # Player movement
@@ -937,7 +936,7 @@ class Main:
             for index, floating_item in enumerate(self.floating_items.copy()):
                 floating_item.update(
                     self.tilemap,
-                    FloatTuple2(
+                    (
                         self.player.pos[0]
                         + self.player.pivot[0]
                         + self.player.hitbox_width / 2,
@@ -975,9 +974,7 @@ class Main:
             self.clouds.render(self.WINDOW, offset=self.render_scroll)
 
             # Tilemap
-            self.tilemap.render(
-                self.WINDOW, offset=IntTuple2(*self.render_scroll)
-            )
+            self.tilemap.render(self.WINDOW, offset=self.render_scroll)
 
             # Mobs
             self.player.render(self.WINDOW, offset=self.render_scroll)
@@ -988,9 +985,7 @@ class Main:
 
             # Floating items
             for item in self.floating_items:
-                item.render(
-                    self.WINDOW, offset=FloatTuple2(*self.render_scroll)
-                )
+                item.render(self.WINDOW, offset=self.render_scroll)
 
             # Inventory
             if self.state == "main_game":
@@ -1045,5 +1040,6 @@ class Main:
             self.frame += 1
 
 
-GAME: Main = Main()
-GAME.run()
+if __name__ == "__main__":
+    GAME: Main = Main()
+    GAME.run()

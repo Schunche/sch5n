@@ -1,7 +1,8 @@
 dev/
-venv/
-__pycache__/
 
+.venv/
+
+__pycache__/
 .ruff_cache/
 *.egg-info/
 

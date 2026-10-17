@@ -4,17 +4,35 @@ Experimental software
 
 ## Run
 
-### Linux
+### Python 3.15
 
-    python -m venv venv
-    source venv/bin/activate
+#### Linux
+
+    python3.15 -m venv .venv
+    source .venv/bin/activate
     python -m pip install --upgrade pip
     python -m pip install -e .
 
-### Windows
+#### Windows
 
-    python -m venv venv
-    (Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; .\venv\Scripts\Activate.ps1
+    python -m venv .venv
+    (Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; .\.venv\Scripts\Activate.ps1
+    python -m pip install --upgrade pip
+    python -m pip install -e .
+
+### Python 3.14
+
+#### Linux
+
+    python -m venv .venv
+    source .venv/bin/activate
+    python -m pip install --upgrade pip
+    python -m pip install -e .
+
+#### Windows
+
+    python -m venv .venv
+    (Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; .\.venv\Scripts\Activate.ps1
     python -m pip install --upgrade pip
     python -m pip install -e .
 
