@@ -4,6 +4,7 @@
 import math
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
+from warnings import deprecated
 
 from sch5n.deprecated.item_surface import ITEM_ICON
 from sch5n.deprecated.loader import NAME_SPACE, SETTINGS, load_sys_font
@@ -12,6 +13,7 @@ if TYPE_CHECKING:
     import pygame
 
 
+@deprecated("Create substitute")
 @dataclass(repr=False)
 class Item:
     """Basic item class."""
@@ -49,12 +51,14 @@ class Item:
             surface.blit(text_rendered, text_rect)
 
 
+@deprecated("Create substitute")
 @dataclass
 class Weapon(Item):
     damage: int = field(default=5)  # This is strange
     knockback: int | None = field(default=5)
 
 
+@deprecated("Create substitute")
 @dataclass
 class ReforgeableItem(Item):
     reforge: str | None = field(default=None)
@@ -69,11 +73,13 @@ class ReforgeableItem(Item):
         return f"{self.reforge.title()} {super().get_name()}"
 
 
+@deprecated("Create substitute")
 @dataclass
 class Tool(Item):
     tool_type: dict[str, int] = field(default_factory=lambda: {"pickaxe": 5})
 
 
+@deprecated("Create substitute")
 @dataclass
 class SwingWeapon(Weapon, ReforgeableItem):
     def __post_init__(self) -> None:
@@ -92,17 +98,20 @@ class SwingWeapon(Weapon, ReforgeableItem):
         """
 
 
+@deprecated("Create substitute")
 @dataclass(kw_only=True)
 class SwingTool(SwingWeapon, Tool):
     pass
 
 
+@deprecated("Create substitute")
 @dataclass
 class PlaceableItem(Item):
     def get_name(self) -> str:
         return f"{super().get_name()} (x{self.amount!s})"
 
 
+@deprecated("Create substitute")
 @dataclass(kw_only=True)
 class Block(PlaceableItem):
     pass

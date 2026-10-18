@@ -43,7 +43,7 @@ Experimental software
 
 ## Development
 
-### For fast development
+### For fast development - No documentation checking
 
     python -m ruff check . --fix --ignore PLR0915 --ignore PLR0912 --ignore C901 --ignore D417 --ignore D103 --ignore D107 --ignore D101 --ignore D102 --ignore DOC201 --ignore D105 --ignore PLR0911 --ignore DOC501 --ignore PLR0913 --ignore PLR0917 --ignore PLR1702
 

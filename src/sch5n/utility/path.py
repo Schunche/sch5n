@@ -10,7 +10,7 @@ import platformdirs
 from sch5n import __author__, __version__
 from sch5n import __package__ as _package
 from sch5n.environment.environment import Flag
-from sch5n.utility.exceptions import VersionError
+from sch5n.error.exceptions import VersionError
 
 _TARGET_PLATFORMDIRS_VERSION = "4.11.9"
 if platformdirs.version.version != _TARGET_PLATFORMDIRS_VERSION:
@@ -27,6 +27,8 @@ _DEV_SITE_DIR = _DEV_DIR / "site"
 
 
 class DevPlatformDirs(platformdirs.api.PlatformDirsABC):  # ruff: ignore[too-many-public-methods]
+    """Custom directory for developers."""
+
     @property
     @override
     def user_data_dir(self) -> str:

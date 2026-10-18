@@ -35,10 +35,11 @@ class Player(Mob):
         super().__init__(species="player", assets=assets, pos=pos)
         self.airTime: int = 0
 
+        self.max_jumps: int
         if game_mode == "admin":
-            self.max_jumps: int = 2**8
+            self.max_jumps = 2**8
         else:
-            self.max_jumps: int = 1
+            self.max_jumps = 1
         self.jumps: int = self.max_jumps
 
         self.wall_slide = False

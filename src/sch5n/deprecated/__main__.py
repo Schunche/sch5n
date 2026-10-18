@@ -2,21 +2,22 @@
 """Experimental software."""
 
 import logging
-import math
 import os
-import secrets
-import sys
-from copy import deepcopy
+from warnings import deprecated
+lazy import math
+lazy import secrets
+lazy import sys
+lazy from copy import deepcopy
 
 import pygame
 
-from sch5n.deprecated.animation import Animation
-from sch5n.deprecated.cloud import Clouds
-from sch5n.deprecated.floating_item import FloatingItem
-from sch5n.deprecated.gui import Button, render_text
-from sch5n.deprecated.item import Item, Tool
-from sch5n.deprecated.item_surface import ITEM_IMAGE
-from sch5n.deprecated.loader import (
+lazy from sch5n.deprecated.animation import Animation
+lazy from sch5n.deprecated.cloud import Clouds
+lazy from sch5n.deprecated.floating_item import FloatingItem
+lazy from sch5n.deprecated.gui import Button, render_text
+lazy from sch5n.deprecated.item import Item, Tool
+lazy from sch5n.deprecated.item_surface import ITEM_IMAGE
+lazy from sch5n.deprecated.loader import (
     FIX_SETTINGS,
     NAME_SPACE,
     SETTINGS,
@@ -26,39 +27,40 @@ from sch5n.deprecated.loader import (
     load_images_as_list,
     load_tiles,
 )
-from sch5n.deprecated.particle import Particle
-from sch5n.deprecated.player import Player
-from sch5n.deprecated.table import SAME_LOOT_TILE
-from sch5n.deprecated.tilemap import Tilemap
-from sch5n.interface.pygame import MouseButton
-from sch5n.interface.random import randf
-from sch5n.math.vector import FloatTuple2
-from sch5n.utility.log import log_error, log_info, log_message
+lazy from sch5n.deprecated.particle import Particle
+lazy from sch5n.deprecated.player import Player
+lazy from sch5n.deprecated.loot_table import SAME_LOOT_TILE
+lazy from sch5n.deprecated.tilemap import Tilemap
+lazy from sch5n.interface.pygame import MouseButton
+lazy from sch5n.interface.random import randf
 
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
+_logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 
-log_info("Program started")
+_logger.info("Program started")
 
 
 pygame.init()
-log_message("Initialized pygame")
+_logger.debug("Initialized pygame")
 
 
-log_message("Loaded local dependency from script")
+_logger.debug("Loaded local dependency from script")
 
 # INITIAL INPUTS HERE
 GAME_MODE: str = "admin"
 
 
+@deprecated("Create substitute")
 def exit_app() -> None:
     """Exit the application."""
-    log_info("Successfully ran program")
+    _logger.info("Successfully ran program")
     pygame.quit()
     sys.exit()
 
 
+@deprecated("Create substitute")
 class Main:
     """Main class responsible for managing the game."""
 
@@ -100,7 +102,7 @@ class Main:
         pygame.display.set_caption(FIX_SETTINGS.window_name)
         pygame.display.set_icon(self.assets["icon"]["main"])
         self.scroll: list[float] = [0, 0]
-        log_message("Created main window")
+        _logger.debug("Created main window")
 
         # Tilemap
         self.assets["tile"] = load_tiles("tile")
@@ -110,24 +112,23 @@ class Main:
             )
             for key, surf in load_dir("tileBreakage").items()
         }
-        log_message("Loaded tile assets")
+        _logger.debug("Loaded tile assets")
 
         self.tilemap: Tilemap = Tilemap(assets=self.assets, map_name="map1")
-        log_message("Created tilemap")
+        _logger.debug("Created tilemap")
         self.floating_items: list[FloatingItem] = []
 
         # Clouds
         self.assets["cloud"] = load_images_as_list("cloud")
 
         self.wind_speed: float = randf() * 2 - 1
-        log_message(f"Starting wind speed: {round(self.wind_speed, 2)}")
-        log_message(
-            f"Starting wind direction: {
-                "west" if self.wind_speed < 0 else "east"
-            }"
+        _logger.debug("Starting wind speed: %s", {round(self.wind_speed, 2)})
+        _logger.debug(
+            "Starting wind direction: %s",
+            "west" if self.wind_speed < 0 else "east",
         )
         self.clouds = Clouds(self.assets["cloud"], count=2**4)
-        log_message("Generated clouds")
+        _logger.debug("Generated clouds")
 
         # Player
         self.assets["mob"]["player"]["idle"] = Animation(
@@ -155,7 +156,7 @@ class Main:
             ),
             game_mode=GAME_MODE,
         )
-        log_message("Created player")
+        _logger.debug("Created player")
 
         # Particles
         self.assets["particle"]["leaf"] = Animation(
@@ -227,16 +228,15 @@ class Main:
                             )
                         ]
 
-        log_message(
+        _logger.debug(
             "Loaded and generated particles, and their respective spawners."
         )
-        log_message(
-            f"Currently {
-                sum(
-                    len(rect_list)
-                    for rect_list in self.particle_spawner_tiles.values()
-                )
-            } tiles emit particles"
+        _logger.debug(
+            "Currently %s tiles emit particles",
+            sum(
+                len(rect_list)
+                for rect_list in self.particle_spawner_tiles.values()
+            ),
         )
 
         self.clicking: dict[str, bool] = {
@@ -319,7 +319,7 @@ class Main:
     def set_state(self, state: str) -> None:
         """Set the current state of the game."""
         self.state = state
-        log_message(f"Set state to '{state}'")
+        _logger.debug("Set state to '%s'", state)
 
     def handle_events(self) -> None:
         """Handle input game events."""
@@ -446,7 +446,7 @@ class Main:
                                         case "exit":
                                             exit_app()
                                         case _:
-                                            log_error(
+                                            _logger.error(
                                                 "Unknow button fount "
                                                 "in existing state: "
                                                 "Ignoring this will "
@@ -459,14 +459,14 @@ class Main:
                                                 "main_game_settings"
                                             )
                                         case _:
-                                            log_error(
+                                            _logger.error(
                                                 "Unknow button found "
                                                 "in existing state: "
                                                 "Ignoring this will "
                                                 "have consequences"
                                             )
                                 case _:
-                                    log_error(
+                                    _logger.error(
                                         "Unknown button found "
                                         "in unknown state: "
                                         "Ignoring this may have consequences"
@@ -491,7 +491,7 @@ class Main:
                                 self.player.inventory.get_item_by_num(slot_num)
                                 is None
                             ):
-                                log_message("'None' with 'None' lol")
+                                _logger.debug("'None' with 'None' lol")
 
                             elif (
                                 self.player.inventory.get_item_by_num(
@@ -509,7 +509,7 @@ class Main:
                                         slot_num
                                     ),
                                 )
-                                log_message("Picked up 'non-stackable' item")
+                                _logger.debug("Picked up 'non-stackable' item")
 
                             else:
                                 if (
@@ -554,7 +554,7 @@ class Main:
                                         item.amount -= 1
                                         if item.amount == 0:
                                             self.player.cursor_slot.slot = None
-                                log_message(
+                                _logger.debug(
                                     "Picked up half of 'stackable' item"
                                 )
 
@@ -574,7 +574,7 @@ class Main:
                                         slot_num
                                     ),
                                 )
-                                log_message("Put down 'non-stackable' item")
+                                _logger.debug("Put down 'non-stackable' item")
 
                             elif (
                                 self.player.inventory.get_item_by_num(
@@ -591,7 +591,7 @@ class Main:
                                         slot_num
                                     ),
                                 )
-                                log_message("Swapped 'non-stackable' items")
+                                _logger.debug("Swapped 'non-stackable' items")
 
                             else:
                                 (
@@ -603,7 +603,7 @@ class Main:
                                         slot_num
                                     ),
                                 )
-                                log_message(
+                                _logger.debug(
                                     "Put 'non-stackable' item in "
                                     "the place of 'stackable' item"
                                 )
@@ -620,7 +620,7 @@ class Main:
                             if self.player.cursor_slot.slot.amount == 0:
                                 self.player.cursor_slot.slot = None
 
-                            log_message(
+                            _logger.debug(
                                 "Put down 1 'stackable' item to empty slot"
                             )
 
@@ -639,7 +639,7 @@ class Main:
                                     slot_num
                                 ),
                             )
-                            log_message(
+                            _logger.debug(
                                 "Swapped 'non-stackable' item "
                                 "with 'stackable' items"
                             )
@@ -657,7 +657,7 @@ class Main:
                                     slot_num
                                 ),
                             )
-                            log_message("Swapped 'stackable' items")
+                            _logger.debug("Swapped 'stackable' items")
                         # ItemIDs are the same
 
                         elif (
@@ -669,7 +669,7 @@ class Main:
                             ).max_amount
                         ):
                             # Item in inventpry is at max stack
-                            log_message(
+                            _logger.debug(
                                 "Inventory full, can't put items in it"
                             )
                         else:
@@ -677,7 +677,9 @@ class Main:
                             self.player.cursor_slot.slot.amount -= 1
                             if self.player.cursor_slot.slot.amount == 0:
                                 self.player.cursor_slot.slot = None
-                            log_message("Put 1 'stackable' item to inventory")
+                            _logger.debug(
+                                "Put 1 'stackable' item to inventory"
+                            )
 
                 if event.button == MouseButton.UP:
                     self.clicking["up"] = True
@@ -865,7 +867,7 @@ class Main:
 
                     self.player.tool_use_penalty = 0
                 elif not self.frame % 10:
-                    log_message("Other tool is required to break this tile")
+                    _logger.debug("Other tool is required to break this tile")
 
             # Background
             self.clouds.update(wind_speed=self.wind_speed)
@@ -1040,6 +1042,9 @@ class Main:
             self.frame += 1
 
 
+def main() -> None:
+    Main().run()
+
+
 if __name__ == "__main__":
-    GAME: Main = Main()
-    GAME.run()
+    main()

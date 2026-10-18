@@ -23,6 +23,7 @@ dependencies = [
     "platformdirs",
     "pygame-ce",
     "pyglm",
+    "pyright",
     "python-dotenv",
     "python-steam-api",
     "sounddevice",

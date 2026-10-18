@@ -5,27 +5,28 @@ import json
 import logging
 import math
 import pathlib
+from warnings import deprecated
 
 from sch5n.interface.random import choice, randbelow, randf, randint
-from sch5n.utility.log import log_message
 
 _logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 
-def save_map(tilemap: dict[str, dict[str, str | int]], alias: str) -> None:
+def _save_map(tilemap: dict[str, dict[str, str | int]], alias: str) -> None:
     with pathlib.Path(f"src/map/{alias}/tilemap.json").open(
         mode="w", encoding="utf-8"
     ) as file:
         json.dump(tilemap, file, indent=4)
 
 
-def round_up(num: float) -> int:
+def _round_up(num: float) -> int:
     if float.is_integer(num):
         return int(num)
     return int(num) + 1
 
 
-def diff25(num: float) -> float:
+def _diff25(num: float) -> float:
     return abs(num * (1 + math.sin(randf() * 2 * math.pi) / 4))
 
 
@@ -37,11 +38,12 @@ def _temp_func_2(num: float) -> float:
     return 8 * ((1 - num) ** 3)
 
 
-def random_signed[T: int | float](num: T) -> T:
+def _random_signed(num: float) -> float:
     return ((randbelow(1) * 2) - 1) * num
 
 
-def generate_map(
+@deprecated("Create substitute")
+def _generate_map(
     x_left: int = 0, x_right: int = 100, y_top: int = 0, y_bottom: int = 100
 ) -> dict[str, dict[str, str | int]]:
     tilemap: dict[str, dict[str, str | int]] = {}
@@ -73,13 +75,13 @@ def generate_map(
         if count == 0:
             if block == "stone":
                 patches_in_stroke = int(
-                    diff25(
+                    _diff25(
                         _temp_func((point[1] - y_top) / (until_dirt_y - y_top))
                     )
                 )
             elif block == "dirt":
                 patches_in_stroke = int(
-                    diff25(
+                    _diff25(
                         _temp_func_2(
                             (point[1] - until_dirt_y)
                             / (y_bottom - until_dirt_y)
@@ -101,7 +103,7 @@ def generate_map(
                         continue
 
                     # Place the block if inside the circle
-                    if (x - point[0]) ** 2 + (y - point[1]) ** 2 <= round_up(
+                    if (x - point[0]) ** 2 + (y - point[1]) ** 2 <= _round_up(
                         radius**2
                     ):
                         tilemap[f"{x};{y}"] = {"block": block, "variant": 0}
@@ -111,13 +113,13 @@ def generate_map(
             next_point: tuple[int, int] = (
                 int(
                     point[0]
-                    + random_signed(radius / 2 * math.cos(shift_direction))
+                    + _random_signed(radius / 2 * math.cos(shift_direction))
                 ),
                 int(point[1] + radius / 2 * math.sin(shift_direction)),
             )
             # Change previous radious with a max of 25 %
             next_radius: float = min(
-                max(diff25(radius), 1), 5
+                max(_diff25(radius), 1), 5
             )  # Capped between 1 and 5
 
             draw_patch_stroke(
@@ -130,7 +132,7 @@ def generate_map(
 
     # Stone patches in dirt
     num_of_patches: int = int(
-        diff25((x_right - x_left) * (until_dirt_y - y_top) * 0.003)
+        _diff25((x_right - x_left) * (until_dirt_y - y_top) * 0.003)
     )
     _logger.info("Stone strokes in dirt: %s", num_of_patches)
     for _ in range(num_of_patches):
@@ -141,12 +143,12 @@ def generate_map(
         draw_patch_stroke(point, "stone")
 
     # Dirt patches in stone
-    num_of_patches: int = int(
-        diff25((x_right - x_left) * (y_bottom - until_dirt_y) * 0.004)
+    num_of_patches = int(
+        _diff25((x_right - x_left) * (y_bottom - until_dirt_y) * 0.004)
     )
     _logger.info("Dirt strokes in stone: %s", num_of_patches)
     for _ in range(num_of_patches):
-        point: tuple[int, int] = (
+        point = (
             x_left + int(randf() * (x_right - x_left)),
             until_dirt_y + int(randf() * (y_bottom - until_dirt_y)),
         )
@@ -173,8 +175,9 @@ def generate_map(
     return tilemap
 
 
-if __name__ == "__main__":
-    log_message("Started making it")
+@deprecated("Create substitute")
+def main(filename: str = "procedural") -> None:
+    _logger.info("Started making it")
     # X grows left to right
     # Y grows top to bottom
 
@@ -184,16 +187,21 @@ if __name__ == "__main__":
     map_right: int = 300
     map_top: int = 0
     map_bottom: int = 160
-    log_message(
-        f"In range: x = ({map_left}; {map_right}), "
-        f"y = ({map_top}; {map_bottom})"
+    _logger.info(
+        "In range: x = (%s; %s), y = (%s; %s)",
+        map_left,
+        map_right,
+        map_top,
+        map_bottom,
     )
 
-    filename: str = "procedural"
-
-    generated_map = generate_map(
+    generated_map = _generate_map(
         x_left=map_left, x_right=map_right, y_top=map_top, y_bottom=map_bottom
     )
 
-    save_map(generated_map, filename)
+    _save_map(generated_map, filename)
     _logger.info("Map saved to '%s'", filename)
+
+
+if __name__ == "__main__":
+    main()

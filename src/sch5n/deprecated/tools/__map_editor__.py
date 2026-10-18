@@ -1,20 +1,23 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
+import logging
 import sys
 
 import pygame
 
 from sch5n.deprecated.loader import SETTINGS, load_tiles
 from sch5n.deprecated.tilemap import Tilemap
-from sch5n.utility.log import log_info, log_message
+
+_logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 pygame.init()
 
-log_message("Initialized pygame")
+_logger.debug("Initialized pygame")
 
 
-log_message("Loaded all local dependency script")
+_logger.debug("Loaded all local dependency script")
 
 MOUSE_BUTTON_LEFT = 1
 MOUSE_BUTTON_MIDDLE = 2
@@ -25,7 +28,7 @@ MOUSE_BUTTON_DOWN = 5
 
 def exit_app() -> None:
     """Exit the application."""
-    log_info("Successfully run program")
+    _logger.info("Successfully run program")
     pygame.quit()
     sys.exit()
 
@@ -45,12 +48,12 @@ class Main:
 
         self.assets: dict[str, dict[str, pygame.Surface]] = {}
         self.assets["tile"] = load_tiles("tile")
-        log_message("Loaded tile assets")
+        _logger.debug("Loaded tile assets")
 
         map_name = "map1"
 
         self.tilemap: Tilemap = Tilemap(assets=self.assets, map_name=map_name)
-        log_message("Created tilemap")
+        _logger.debug("Created tilemap")
 
         self.clock: pygame.time.Clock = pygame.time.Clock()
 
@@ -170,7 +173,7 @@ class Main:
             )
 
         if self.clicking["right"] and self.tilemap.is_tile_at(self.tile_pos):
-            log_message(f"Tile deleted at {self.tile_pos}")
+            _logger.debug("Tile deleted at %s", self.tile_pos)
             self.tilemap.delete_tile(self.tile_pos)
 
         self.current_tile_img = self.assets["tile"][
@@ -207,6 +210,9 @@ class Main:
             pygame.display.update()
 
 
+def main() -> None:
+    Main().run()
+
+
 if __name__ == "__main__":
-    GAME: Main = Main()
-    GAME.run()
+    main()

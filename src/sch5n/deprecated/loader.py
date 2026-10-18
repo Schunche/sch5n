@@ -1,14 +1,16 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-import json
+import logging
 import pathlib
-from typing import Any
+lazy import json
+lazy from typing import Any, cast
 
 import pydantic
 import pygame
 
-from sch5n.utility.log import log_error, log_message
+_logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 pygame.init()
 
@@ -28,13 +30,15 @@ def load_json(path: str) -> Any:  # ruff: ignore[any-type]
             return_file = json.load(file)
 
     except FileNotFoundError as e:
-        log_error(f"'src/{path}.json' not found: {e}")
+        _logger.exception("'src/%s.json' not found: %s", path, e.filename)
 
     except UnicodeDecodeError as e:
-        log_error(f"'src/{path}.json' is not a valid JSON file: {e}")
+        _logger.exception(
+            "'src/%s.json' is not a valid JSON file: %s", path, e.reason
+        )
 
     else:
-        log_message(f"'src/{path}.json' found and loaded")
+        _logger.debug("'src/%s.json' found and loaded", path)
         return return_file
 
     return None
@@ -104,7 +108,7 @@ def load_image(path: str) -> pygame.Surface:
         img: pygame.Surface = pygame.image.load(f"src/img/{path}.png")
 
     except FileNotFoundError as e:
-        log_error(f"'src/img/{path}.png' not found: {e}")
+        _logger.exception("'src/img/%s.png' not found: %s", path, e.filename)
 
         return load_image("icon/_")
 
@@ -221,7 +225,7 @@ def get_bit(block: str = "_") -> str:
         return "_"
     for key, value in NAME_SPACE["bitForm"].items():
         if block in value:
-            return key
+            return cast("str", key)
     return "_"
 
 

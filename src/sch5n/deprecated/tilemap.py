@@ -3,6 +3,7 @@
 
 import datetime as dt
 import json
+import logging
 import pathlib
 from typing import NotRequired, TypedDict, cast
 
@@ -10,7 +11,9 @@ import pygame
 
 from sch5n.deprecated.loader import NAME_SPACE, SETTINGS, get_bit
 from sch5n.math.vector import FloatTuple2, IntTuple2, deserialize_int_tuple_2
-from sch5n.utility.log import log_error, log_info, log_message
+
+_logger: logging.Logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 NEIGHBOR_OFFSETS: list[tuple[int, int]] = [
     (i, j) for j in range(-2, 3) for i in range(-2, 3)
@@ -18,7 +21,7 @@ NEIGHBOR_OFFSETS: list[tuple[int, int]] = [
 PHYSICS_TILES: set[str] = set(NAME_SPACE["physics_tiles"])
 
 
-def get_map_name() -> str:
+def _generate_radom_map_name() -> str:
     return str(dt.datetime.now(dt.UTC).timestamp()).replace(".", "_")
 
 
@@ -50,7 +53,9 @@ class Tilemap:
 
         """
         self.assets: dict[str, dict[int, pygame.Surface]] = assets
-        self.map_name: str = get_map_name() if map_name is None else map_name
+        self.map_name: str = (
+            _generate_radom_map_name() if map_name is None else map_name
+        )
         self.tilemap: dict[IntTuple2, Tile] = {}
 
         self.load_map(alias=self.map_name)
@@ -157,7 +162,7 @@ class Tilemap:
             ) as file:
                 str_keys_tilemap = cast("dict[str, Tile]", json.load(file))
         except FileNotFoundError:
-            log_error(f"File '{alias}/tilemap.json' not found.")
+            _logger.critical("File '%s/tilemap.json' not found.", alias)
             return
 
         tuple_keys_tilemap: dict[IntTuple2, Tile] = {}
@@ -166,8 +171,8 @@ class Tilemap:
 
         self.tilemap = tuple_keys_tilemap
 
-        log_info(f"'{alias}' found and loaded as tilemap")
-        log_message(f"'{alias}' currently has {len(self.tilemap)} tiles")
+        _logger.info("'%s' found and loaded as tilemap", alias)
+        _logger.debug("'%s' currently has %s tiles", alias, len(self.tilemap))
 
     def save_map(self, alias: str = "map1") -> None:
         """Save the current tilemap to a JSON file.
@@ -185,7 +190,7 @@ class Tilemap:
         ) as file:
             json.dump(str_keys_tilemap, file, indent=4)
 
-        log_info(f"Tilemap saved to '{alias}/tilemap.json'")
+        _logger.info("Tilemap saved to '%s/tilemap.json'", alias)
 
     def tiles_around(
         self, world_pos: FloatTuple2
@@ -293,22 +298,25 @@ class Tilemap:
                         )
 
     def render_seek(
-        self, surface: pygame.Surface, offset: IntTuple2 = (0, 0)
+        self, surface: pygame.Surface, offset: FloatTuple2 = (0, 0)
     ) -> None:
         """Render the tilemap on the given surface with an optional offset.
 
         Args:
             surface (pygame.Surface): The surface to render the tilemap on.
-            offset (IntTuple2, optional) = (0, 0): The offset to apply.
+            offset (FloatTuple2, optional) = (0, 0): The offset to apply.
 
         """
         for x in range(
-            offset[0] // SETTINGS.tile_size - 1,
-            (offset[0] + surface.get_width()) // SETTINGS.tile_size + 1,
+            int(offset[0] // SETTINGS.tile_size - 1),
+            int((offset[0] + surface.get_width()) // SETTINGS.tile_size + 1),
         ):
             for y in range(
-                offset[1] // SETTINGS.tile_size - 1,
-                (offset[1] + surface.get_height()) // SETTINGS.tile_size + 1,
+                int(offset[1] // SETTINGS.tile_size - 1),
+                int(
+                    (offset[1] + surface.get_height()) // SETTINGS.tile_size
+                    + 1
+                ),
             ):
                 location: IntTuple2 = (x, y)
                 tile = self.tilemap.get(location)

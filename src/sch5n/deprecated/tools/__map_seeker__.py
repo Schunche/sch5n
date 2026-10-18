@@ -1,20 +1,21 @@
 # Copyright (c) 2026 Schunche
 """Game and player management package."""
 
-import sys
+import logging
+lazy import sys
 
 import pygame
 
-from sch5n.deprecated.loader import SETTINGS, load_tiles_resized
-from sch5n.deprecated.tilemap import Tilemap
-from sch5n.utility.log import log_info, log_message
+lazy from sch5n.deprecated.loader import SETTINGS, load_tiles_resized
+lazy from sch5n.deprecated.tilemap import Tilemap
+lazy from sch5n.math.vector import FloatTuple2
 
-log_info("Program started")
+_logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
+
+_logger.info("Program started")
 pygame.init()
-log_message("Initialized pygame")
-
-
-log_message("Loaded all local dependency script")
+_logger.debug("Initialized pygame")
 
 
 class Main:
@@ -32,15 +33,15 @@ class Main:
 
         self.assets: dict[str, dict[str, pygame.Surface]] = {}
         self.assets["tile"] = load_tiles_resized("src/img/bit", self.tile_size)
-        log_message("Loaded tile assets")
+        _logger.debug("Loaded tile assets")
 
         map_name = "map1"
 
         self.tilemap: Tilemap = Tilemap(
-            assets=self.assets,
+            assets=self.assets["tile"],
             map_name=map_name,
         )
-        log_message("Created tilemap")
+        _logger.debug("Created tilemap")
 
         self.clock: pygame.time.Clock = pygame.time.Clock()
 
@@ -50,7 +51,7 @@ class Main:
         ])
         pygame.display.set_caption(f"{map_name} von Map Seeker")
 
-        self.pos: list[float] = [0, 0]
+        self.pos: FloatTuple2 = (0, 0)
         self.movement_input: dict[str, bool] = {
             "left": False,
             "right": False,
@@ -60,7 +61,7 @@ class Main:
 
     def exit_app(self) -> None:
         """Exit the application."""
-        log_info(f"Successfully run program: {self.clock}")
+        _logger.info("Successfully run program: %ss", self.clock.get_time())
         pygame.quit()
         sys.exit()
 
@@ -85,19 +86,21 @@ class Main:
                     self.movement_input[keys[event.key]] = True
 
                 if event.key == pygame.K_r:
-                    self.pos = [self.tile_size, self.tile_size * 0]
+                    self.pos = (self.tile_size, self.tile_size * 0)
 
             if (event.type == pygame.KEYUP) and (event.key in keys):
                 self.movement_input[keys[event.key]] = False
 
     def update_state(self) -> None:
         """Handle game updates."""
-        self.pos[0] += (
-            self.movement_input["right"] - self.movement_input["left"]
-        ) * 5
-        self.pos[1] += (
-            self.movement_input["down"] - self.movement_input["up"]
-        ) * 5
+        self.pos = (
+            (self.movement_input["right"] - self.movement_input["left"]) * 5,
+            self.pos[1],
+        )
+        self.pos = (
+            self.pos[0],
+            (self.movement_input["down"] - self.movement_input["up"]) * 5,
+        )
 
     def render(self) -> None:
         """Handle rendering of game objects."""

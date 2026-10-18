@@ -2,9 +2,9 @@
 """Experimental software."""
 
 import logging
-from typing import TYPE_CHECKING, cast
+lazy from typing import cast
 
-import pygame
+lazy import pygame
 
 from sch5n.deprecated.loader import (
     FIX_SETTINGS,
@@ -12,14 +12,12 @@ from sch5n.deprecated.loader import (
     SETTINGS,
     load_sys_font,
 )
-from sch5n.utility.log import log_error
-
-if TYPE_CHECKING:
-    from sch5n.deprecated.item import Item
+lazy from sch5n.deprecated.item import Item
 
 # https://fonts.google.com/specimen/Pixelify+Sans?query=pixel
 
 _logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 
 def render_text(
@@ -92,6 +90,11 @@ class Button:
         self.border_width: int = border_width
         self.border_radius: int = border_radius
 
+        self.inner_rect: pygame.Rect
+        self.border_rect: pygame.Rect
+        self.text_rendered: pygame.Surface
+        self.text_rect: pygame.Rect
+
         if align_by == "topLeft":
             self.inner_rect = pygame.Rect(
                 self.pos[0], self.pos[1], self.size[0], self.size[1]
@@ -123,12 +126,12 @@ class Button:
                 self.size[0],
                 self.size[1],
             )
-            self.text_rendered: pygame.Surface = self.font.render(
+            self.text_rendered = self.font.render(
                 self.text,
                 antialias=True,
                 color=NAME_SPACE["color"][self.text_color],
             )
-            self.text_rect: pygame.Rect = self.text_rendered.get_rect()
+            self.text_rect = self.text_rendered.get_rect()
             self.text_rect.center = (
                 self.pos[0],
                 self.pos[1] - FIX_SETTINGS.GUI.button_text_vertical_off_error,
@@ -147,12 +150,12 @@ class Button:
                 self.size[0],
                 self.size[1],
             )
-            self.text_rendered: pygame.Surface = self.font.render(
+            self.text_rendered = self.font.render(
                 self.text,
                 antialias=True,
                 color=NAME_SPACE["color"][self.text_color],
             )
-            self.text_rect: pygame.Rect = self.text_rendered.get_rect()
+            self.text_rect = self.text_rendered.get_rect()
             self.text_rect.center = (self.pos[0], self.pos[1])
 
         else:
@@ -206,7 +209,7 @@ class Inventory:
         for index, item in enumerate(args):
             self.slots[index] = item
 
-        inner_rect_size: int = SETTINGS.gui_size * 1.5
+        inner_rect_size: int = int(SETTINGS.gui_size * 1.5)
         self.inner_rects: list[pygame.Rect] = [
             pygame.Rect(
                 FIX_SETTINGS.GUI.outer_window_padding
@@ -254,13 +257,9 @@ class Inventory:
 
     def click(self, mouse_pos: tuple[int, int]) -> bool:  # ruff: ignore[no-self-use, unused-method-argument]
         # Placeholder
-        if True:
-            return False
+        return False
 
         # Actual functionality here
-        _logger.info("clicked")
-
-        return True
 
     def get_item_by_num(self, slot_num: int) -> Item | None:
         return self.slots[slot_num]
@@ -398,7 +397,7 @@ class Inventory:
                     if slot.amount + item.amount <= slot.max_amount:
                         slot.amount += item.amount
                         return None
-                    diff: int = slot.max_amount - slot.amount
+                    diff = slot.max_amount - slot.amount
                     slot.amount = item.max_amount
                     item.amount -= diff
             # To this point filled up all duplicants
@@ -428,7 +427,7 @@ class Inventory:
                         slot.amount += item.amount
                         return None
                     # Decrease with some amount
-                    diff: int = slot.max_amount - slot.amount
+                    diff = slot.max_amount - slot.amount
                     slot.amount = item.max_amount
                     item.amount -= diff
             # To this point filled up all duplicants
@@ -437,7 +436,9 @@ class Inventory:
             return item
             # So it has empty slots
 
-        log_error("Not all cases have been covered, in inventory adding")
+        _logger.critical(
+            "Not all cases have been covered, in inventory adding"
+        )
         return None
 
 

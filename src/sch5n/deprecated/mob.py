@@ -74,7 +74,7 @@ class Mob:
 
         """
         if action != self.action:
-            self.action: str = action
+            self.action = action
             self.animation: Animation = self.assets[self.species][
                 self.action
             ].copy()
@@ -114,7 +114,7 @@ class Mob:
                 self.pos = (mob_rect.x - self.pivot[0], self.pos[1])
 
         self.pos = (self.pos[0], self.pos[1] + frame_movement[1])
-        mob_rect: pygame.Rect = self.rect()
+        mob_rect = self.rect()
         for rect in tilemap.physics_rects_around((
             int(self.pos[0] + self.pivot[0] + self.hitbox_width / 2),
             int(self.pos[1] + self.pivot[1] + self.hitbox_height / 2),

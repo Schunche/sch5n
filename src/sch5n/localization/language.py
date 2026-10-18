@@ -3,9 +3,14 @@
 
 from __future__ import annotations
 
-import json
+import logging
 from pathlib import Path
-from typing import ClassVar, cast
+lazy import json
+lazy from typing import ClassVar, cast
+
+_logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
+
 
 type Language = str
 
@@ -109,7 +114,9 @@ class _LanguageDictionary:
         if key in localization:
             return localization[key]
 
-        # TODO: Log missing localization key  # ruff: ignore[line-contains-todo]
+        _logger.warning(
+            "Missing localization key: %s of language %s", key, cls._language
+        )
 
         fallback = cls._DICTIONARY.get(cls._FALLBACK_LANGUAGE, {})
         if key in fallback:

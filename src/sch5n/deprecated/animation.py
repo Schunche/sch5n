@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Self
+from warnings import deprecated
 
 if TYPE_CHECKING:
     import pygame
 
 
+@deprecated("Create replacement")
 class Animation:
     """A class to represent an animation consisting of a sequence of images.
 

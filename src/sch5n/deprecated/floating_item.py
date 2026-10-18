@@ -74,7 +74,7 @@ class FloatingItem:
                 )
 
         self.pos = (self.pos[0], self.pos[1] + frame_movement[1])
-        item_rect: pygame.Rect = self.get_collision_rect()
+        item_rect = self.get_collision_rect()
         for tile_rect in tilemap.physics_rects_around((
             int(item_rect.x + item_rect.w * 0.5),
             int(item_rect.y + item_rect.h * 0.5),

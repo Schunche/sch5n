@@ -2,10 +2,7 @@
 """Experimental software."""
 
 import secrets
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
+lazy from collections.abc import Callable
 
 
 def randf() -> float:
