@@ -2,4 +2,5 @@
 """Experimental software."""
 
 
-class Tile
+class Tile:
+    pass
