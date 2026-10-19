@@ -15,23 +15,9 @@ Experimental software
 
 #### Windows
 
-    python -m venv .venv
-    (Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; .\.venv\Scripts\Activate.ps1
-    python -m pip install --upgrade pip
-    python -m pip install -e .
+https://www.python.org/downloads/release/pymanager-264/
 
-### Python 3.14
-
-#### Linux
-
-    python -m venv .venv
-    source .venv/bin/activate
-    python -m pip install --upgrade pip
-    python -m pip install -e .
-
-#### Windows
-
-    python -m venv .venv
+    py -m venv .venv
     (Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; .\.venv\Scripts\Activate.ps1
     python -m pip install --upgrade pip
     python -m pip install -e .
