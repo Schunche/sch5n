@@ -5,10 +5,9 @@ import logging
 lazy import contextlib
 lazy import json
 lazy import time
+lazy import zlib
 lazy from pathlib import Path
 lazy from typing import cast
-
-lazy import zstandard
 
 lazy from sch5n.math.vector import (
     IntTuple2,
@@ -102,7 +101,7 @@ class Map:
         with path.open("rb") as file:
             compressed = file.read()
 
-        decompressed = zstandard.decompress(compressed)
+        decompressed = zlib.decompress(compressed)
         json_data = json.loads(decompressed)
 
         try:
@@ -142,7 +141,7 @@ class Map:
         }
 
         json_bytes = json.dumps(json_data).encode(encoding="utf-8")
-        compressed = zstandard.compress(json_bytes, level=1)
+        compressed = zlib.compress(json_bytes, level=1)
 
         _logger.debug(
             "Saving map with compression ratio: %s",
