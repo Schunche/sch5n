@@ -1,15 +1,15 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-from typing import TYPE_CHECKING
+from warnings import deprecated
 
-if TYPE_CHECKING:
-    import pygame
+lazy import pygame
 
-    from sch5n.deprecated.animation import Animation
-    from sch5n.math.vector import FloatTuple2
+lazy from sch5n.deprecated.animation import Animation
+lazy from sch5n.math.vector import FloatTuple2
 
 
+@deprecated("Create substitute.")
 class Particle:
     """A class representing a particle in a game.
 

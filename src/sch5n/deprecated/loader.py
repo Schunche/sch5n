@@ -3,18 +3,25 @@
 
 import logging
 import pathlib
+from warnings import deprecated
 lazy import json
 lazy from typing import Any, cast
 
 import pydantic
 import pygame
 
+from sch5n.function.decorator import instant_call
+
 _logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
-pygame.init()
+
+@instant_call
+def __ensure_init() -> None:
+    pygame.init()
 
 
+@deprecated("Create substitute.")
 def load_json(path: str) -> Any:  # ruff: ignore[any-type]
     """Load json file.
 
@@ -44,6 +51,7 @@ def load_json(path: str) -> Any:  # ruff: ignore[any-type]
     return None
 
 
+@deprecated("Create substitute.")
 class Settings(pydantic.BaseModel):
     window_width: int
     window_height: int
@@ -57,10 +65,12 @@ SETTINGS: Settings = Settings.model_validate_json(
 )
 
 
+@deprecated("Create substitute.")
 class FixGuiMainMenuSettings(pydantic.BaseModel):
     button_padding: int
 
 
+@deprecated("Create substitute.")
 class FixGuiSettings(pydantic.BaseModel):
     button_border_width: int
     button_border_radius: int
@@ -74,6 +84,7 @@ class FixGuiSettings(pydantic.BaseModel):
     main_menu: FixGuiMainMenuSettings
 
 
+@deprecated("Create substitute.")
 class FixSettings(pydantic.BaseModel):
     window_name: str
     reach: int
@@ -94,6 +105,7 @@ NAME_SPACE = load_json("fixData/nameSpace")
 TRANSPARENT_COLOR: list[int] = NAME_SPACE["color"]["toBeTransparent"]
 
 
+@deprecated("Create substitute.")
 def load_image(path: str) -> pygame.Surface:
     """Load a '.png' image from a file.
 
@@ -116,6 +128,7 @@ def load_image(path: str) -> pygame.Surface:
     return img
 
 
+@deprecated("Create substitute.")
 def load_image_resized(path: str, size: tuple[int, int]) -> pygame.Surface:
     """Load an image from a file, and resizes it.
 
@@ -145,6 +158,7 @@ def load_image_resized(path: str, size: tuple[int, int]) -> pygame.Surface:
     return return_image
 
 
+@deprecated("Create substitute.")
 def load_dir(path: str) -> dict[str, pygame.Surface]:
     """Load images from a directory.
 
@@ -164,6 +178,7 @@ def load_dir(path: str) -> dict[str, pygame.Surface]:
     return images
 
 
+@deprecated("Create substitute.")
 def load_images_as_list(path: str) -> list[pygame.Surface]:
     """Load images from a directory into a list of pygame Surface objects.
 
@@ -182,6 +197,7 @@ def load_images_as_list(path: str) -> list[pygame.Surface]:
     ]
 
 
+@deprecated("Create substitute.")
 def load_tiles(path: str) -> dict[str, dict[int, pygame.surface.Surface]]:
     """Load tiles from a directory structure into a dictionary of Surface.
 
@@ -209,6 +225,7 @@ def load_tiles(path: str) -> dict[str, dict[int, pygame.surface.Surface]]:
     return tiles
 
 
+@deprecated("Create substitute.")
 def load_tiles_resized(
     path_dir: str, size: int
 ) -> dict[str, pygame.surface.Surface]:
@@ -219,6 +236,7 @@ def load_tiles_resized(
     return ret
 
 
+@deprecated("Create substitute.")
 def get_bit(block: str = "_") -> str:
     # key <- value
     if block == "_":
@@ -229,12 +247,14 @@ def get_bit(block: str = "_") -> str:
     return "_"
 
 
+@deprecated("Create substitute.")
 def load_sys_font(
     name: str, size: int = 16, *, bold: bool = False, italic: bool = False
 ) -> pygame.font.Font:
     return pygame.font.SysFont(name=name, size=size, bold=bold, italic=italic)
 
 
+@deprecated("Create substitute.")
 def load_icon(path: str) -> pygame.Surface:
     """Load an icon from a file."""
     return load_image_resized(path, (SETTINGS.gui_size, SETTINGS.gui_size))

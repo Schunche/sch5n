@@ -1,12 +1,11 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-from typing import TYPE_CHECKING
+from warnings import deprecated
 
-from sch5n.interface.random import choice, randf
+lazy import pygame
 
-if TYPE_CHECKING:
-    import pygame
+lazy from sch5n.interface.random import choice, randf
 
 
 class Cloud:
@@ -23,7 +22,7 @@ class Cloud:
     def __init__(
         self,
         pos: tuple[float, float],
-        img: pygame.Surface,
+        img: pygame.surface.Surface,
         speed: float,
         depth: float,
     ) -> None:
@@ -41,6 +40,7 @@ class Cloud:
         self.depth: float = depth
         self.speed: float = self.depth / (speed * (2**6))
 
+    @deprecated("Make sure to use delta time.")
     def update(self, wind_speed: float = 1) -> None:
         """Update the position of the cloud based on its speed."""
         self.pos[0] += self.speed * wind_speed
@@ -102,6 +102,7 @@ class Clouds:
 
         self.clouds.sort(key=lambda x: x.depth)
 
+    @deprecated("Make sure to use delta time.")
     def update(self, wind_speed: float = 1) -> None:
         """Update the position of all clouds."""
         for cloud in self.clouds:

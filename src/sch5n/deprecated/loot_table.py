@@ -1,11 +1,9 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from sch5n.deprecated.item import Item
 from sch5n.deprecated.item_data import ITEM_DATA
+lazy from sch5n.deprecated.item import Item
 
 # Loot tables here
 

@@ -1,18 +1,17 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-from typing import TYPE_CHECKING
+from warnings import deprecated
 
-import pygame
+lazy import pygame
 
-from sch5n.deprecated.loader import SETTINGS
-
-if TYPE_CHECKING:
-    from sch5n.deprecated.animation import Animation
-    from sch5n.deprecated.tilemap import Tilemap
-    from sch5n.math.vector import FloatTuple2, IntTuple2
+lazy from sch5n.deprecated.animation import Animation
+lazy from sch5n.deprecated.loader import SETTINGS
+lazy from sch5n.deprecated.tilemap import Tilemap
+lazy from sch5n.math.vector import FloatTuple2, IntTuple2
 
 
+@deprecated("Create substitute.")
 class Mob:
     """A class representing a mobile entity in a game."""
 

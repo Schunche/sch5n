@@ -1,12 +1,14 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
+from warnings import deprecated
 lazy from math import cos, pi
 
 lazy from sch5n.math.scalar import sign_or_zero
 lazy from sch5n.math.vector import FloatTuple2
 
 
+@deprecated("Create substitute.")
 def player_magnet_func(distance: FloatTuple2) -> FloatTuple2:
     """How much should the item move relative to player.
 

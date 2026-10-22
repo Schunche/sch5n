@@ -3,6 +3,7 @@
 
 from copy import deepcopy
 from typing import TYPE_CHECKING, override
+from warnings import deprecated
 
 from sch5n.deprecated.gui import CursorSlot, Inventory
 from sch5n.deprecated.item import Item, Tool
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
     from sch5n.math.vector import FloatTuple2
 
 
+@deprecated("Create substitute.")
 class Player(Mob):
     """A class representing the player character in the game."""
 

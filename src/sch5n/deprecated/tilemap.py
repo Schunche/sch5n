@@ -6,6 +6,7 @@ import json
 import logging
 import pathlib
 from typing import NotRequired, TypedDict, cast
+from warnings import deprecated
 
 import pygame
 
@@ -25,12 +26,14 @@ def _generate_radom_map_name() -> str:
     return str(dt.datetime.now(dt.UTC).timestamp()).replace(".", "_")
 
 
+@deprecated("Create substitute.")
 class Tile(TypedDict):
     block: str
     variant: int
     durability: NotRequired[int]
 
 
+@deprecated("Create substitute.")
 class Tilemap:
     """A class representing a tilemap in a game.
 

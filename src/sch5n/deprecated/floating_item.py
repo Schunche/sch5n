@@ -1,22 +1,22 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-import math
-from copy import deepcopy
-from typing import TYPE_CHECKING
 
-import pygame
+from warnings import deprecated
+lazy import math
+lazy from copy import deepcopy
 
-from sch5n.deprecated.item_surface import ITEM_IMAGE
-from sch5n.deprecated.loader import FIX_SETTINGS, SETTINGS
-from sch5n.deprecated.math_func import player_magnet_func
+lazy import pygame
 
-if TYPE_CHECKING:
-    import sch5n.deprecated.tilemap
-    from sch5n.deprecated.item import Item
-    from sch5n.math.vector import FloatTuple2
+lazy from sch5n.deprecated.item import Item
+lazy from sch5n.deprecated.item_surface import ITEM_IMAGE
+lazy from sch5n.deprecated.loader import FIX_SETTINGS, SETTINGS
+lazy from sch5n.deprecated.math_func import player_magnet_func
+lazy from sch5n.deprecated.tilemap import Tilemap
+lazy from sch5n.math.vector import FloatTuple2
 
 
+@deprecated("Create substitute.")
 class FloatingItem:
     def __init__(self, pos: FloatTuple2, item: Item) -> None:
         self.pos: FloatTuple2 = pos
@@ -31,9 +31,10 @@ class FloatingItem:
             ITEM_IMAGE[self.item.id].get_height() * 0.5,
         )
 
+    @deprecated("Use delta time for your own sake!")
     def update(
         self,
-        tilemap: sch5n.deprecated.tilemap.Tilemap,
+        tilemap: Tilemap,
         player_pos: FloatTuple2 = (0, 0),
     ) -> None:
         """Update the item's position and handle collisions with the tilemap.
@@ -116,10 +117,10 @@ class FloatingItem:
             # The item is in the range of the player
             # So it approaches the player
             app_velocity: FloatTuple2 = player_magnet_func((
-                (player_pos[0] - self.get_collision_rect().centerx)
+                - (player_pos[0] - self.get_collision_rect().centerx)
                 / SETTINGS.tile_size
                 / FIX_SETTINGS.reach,
-                (player_pos[1] - self.get_collision_rect().centery)
+                - (player_pos[1] - self.get_collision_rect().centery)
                 / SETTINGS.tile_size
                 / FIX_SETTINGS.reach,
             ))

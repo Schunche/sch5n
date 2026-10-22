@@ -122,11 +122,8 @@ class Main:
         self.assets["cloud"] = load_images_as_list("cloud")
 
         self.wind_speed: float = randf() * 2 - 1
-        _logger.debug("Starting wind speed: %s", {round(self.wind_speed, 2)})
-        _logger.debug(
-            "Starting wind direction: %s",
-            "west" if self.wind_speed < 0 else "east",
-        )
+        _logger.debug("Starting wind: %s %s", "west" if self.wind_speed < 0 else "east", round(self.wind_speed, 2))
+
         self.clouds = Clouds(self.assets["cloud"], count=2**4)
         _logger.debug("Generated clouds")
 

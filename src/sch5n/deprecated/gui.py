@@ -2,6 +2,7 @@
 """Experimental software."""
 
 import logging
+from warnings import deprecated
 lazy from typing import cast
 
 lazy import pygame
@@ -20,6 +21,7 @@ _logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 
+@deprecated("Create substitute.")
 def render_text(
     surface: pygame.Surface,
     pos: tuple[int, int],
@@ -38,6 +40,7 @@ def render_text(
     surface.blit(text_rendered, text_rect)
 
 
+@deprecated("Create substitute.")
 class Button:
     def __init__(
         self,
@@ -200,6 +203,7 @@ class Button:
         surface.blit(self.text_rendered, self.text_rect)
 
 
+@deprecated("Create substitute.")
 class Inventory:
     def __init__(self, *args: Item) -> None:
 
@@ -442,6 +446,7 @@ class Inventory:
         return None
 
 
+@deprecated("Create substitute.")
 class CursorSlot:
     def __init__(self, item: Item | None = None) -> None:
         self.slot = item
