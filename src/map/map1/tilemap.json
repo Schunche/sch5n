@@ -514,5 +514,21 @@
     "31;9": {
         "block": "oakLeaf",
         "variant": 0
+    },
+    "23;13": {
+        "block": "lead",
+        "variant": 0
+    },
+    "24;13": {
+        "block": "platinum",
+        "variant": 0
+    },
+    "25;13": {
+        "block": "iron",
+        "variant": 0
+    },
+    "26;12": {
+        "block": "iron",
+        "variant": 0
     }
 }

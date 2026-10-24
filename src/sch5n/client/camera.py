@@ -9,15 +9,15 @@ _MAX_ZOOM = 4.0
 
 
 class Camera:
-    __slots__ = ("_offset", "_zoom")
+    __slots__ = ("_pos", "_zoom")
 
-    def __init__(self, offset: FloatTuple2, zoom: float) -> None:
-        self._offset = offset
+    def __init__(self, pos: FloatTuple2, zoom: float) -> None:
+        self._pos = pos
         self._zoom = zoom
 
     @property
     def center(self) -> FloatTuple2:
-        return self._offset
+        return self._pos
 
     @property
     def zoom(self) -> float:

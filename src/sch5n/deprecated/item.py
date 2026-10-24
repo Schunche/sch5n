@@ -2,15 +2,13 @@
 """Experimental software."""
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
 from warnings import deprecated
 lazy import math
 
-lazy from sch5n.deprecated.item_surface import ITEM_ICON
-lazy from sch5n.deprecated.loader import NAME_SPACE, SETTINGS, load_sys_font
+lazy import pygame
 
-if TYPE_CHECKING:
-    import pygame
+from sch5n.deprecated.loader import NAME_SPACE, SETTINGS, load_sys_font
+lazy from sch5n.deprecated.item_surface import ITEM_ICON
 
 
 @deprecated("Create substitute")

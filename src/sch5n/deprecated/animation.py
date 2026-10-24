@@ -3,11 +3,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Self
 from warnings import deprecated
+lazy from typing import Self
 
-if TYPE_CHECKING:
-    import pygame
+lazy import pygame
 
 
 @deprecated("Create replacement")

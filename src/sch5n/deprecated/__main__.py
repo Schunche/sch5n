@@ -1,7 +1,6 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-import logging
 import os
 from warnings import deprecated
 lazy import math
@@ -11,6 +10,7 @@ lazy from copy import deepcopy
 
 import pygame
 
+from sch5n.log.logger import LOGGER
 lazy from sch5n.deprecated.animation import Animation
 lazy from sch5n.deprecated.cloud import Clouds
 lazy from sch5n.deprecated.floating_item import FloatingItem
@@ -27,26 +27,22 @@ lazy from sch5n.deprecated.loader import (
     load_images_as_list,
     load_tiles,
 )
+lazy from sch5n.deprecated.loot_table import SAME_LOOT_TILE
 lazy from sch5n.deprecated.particle import Particle
 lazy from sch5n.deprecated.player import Player
-lazy from sch5n.deprecated.loot_table import SAME_LOOT_TILE
 lazy from sch5n.deprecated.tilemap import Tilemap
-lazy from sch5n.interface.pygame import MouseButton
-lazy from sch5n.interface.random import randf
+lazy from sch5n.vendor.pygame import MouseButton
+lazy from sch5n.vendor.random import randf
 
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
-_logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
 
 
-_logger.info("Program started")
+LOGGER.info("Program started")
 
 
 pygame.init()
-_logger.debug("Initialized pygame")
-
-
-_logger.debug("Loaded local dependency from script")
+LOGGER.debug("Initialized pygame")
+LOGGER.debug("Loaded local dependency from script")
 
 # INITIAL INPUTS HERE
 GAME_MODE: str = "admin"
@@ -55,7 +51,7 @@ GAME_MODE: str = "admin"
 @deprecated("Create substitute")
 def exit_app() -> None:
     """Exit the application."""
-    _logger.info("Successfully ran program")
+    LOGGER.info("Successfully ran program")
     pygame.quit()
     sys.exit()
 
@@ -102,7 +98,7 @@ class Main:
         pygame.display.set_caption(FIX_SETTINGS.window_name)
         pygame.display.set_icon(self.assets["icon"]["main"])
         self.scroll: list[float] = [0, 0]
-        _logger.debug("Created main window")
+        LOGGER.debug("Created main window")
 
         # Tilemap
         self.assets["tile"] = load_tiles("tile")
@@ -112,20 +108,24 @@ class Main:
             )
             for key, surf in load_dir("tileBreakage").items()
         }
-        _logger.debug("Loaded tile assets")
+        LOGGER.debug("Loaded tile assets")
 
         self.tilemap: Tilemap = Tilemap(assets=self.assets, map_name="map1")
-        _logger.debug("Created tilemap")
+        LOGGER.debug("Created tilemap")
         self.floating_items: list[FloatingItem] = []
 
         # Clouds
         self.assets["cloud"] = load_images_as_list("cloud")
 
         self.wind_speed: float = randf() * 2 - 1
-        _logger.debug("Starting wind: %s %s", "west" if self.wind_speed < 0 else "east", round(self.wind_speed, 2))
+        LOGGER.debug(
+            "Starting wind: %s %s",
+            "west" if self.wind_speed < 0 else "east",
+            round(self.wind_speed, 2),
+        )
 
         self.clouds = Clouds(self.assets["cloud"], count=2**4)
-        _logger.debug("Generated clouds")
+        LOGGER.debug("Generated clouds")
 
         # Player
         self.assets["mob"]["player"]["idle"] = Animation(
@@ -153,7 +153,7 @@ class Main:
             ),
             game_mode=GAME_MODE,
         )
-        _logger.debug("Created player")
+        LOGGER.debug("Created player")
 
         # Particles
         self.assets["particle"]["leaf"] = Animation(
@@ -225,10 +225,10 @@ class Main:
                             )
                         ]
 
-        _logger.debug(
+        LOGGER.debug(
             "Loaded and generated particles, and their respective spawners."
         )
-        _logger.debug(
+        LOGGER.debug(
             "Currently %s tiles emit particles",
             sum(
                 len(rect_list)
@@ -316,7 +316,7 @@ class Main:
     def set_state(self, state: str) -> None:
         """Set the current state of the game."""
         self.state = state
-        _logger.debug("Set state to '%s'", state)
+        LOGGER.debug("Set state to '%s'", state)
 
     def handle_events(self) -> None:
         """Handle input game events."""
@@ -443,7 +443,7 @@ class Main:
                                         case "exit":
                                             exit_app()
                                         case _:
-                                            _logger.error(
+                                            LOGGER.error(
                                                 "Unknow button fount "
                                                 "in existing state: "
                                                 "Ignoring this will "
@@ -456,14 +456,14 @@ class Main:
                                                 "main_game_settings"
                                             )
                                         case _:
-                                            _logger.error(
+                                            LOGGER.error(
                                                 "Unknow button found "
                                                 "in existing state: "
                                                 "Ignoring this will "
                                                 "have consequences"
                                             )
                                 case _:
-                                    _logger.error(
+                                    LOGGER.error(
                                         "Unknown button found "
                                         "in unknown state: "
                                         "Ignoring this may have consequences"
@@ -488,7 +488,7 @@ class Main:
                                 self.player.inventory.get_item_by_num(slot_num)
                                 is None
                             ):
-                                _logger.debug("'None' with 'None' lol")
+                                LOGGER.debug("'None' with 'None' lol")
 
                             elif (
                                 self.player.inventory.get_item_by_num(
@@ -506,7 +506,7 @@ class Main:
                                         slot_num
                                     ),
                                 )
-                                _logger.debug("Picked up 'non-stackable' item")
+                                LOGGER.debug("Picked up 'non-stackable' item")
 
                             else:
                                 if (
@@ -551,7 +551,7 @@ class Main:
                                         item.amount -= 1
                                         if item.amount == 0:
                                             self.player.cursor_slot.slot = None
-                                _logger.debug(
+                                LOGGER.debug(
                                     "Picked up half of 'stackable' item"
                                 )
 
@@ -571,7 +571,7 @@ class Main:
                                         slot_num
                                     ),
                                 )
-                                _logger.debug("Put down 'non-stackable' item")
+                                LOGGER.debug("Put down 'non-stackable' item")
 
                             elif (
                                 self.player.inventory.get_item_by_num(
@@ -588,7 +588,7 @@ class Main:
                                         slot_num
                                     ),
                                 )
-                                _logger.debug("Swapped 'non-stackable' items")
+                                LOGGER.debug("Swapped 'non-stackable' items")
 
                             else:
                                 (
@@ -600,7 +600,7 @@ class Main:
                                         slot_num
                                     ),
                                 )
-                                _logger.debug(
+                                LOGGER.debug(
                                     "Put 'non-stackable' item in "
                                     "the place of 'stackable' item"
                                 )
@@ -617,7 +617,7 @@ class Main:
                             if self.player.cursor_slot.slot.amount == 0:
                                 self.player.cursor_slot.slot = None
 
-                            _logger.debug(
+                            LOGGER.debug(
                                 "Put down 1 'stackable' item to empty slot"
                             )
 
@@ -636,7 +636,7 @@ class Main:
                                     slot_num
                                 ),
                             )
-                            _logger.debug(
+                            LOGGER.debug(
                                 "Swapped 'non-stackable' item "
                                 "with 'stackable' items"
                             )
@@ -654,7 +654,7 @@ class Main:
                                     slot_num
                                 ),
                             )
-                            _logger.debug("Swapped 'stackable' items")
+                            LOGGER.debug("Swapped 'stackable' items")
                         # ItemIDs are the same
 
                         elif (
@@ -666,7 +666,7 @@ class Main:
                             ).max_amount
                         ):
                             # Item in inventpry is at max stack
-                            _logger.debug(
+                            LOGGER.debug(
                                 "Inventory full, can't put items in it"
                             )
                         else:
@@ -674,9 +674,7 @@ class Main:
                             self.player.cursor_slot.slot.amount -= 1
                             if self.player.cursor_slot.slot.amount == 0:
                                 self.player.cursor_slot.slot = None
-                            _logger.debug(
-                                "Put 1 'stackable' item to inventory"
-                            )
+                            LOGGER.debug("Put 1 'stackable' item to inventory")
 
                 if event.button == MouseButton.UP:
                     self.clicking["up"] = True
@@ -864,7 +862,7 @@ class Main:
 
                     self.player.tool_use_penalty = 0
                 elif not self.frame % 10:
-                    _logger.debug("Other tool is required to break this tile")
+                    LOGGER.debug("Other tool is required to break this tile")
 
             # Background
             self.clouds.update(wind_speed=self.wind_speed)

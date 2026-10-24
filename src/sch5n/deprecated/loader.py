@@ -1,7 +1,6 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-import logging
 import pathlib
 from warnings import deprecated
 lazy import json
@@ -11,9 +10,7 @@ import pydantic
 import pygame
 
 from sch5n.function.decorator import instant_call
-
-_logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+lazy from sch5n.log.logger import LOGGER
 
 
 @instant_call
@@ -37,15 +34,15 @@ def load_json(path: str) -> Any:  # ruff: ignore[any-type]
             return_file = json.load(file)
 
     except FileNotFoundError as e:
-        _logger.exception("'src/%s.json' not found: %s", path, e.filename)
+        LOGGER.exception("'src/%s.json' not found: %s", path, e.filename)
 
     except UnicodeDecodeError as e:
-        _logger.exception(
+        LOGGER.exception(
             "'src/%s.json' is not a valid JSON file: %s", path, e.reason
         )
 
     else:
-        _logger.debug("'src/%s.json' found and loaded", path)
+        LOGGER.debug("'src/%s.json' found and loaded", path)
         return return_file
 
     return None
@@ -120,7 +117,7 @@ def load_image(path: str) -> pygame.Surface:
         img: pygame.Surface = pygame.image.load(f"src/img/{path}.png")
 
     except FileNotFoundError as e:
-        _logger.exception("'src/img/%s.png' not found: %s", path, e.filename)
+        LOGGER.exception("'src/img/%s.png' not found: %s", path, e.filename)
 
         return load_image("icon/_")
 

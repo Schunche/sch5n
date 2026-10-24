@@ -3,7 +3,6 @@
 
 import datetime as dt
 import json
-import logging
 import pathlib
 from typing import NotRequired, TypedDict, cast
 from warnings import deprecated
@@ -12,9 +11,7 @@ import pygame
 
 from sch5n.deprecated.loader import NAME_SPACE, SETTINGS, get_bit
 from sch5n.math.vector import FloatTuple2, IntTuple2, deserialize_int_tuple_2
-
-_logger: logging.Logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+lazy from sch5n.log.logger import LOGGER
 
 NEIGHBOR_OFFSETS: list[tuple[int, int]] = [
     (i, j) for j in range(-2, 3) for i in range(-2, 3)
@@ -26,7 +23,7 @@ def _generate_radom_map_name() -> str:
     return str(dt.datetime.now(dt.UTC).timestamp()).replace(".", "_")
 
 
-@deprecated("Create substitute.")
+@deprecated("This will be incorrect.")
 class Tile(TypedDict):
     block: str
     variant: int
@@ -165,7 +162,7 @@ class Tilemap:
             ) as file:
                 str_keys_tilemap = cast("dict[str, Tile]", json.load(file))
         except FileNotFoundError:
-            _logger.critical("File '%s/tilemap.json' not found.", alias)
+            LOGGER.critical("File '%s/tilemap.json' not found.", alias)
             return
 
         tuple_keys_tilemap: dict[IntTuple2, Tile] = {}
@@ -174,8 +171,8 @@ class Tilemap:
 
         self.tilemap = tuple_keys_tilemap
 
-        _logger.info("'%s' found and loaded as tilemap", alias)
-        _logger.debug("'%s' currently has %s tiles", alias, len(self.tilemap))
+        LOGGER.info("'%s' found and loaded as tilemap", alias)
+        LOGGER.debug("'%s' currently has %s tiles", alias, len(self.tilemap))
 
     def save_map(self, alias: str = "map1") -> None:
         """Save the current tilemap to a JSON file.
@@ -193,7 +190,7 @@ class Tilemap:
         ) as file:
             json.dump(str_keys_tilemap, file, indent=4)
 
-        _logger.info("Tilemap saved to '%s/tilemap.json'", alias)
+        LOGGER.info("Tilemap saved to '%s/tilemap.json'", alias)
 
     def tiles_around(
         self, world_pos: FloatTuple2
@@ -245,7 +242,11 @@ class Tilemap:
         ]
 
     def render(
-        self, surface: pygame.Surface, offset: IntTuple2 = (0, 0)
+        self,
+        surface: pygame.Surface,
+        offset: IntTuple2 = (0, 0),
+        *,
+        breakage: bool = True,
     ) -> None:
         """Render the tilemap on the given surface with an optional offset.
 
@@ -275,7 +276,7 @@ class Tilemap:
                         world_pos,
                     )
 
-                    if "durability" in tile:
+                    if breakage and "durability" in tile:
                         breakage_name = (
                             tile["block"]
                             if tile["block"]

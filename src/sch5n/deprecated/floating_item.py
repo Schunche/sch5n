@@ -1,7 +1,6 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-
 from warnings import deprecated
 lazy import math
 lazy from copy import deepcopy
@@ -117,10 +116,10 @@ class FloatingItem:
             # The item is in the range of the player
             # So it approaches the player
             app_velocity: FloatTuple2 = player_magnet_func((
-                - (player_pos[0] - self.get_collision_rect().centerx)
+                -(player_pos[0] - self.get_collision_rect().centerx)
                 / SETTINGS.tile_size
                 / FIX_SETTINGS.reach,
-                - (player_pos[1] - self.get_collision_rect().centery)
+                -(player_pos[1] - self.get_collision_rect().centery)
                 / SETTINGS.tile_size
                 / FIX_SETTINGS.reach,
             ))

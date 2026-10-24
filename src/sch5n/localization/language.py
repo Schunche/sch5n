@@ -3,14 +3,11 @@
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 lazy import json
 lazy from typing import ClassVar, cast
 
-_logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
-
+lazy from sch5n.log.logger import LOGGER
 
 type Language = str
 
@@ -114,7 +111,7 @@ class _LanguageDictionary:
         if key in localization:
             return localization[key]
 
-        _logger.warning(
+        LOGGER.warning(
             "Missing localization key: %s of language %s", key, cls._language
         )
 

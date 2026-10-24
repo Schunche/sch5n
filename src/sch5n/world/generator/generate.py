@@ -1,11 +1,10 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-from typing import TYPE_CHECKING
+lazy from collections.abc import Awaitable
 
-if TYPE_CHECKING:
-    from sch5n.world.types import Options as WorldGenerationOptions
+lazy from sch5n.world.types import Options as WorldGenerationOptions
 
 
-async def generate(options: WorldGenerationOptions) -> None:
-    pass
+async def generate(options: WorldGenerationOptions) -> Awaitable[None]:
+    raise NotImplementedError

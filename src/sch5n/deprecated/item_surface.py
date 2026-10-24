@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-from typing import TYPE_CHECKING
+lazy from pygame.surface import Surface
 
 from sch5n.deprecated.loader import (
     SETTINGS,
@@ -10,17 +10,14 @@ from sch5n.deprecated.loader import (
     load_image_resized,
 )
 
-if TYPE_CHECKING:
-    import pygame
-
-ITEM_ICON: dict[int, pygame.surface.Surface] = {
+ITEM_ICON: dict[int, Surface] = {
     0: load_icon("tool/copperPickaxe"),
     1: load_icon("tool/copperAxe"),
     2: load_icon("tile/dirt/0"),
     3: load_icon("tile/oakLog/0"),
 }
 
-ITEM_IMAGE: dict[int, pygame.surface.Surface] = {
+ITEM_IMAGE: dict[int, Surface] = {
     0: load_image("tool/copperPickaxe"),
     1: load_image("tool/copperAxe"),
     2: load_image_resized(

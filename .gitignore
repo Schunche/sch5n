@@ -2,9 +2,12 @@ dev/
 
 .venv/
 
+build/
 __pycache__/
 .ruff_cache/
+.mypy_cache/
 *.egg-info/
 
+uv.lock
 __temp*__.py
 *.prof

@@ -2,10 +2,7 @@
 """Experimental software."""
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from typing import Any
+lazy from typing import Any
 
 
 @dataclass(slots=True, frozen=True)

@@ -1,7 +1,6 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-import logging
 from warnings import deprecated
 lazy from typing import cast
 
@@ -14,11 +13,9 @@ from sch5n.deprecated.loader import (
     load_sys_font,
 )
 lazy from sch5n.deprecated.item import Item
+lazy from sch5n.log.logger import LOGGER
 
 # https://fonts.google.com/specimen/Pixelify+Sans?query=pixel
-
-_logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
 
 
 @deprecated("Create substitute.")
@@ -440,9 +437,7 @@ class Inventory:
             return item
             # So it has empty slots
 
-        _logger.critical(
-            "Not all cases have been covered, in inventory adding"
-        )
+        LOGGER.critical("Not all cases have been covered, in inventory adding")
         return None
 
 

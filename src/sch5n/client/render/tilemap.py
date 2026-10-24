@@ -12,4 +12,4 @@ class Tilemap(_Tilemap):
     """Implement render functionality."""
 
     def __init__(self) -> None:
-        pass
+        raise NotImplementedError

@@ -1,7 +1,6 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-import logging
 lazy import contextlib
 lazy import json
 lazy import time
@@ -9,18 +8,13 @@ lazy import zlib
 lazy from pathlib import Path
 lazy from typing import cast
 
+lazy from sch5n.log.logger import LOGGER
 lazy from sch5n.math.vector import (
     IntTuple2,
     IntTuple3,
     deserialize_int_tuple_2,
-    parse_int_tuple2,
-    parse_int_tuple3,
     serialize_int_tuple_2,
 )
-
-_logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
-
 
 type _Color = IntTuple3
 type _Light = int
@@ -89,13 +83,18 @@ class Map:
 
     @staticmethod
     def _remove_corrupt_file(path: Path) -> None:
-        _logger.error("Corrupted map file.")
-        _logger.info("Removing corrupted map file.")
+        LOGGER.error("Corrupted map file.")
+        LOGGER.info("Removing corrupted map file.")
         path.unlink(missing_ok=True)
 
-    def load(self, path: Path) -> None:
+    def load(self, path: Path, backup_path: Path | None = None) -> None:
         if not path.exists():
-            _logger.info("Tried to load non-existing map.")
+            LOGGER.info("Tried to load non-existing map.")
+            if backup_path is not None:
+                LOGGER.info("Trying to load backup.")
+                self.load(backup_path)
+            else:
+                LOGGER.info("No backup path was given.")
             return
 
         with path.open("rb") as file:
@@ -143,7 +142,7 @@ class Map:
         json_bytes = json.dumps(json_data).encode(encoding="utf-8")
         compressed = zlib.compress(json_bytes, level=1)
 
-        _logger.debug(
+        LOGGER.debug(
             "Saving map with compression ratio: %s",
             len(compressed) / len(json_bytes),
         )

@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 name = "sch5n"
 version = "0.0.1"
-requires-python = ">=3.15"
+requires-python = ">=3.15.1"
 authors = [{name = "Schunche", email = "schunche.w@gmail.com"}]
 maintainers = [{name = "Schunche", email = "schunche.w@gmail.com"}]
 description = "Experimental software. Use at your own risk."
@@ -35,8 +35,13 @@ dependencies = [
     "ruff",
     "sounddevice",
     "steamworkspy",
+    "uv",
     "zeroconf",
 ]
+
+[project.scripts]
+
+sch5n = "sch5n.__main__:main"
 
 [tool]
 

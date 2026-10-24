@@ -1,20 +1,18 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-from copy import deepcopy
-from typing import TYPE_CHECKING, override
+from typing import override
 from warnings import deprecated
+lazy from copy import deepcopy
 
-from sch5n.deprecated.gui import CursorSlot, Inventory
-from sch5n.deprecated.item import Item, Tool
 from sch5n.deprecated.item_data import ITEM_DATA
-from sch5n.deprecated.loader import NAME_SPACE
 from sch5n.deprecated.mob import Mob
-
-if TYPE_CHECKING:
-    from sch5n.deprecated.animation import Animation
-    from sch5n.deprecated.tilemap import Tilemap
-    from sch5n.math.vector import FloatTuple2
+lazy from sch5n.deprecated.animation import Animation
+lazy from sch5n.deprecated.gui import CursorSlot, Inventory
+lazy from sch5n.deprecated.item import Item, Tool
+lazy from sch5n.deprecated.loader import NAME_SPACE
+lazy from sch5n.deprecated.tilemap import Tilemap
+lazy from sch5n.math.vector import FloatTuple2
 
 
 @deprecated("Create substitute.")

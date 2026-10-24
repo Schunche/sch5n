@@ -2,6 +2,7 @@
 """Experimental software."""
 
 lazy from sch5n.deprecated.__main__ import main as main_old
+lazy from sch5n.log.logger import init as init_logging
 
 
 # def main(argv: list[str] | None = None) -> None:
@@ -15,6 +16,7 @@ def main() -> None:
     # args = parser.parse_args(argv)
 
     # print(args)
+    init_logging()
     main_old()
 
 

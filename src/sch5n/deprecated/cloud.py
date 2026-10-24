@@ -5,7 +5,7 @@ from warnings import deprecated
 
 lazy import pygame
 
-lazy from sch5n.interface.random import choice, randf
+lazy from sch5n.vendor.random import choice, randf
 
 
 class Cloud:

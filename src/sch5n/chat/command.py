@@ -4,12 +4,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, ClassVar
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
 from dataclasses import dataclass
+from typing import Any, ClassVar
+lazy from collections.abc import Callable
 
 
 class ChatCommandParseError(Exception):
@@ -23,7 +20,7 @@ class ChatCommandPart[T](ABC):
     @classmethod
     @abstractmethod
     def parse(cls, s: str) -> ChatCommandPart[T] | None:
-        pass
+        raise NotImplementedError
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,7 +32,7 @@ class ChatCommand:
     _COMMAND_START_CHAR: ClassVar[str] = "/"
 
     def parse(self, s: str) -> ChatCommand | None:
-        pass
+        raise NotImplementedError
 
 
 class ChatCommandBuilder:

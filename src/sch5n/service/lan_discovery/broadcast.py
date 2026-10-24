@@ -1,13 +1,14 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-import logging
 import socket
 import time
 lazy from itertools import chain
 
 lazy import psutil
 lazy from zeroconf import InterfaceChoice, IPVersion, ServiceInfo, Zeroconf
+
+lazy from sch5n.log.logger import LOGGER
 
 type IPv4AddressBytes = bytes
 type IPv6AddressBytes = bytes
@@ -17,9 +18,6 @@ type IPv6AddressStr = str
 
 type IPv4Address = IPv4AddressBytes | IPv4AddressStr
 type IPv6Address = IPv6AddressBytes | IPv6AddressStr
-
-_logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
 
 
 def get_all_lan_ips() -> tuple[list[IPv4AddressStr], list[IPv6AddressStr]]:
@@ -54,7 +52,7 @@ def _main() -> None:
     ipv4_ips, ipv6_ips = get_all_lan_ips()
 
     if not ipv4_ips and not ipv6_ips:
-        _logger.error("[HOST][ERROR] No active network interfaces found!")
+        LOGGER.error("[HOST][ERROR] No active network interfaces found!")
         return
 
     game_socket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
@@ -62,19 +60,19 @@ def _main() -> None:
     game_socket.bind(("::", 0))
 
     port = game_socket.getsockname()[1]
-    _logger.info(
+    LOGGER.info(
         "[HOST] Game socket listening on dynamically assigned port: %s", port
     )
 
     addresses_bytes: list[IPv4AddressBytes | IPv6AddressBytes] = []
-    _logger.info("[HOST] Registering service on the following local paths:")
+    LOGGER.info("[HOST] Registering service on the following local paths:")
 
     for ip in ipv4_ips:
-        _logger.info(" -> IPv4: %s", ip)
+        LOGGER.info(" -> IPv4: %s", ip)
         addresses_bytes.append(socket.inet_aton(ip))
 
     for ip in ipv6_ips:
-        _logger.info(" -> IPv6: %s", ip)
+        LOGGER.info(" -> IPv6: %s", ip)
         addresses_bytes.append(socket.inet_pton(socket.AF_INET6, ip))
 
     service_type = "_pythonlan._tcp.local."
@@ -92,15 +90,15 @@ def _main() -> None:
     zc = Zeroconf(ip_version=IPVersion.All, interfaces=InterfaceChoice.All)
     zc.register_service(info)
 
-    _logger.info("[HOST] mDNS server broadcasting across all interfaces...")
-    _logger.info("[HOST] Press Ctrl+C to stop...")
+    LOGGER.info("[HOST] mDNS server broadcasting across all interfaces...")
+    LOGGER.info("[HOST] Press Ctrl+C to stop...")
 
     try:
         game_socket.listen(5)
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        _logger.info("\n[HOST] Shutting down...")
+        LOGGER.info("\n[HOST] Shutting down...")
     finally:
         zc.unregister_service(info)
         zc.close()

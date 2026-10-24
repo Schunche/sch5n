@@ -1,23 +1,20 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-import logging
 import sys
 
 import pygame
 
 from sch5n.deprecated.loader import SETTINGS, load_tiles
-from sch5n.deprecated.tilemap import Tilemap
-
-_logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+from sch5n.deprecated.tilemap import Tile, Tilemap
+from sch5n.log.logger import LOGGER
 
 pygame.init()
 
-_logger.debug("Initialized pygame")
+LOGGER.debug("Initialized pygame")
 
 
-_logger.debug("Loaded all local dependency script")
+LOGGER.debug("Loaded all local dependency script")
 
 MOUSE_BUTTON_LEFT = 1
 MOUSE_BUTTON_MIDDLE = 2
@@ -28,7 +25,7 @@ MOUSE_BUTTON_DOWN = 5
 
 def exit_app() -> None:
     """Exit the application."""
-    _logger.info("Successfully run program")
+    LOGGER.info("Successfully run program")
     pygame.quit()
     sys.exit()
 
@@ -48,12 +45,12 @@ class Main:
 
         self.assets: dict[str, dict[str, pygame.Surface]] = {}
         self.assets["tile"] = load_tiles("tile")
-        _logger.debug("Loaded tile assets")
+        LOGGER.debug("Loaded tile assets")
 
         map_name = "map1"
 
         self.tilemap: Tilemap = Tilemap(assets=self.assets, map_name=map_name)
-        _logger.debug("Created tilemap")
+        LOGGER.debug("Created tilemap")
 
         self.clock: pygame.time.Clock = pygame.time.Clock()
 
@@ -164,28 +161,29 @@ class Main:
         ) * 5
 
         if self.clicking["left"]:
+            tile: Tile = {
+                "block": self.tile_list[self.tile_index][0],
+                "variant": self.tile_list[self.tile_index][1],
+            }
             self.tilemap.insert_tile(
-                pos=(self.tile_pos[0], self.tile_pos[1]),
-                tile={
-                    "block": self.tile_list[self.tile_index][0],
-                    "variant": self.tile_list[self.tile_index][1],
-                },
+                pos=(self.tile_pos[0], self.tile_pos[1]), tile=tile
             )
+            LOGGER.debug("Placed tile: %s", tile)
 
         if self.clicking["right"] and self.tilemap.is_tile_at(self.tile_pos):
-            _logger.debug("Tile deleted at %s", self.tile_pos)
+            LOGGER.debug("Tile deleted at %s", self.tile_pos)
             self.tilemap.delete_tile(self.tile_pos)
 
         self.current_tile_img = self.assets["tile"][
             self.tile_list[self.tile_index][0]
         ][self.tile_list[self.tile_index][1]].copy()
-        self.current_tile_img.set_alpha(100)
+        self.current_tile_img.set_alpha(127)
 
     def render(self) -> None:
         """Handle rendering of game objects."""
         self.WINDOW.fill([0, 0, 0])
 
-        self.tilemap.render(self.WINDOW, offset=self.pos)
+        self.tilemap.render(self.WINDOW, offset=self.pos, breakage=False)
 
         self.WINDOW.blit(
             self.current_tile_img,

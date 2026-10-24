@@ -2,15 +2,12 @@
 """Experimental software."""
 
 import json
-import logging
 import math
 import pathlib
 from warnings import deprecated
 
-from sch5n.interface.random import choice, randbelow, randf, randint
-
-_logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
+from sch5n.vendor.random import choice, randbelow, randf, randint
+lazy from sch5n.log.logger import LOGGER
 
 
 def _save_map(tilemap: dict[str, dict[str, str | int]], alias: str) -> None:
@@ -51,7 +48,7 @@ def _generate_map(
     # Bottom half with stone
 
     until_dirt_y: int = int((y_top + y_bottom) / 2)
-    _logger.info("Dirt is generated until: y = %s", until_dirt_y)
+    LOGGER.info("Dirt is generated until: y = %s", until_dirt_y)
     for x in range(x_left, x_right):
         # Dirt
         for y in range(y_top, until_dirt_y):
@@ -134,7 +131,7 @@ def _generate_map(
     num_of_patches: int = int(
         _diff25((x_right - x_left) * (until_dirt_y - y_top) * 0.003)
     )
-    _logger.info("Stone strokes in dirt: %s", num_of_patches)
+    LOGGER.info("Stone strokes in dirt: %s", num_of_patches)
     for _ in range(num_of_patches):
         point: tuple[int, int] = (
             x_left + int(randf() * (x_right - x_left)),
@@ -146,7 +143,7 @@ def _generate_map(
     num_of_patches = int(
         _diff25((x_right - x_left) * (y_bottom - until_dirt_y) * 0.004)
     )
-    _logger.info("Dirt strokes in stone: %s", num_of_patches)
+    LOGGER.info("Dirt strokes in stone: %s", num_of_patches)
     for _ in range(num_of_patches):
         point = (
             x_left + int(randf() * (x_right - x_left)),
@@ -170,14 +167,14 @@ def _generate_map(
         for _ in range(int(len(ores) / 2))
     ]
 
-    _logger.info("This world contains the ores: %s", ", ".join(world_ores))
+    LOGGER.info("This world contains the ores: %s", ", ".join(world_ores))
 
     return tilemap
 
 
 @deprecated("Create substitute")
 def main(filename: str = "procedural") -> None:
-    _logger.info("Started making it")
+    LOGGER.info("Started making it")
     # X grows left to right
     # Y grows top to bottom
 
@@ -187,7 +184,7 @@ def main(filename: str = "procedural") -> None:
     map_right: int = 300
     map_top: int = 0
     map_bottom: int = 160
-    _logger.info(
+    LOGGER.info(
         "In range: x = (%s; %s), y = (%s; %s)",
         map_left,
         map_right,
@@ -200,7 +197,7 @@ def main(filename: str = "procedural") -> None:
     )
 
     _save_map(generated_map, filename)
-    _logger.info("Map saved to '%s'", filename)
+    LOGGER.info("Map saved to '%s'", filename)
 
 
 if __name__ == "__main__":

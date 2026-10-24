@@ -10,8 +10,8 @@ Experimental software
 
     python3.15 -m venv .venv
     source .venv/bin/activate
-    python -m pip install --upgrade pip
-    python -m pip install -e .
+    pytohn -m pip install uv
+    uv pip install -e .
 
 #### Windows
 
@@ -19,13 +19,13 @@ https://www.python.org/downloads/release/pymanager-264/
 
     py -m venv .venv
     (Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; .\.venv\Scripts\Activate.ps1
-    python -m pip install --upgrade pip
+    pytohn -m pip install uv
     python -m pip install -e .
 
 ## Dependencies
 
 - [Python](https://www.python.org/)
-    - [Pygame](https://www.pygame.org/news)
+    - [PyGame-CE](https://www.pyga.me)
 
 ## Development
 
@@ -35,6 +35,8 @@ https://www.python.org/downloads/release/pymanager-264/
 
 ## Sources
 
-- [Tilemap & particles](https://www.youtube.com/watch?v=2gABYM5M0ww&t=8555s&ab_channel=DaFluffyPotato)
+- [Tilemap & particles](https://www.youtube.com/watch?v=2gABYM5M0ww)
 
-- [Map generation](https://www.youtube.com/watch?v=Pgt82G4Jxac&ab_channel=griffpatch)
+- [Map generation](https://www.youtube.com/watch?v=Pgt82G4Jxac)
+
+- [Logging](https://www.youtube.com/watch?v=9L77QExPmI0)

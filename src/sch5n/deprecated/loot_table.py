@@ -1,7 +1,6 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
-
 from sch5n.deprecated.item_data import ITEM_DATA
 lazy from sch5n.deprecated.item import Item
 

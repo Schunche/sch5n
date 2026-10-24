@@ -1,21 +1,18 @@
 # Copyright (c) 2026 Schunche
 """Game and player management package."""
 
-import logging
 lazy import sys
 
 import pygame
 
+from sch5n.log.logger import LOGGER
 lazy from sch5n.deprecated.loader import SETTINGS, load_tiles_resized
 lazy from sch5n.deprecated.tilemap import Tilemap
 lazy from sch5n.math.vector import FloatTuple2
 
-_logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
-
-_logger.info("Program started")
+LOGGER.info("Program started")
 pygame.init()
-_logger.debug("Initialized pygame")
+LOGGER.debug("Initialized pygame")
 
 
 class Main:
@@ -33,7 +30,7 @@ class Main:
 
         self.assets: dict[str, dict[str, pygame.Surface]] = {}
         self.assets["tile"] = load_tiles_resized("src/img/bit", self.tile_size)
-        _logger.debug("Loaded tile assets")
+        LOGGER.debug("Loaded tile assets")
 
         map_name = "map1"
 
@@ -41,7 +38,7 @@ class Main:
             assets=self.assets["tile"],
             map_name=map_name,
         )
-        _logger.debug("Created tilemap")
+        LOGGER.debug("Created tilemap")
 
         self.clock: pygame.time.Clock = pygame.time.Clock()
 
@@ -61,7 +58,7 @@ class Main:
 
     def exit_app(self) -> None:
         """Exit the application."""
-        _logger.info("Successfully run program: %ss", self.clock.get_time())
+        LOGGER.info("Successfully run program: %ss", self.clock.get_time())
         pygame.quit()
         sys.exit()
 
@@ -119,6 +116,9 @@ class Main:
             pygame.display.update()
 
 
+def main() -> None:
+    Main().run()
+
+
 if __name__ == "__main__":
-    GAME: Main = Main()
-    GAME.run()
+    main()
