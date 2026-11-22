@@ -4,13 +4,14 @@
 import pathlib
 from warnings import deprecated
 lazy import json
-lazy from typing import Any, cast
+lazy from typing import cast
 
 import pydantic
 import pygame
 
 from sch5n.function.decorator import instant_call
 lazy from sch5n.log.logger import LOGGER
+lazy from sch5n.vendor.json import Json
 
 
 @instant_call
@@ -19,7 +20,7 @@ def __ensure_init() -> None:
 
 
 @deprecated("Create substitute.")
-def load_json(path: str) -> Any:  # ruff: ignore[any-type]
+def load_json(path: str) -> Json:
     """Load json file.
 
     Arguments:

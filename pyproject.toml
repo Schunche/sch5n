@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 name = "sch5n"
 version = "0.0.1"
-requires-python = ">=3.15.1"
+requires-python = ">=3.15.2"
 authors = [{name = "Schunche", email = "schunche.w@gmail.com"}]
 maintainers = [{name = "Schunche", email = "schunche.w@gmail.com"}]
 description = "Experimental software. Use at your own risk."
@@ -37,6 +37,8 @@ dependencies = [
     "steamworkspy",
     "uv",
     "zeroconf",
+    "jmespath",
+    "moderngl-window>=3.1.1",
 ]
 
 [project.scripts]
@@ -69,6 +71,7 @@ line-length = 79
 preview = true
 target-version = "py315"
 extend-exclude = ["pyproject.toml"]
+respect-gitignore = true
 
 [tool.ruff.format]
 quote-style = "double"
@@ -88,5 +91,12 @@ ignore = [
     "TD003",  # TODOs dont always need to show issue link
 ]
 
-[tool.ruff.lint.mccabe]
-#max-complexity = 5
+[tool.uv]
+preview-features = ["format-command"]
+
+[tool.ty.rules]
+respect-gitignore = true
+deprecated = "ignore"
+exclude = [
+    "build/"
+]

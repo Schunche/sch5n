@@ -966,7 +966,7 @@ class Main:
 
         elif self.state in {"main_game", "main_game_inventory"}:
             # Background
-            self.WINDOW.fill(NAME_SPACE["color"]["pink"])
+            self.WINDOW.fill((31, 127, 191))
 
             self.clouds.render(self.WINDOW, offset=self.render_scroll)
 
@@ -1037,6 +1037,7 @@ class Main:
             self.frame += 1
 
 
+@deprecated("Create substitute")
 def main() -> None:
     Main().run()
 

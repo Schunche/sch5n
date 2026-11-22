@@ -1,0 +1,71 @@
+#version 430
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+layout (rgba32f, binding = 0) writeonly uniform image2D u_out_tex;
+
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform int u_seed;
+
+// Fast, precision-safe integer hash in [0, 1)
+float hash21(ivec2 cell, int seed) {
+    uvec2 p = uvec2(cell);
+    uint s = uint(seed);
+    uint h = p.x * 374761393u + p.y * 668265263u + s * 1442695041u;
+    h = (h ^ (h >> 13)) * 1274126177u;
+    h = h ^ (h >> 16);
+    return float(h) / 4294967295.0;
+}
+
+float noise(vec2 p, int seed) {
+    ivec2 i = ivec2(floor(p));
+    vec2 f = fract(p);
+    vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+
+    float a = hash21(i, seed);
+    float b = hash21(i + ivec2(1, 0), seed);
+    float c = hash21(i + ivec2(0, 1), seed);
+    float d = hash21(i + ivec2(1, 1), seed);
+
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+float fbm(vec2 p, int seed) {
+    float val = 0.0;
+    float amp = 0.5;
+    for (int i = 0; i < 5; i++) {
+        val += amp * noise(p, seed + i * 101);
+        p *= 2.02;
+        amp *= 0.5;
+    }
+    return val;
+}
+
+void main() {
+    ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(u_out_tex);
+    if (gid.x >= size.x || gid.y >= size.y) {
+        return;
+    }
+
+    vec2 fragCoord = vec2(gid) + 0.5;
+    vec2 uv = (2.0 * fragCoord - vec2(size)) / float(size.y);
+
+    vec2 p = uv * 2.5;
+
+    // Domain warping driven by u_seed
+    vec2 q = vec2(
+        fbm(p + vec2(0.0, u_time * 0.12), u_seed),
+        fbm(p + vec2(5.2, 1.3 - u_time * 0.10), u_seed + 7919)
+    );
+    float pattern = fbm(p + 3.2 * q + vec2(u_time * 0.08), u_seed + 104729);
+
+    vec3 dark = vec3(0.04, 0.06, 0.12);
+    vec3 mid = vec3(0.14, 0.48, 0.68);
+    vec3 highlight = vec3(0.96, 0.78, 0.42);
+
+    vec3 col = mix(dark, mid, smoothstep(0.15, 0.65, pattern));
+    col = mix(col, highlight, smoothstep(0.65, 0.92, q.x * pattern * 1.4));
+
+    imageStore(u_out_tex, gid, vec4(col, 1.0));
+}

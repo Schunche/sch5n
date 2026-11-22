@@ -17,12 +17,6 @@ def _save_map(tilemap: dict[str, dict[str, str | int]], alias: str) -> None:
         json.dump(tilemap, file, indent=4)
 
 
-def _round_up(num: float) -> int:
-    if float.is_integer(num):
-        return int(num)
-    return int(num) + 1
-
-
 def _diff25(num: float) -> float:
     return abs(num * (1 + math.sin(randf() * 2 * math.pi) / 4))
 
@@ -100,7 +94,7 @@ def _generate_map(
                         continue
 
                     # Place the block if inside the circle
-                    if (x - point[0]) ** 2 + (y - point[1]) ** 2 <= _round_up(
+                    if (x - point[0]) ** 2 + (y - point[1]) ** 2 <= round(
                         radius**2
                     ):
                         tilemap[f"{x};{y}"] = {"block": block, "variant": 0}

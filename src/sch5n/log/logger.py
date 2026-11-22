@@ -21,18 +21,27 @@ LOGGER = logging.getLogger(_package)
 _is_initialized = False
 
 
-def init(
-    config_path: Path | None = None, overriide: _DictConfigArgs | None = None
-) -> None:
+def init(config_path: Path, overriide: _DictConfigArgs | None = None) -> None:
+    """Initialize logging.
+
+    Calling this function several times is safe.
+
+    Args:
+        config_path: Path to configuration.
+        overriide: Override options from file.
+
+    Raises:
+        RuntimeError: The `logging` builtin module messed up.
+
+    """
     global _is_initialized  # ruff: ignore[global-statement]
 
     if _is_initialized:
-        LOGGER.warning("Logging already initialized.")
+        LOGGER.warning("Logging already initialized. Not doing that again.")
+        return
     _is_initialized = True
     os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 
-    if config_path is None:
-        config_path = Path("assets") / "base" / "config" / "logging.json"
     if overriide is None:
         overriide = {"version": 1}
 
@@ -58,4 +67,5 @@ def init(
             atexit.register(listener.stop)
             return
 
-    raise RuntimeError
+    msg = "The `logging` builtin module messed up."
+    raise RuntimeError(msg)

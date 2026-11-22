@@ -1,11 +1,30 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
+from __future__ import annotations
+
+from functools import wraps
+lazy from collections.abc import Callable
+
 lazy from sch5n.math.scalar import clamp
 lazy from sch5n.math.vector import FloatTuple2
 
-_MIN_ZOOM = 0.25
-_MAX_ZOOM = 4.0
+
+def clamp_zoom(
+    rangev: tuple[float, float],
+) -> Callable[
+    [Callable[[Camera, float], None]], Callable[[Camera, float], None]
+]:  # ruff: ignore[line-too-long]
+    def decorator(
+        func: Callable[[Camera, float], None],
+    ) -> Callable[[Camera, float], None]:  # ruff: ignore[line-too-long]
+        @wraps(func)
+        def wrapper(slf: Camera, value: float) -> None:
+            return func(slf, clamp(value, rangev[0], rangev[1]))
+
+        return wrapper
+
+    return decorator
 
 
 class Camera:
@@ -24,5 +43,6 @@ class Camera:
         return self._zoom
 
     @zoom.setter
+    @clamp_zoom((0.25, 4.0))
     def zoom(self, value: float) -> None:
-        self._zoom = clamp(value, _MIN_ZOOM, _MAX_ZOOM)
+        self._zoom = value

@@ -515,20 +515,16 @@
         "block": "oakLeaf",
         "variant": 0
     },
-    "23;13": {
-        "block": "lead",
+    "21;18": {
+        "block": "stone",
         "variant": 0
     },
-    "24;13": {
-        "block": "platinum",
+    "20;18": {
+        "block": "stone",
         "variant": 0
     },
-    "25;13": {
-        "block": "iron",
-        "variant": 0
-    },
-    "26;12": {
-        "block": "iron",
+    "19;18": {
+        "block": "stone",
         "variant": 0
     }
 }

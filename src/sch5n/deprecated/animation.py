@@ -11,16 +11,7 @@ lazy import pygame
 
 @deprecated("Create replacement")
 class Animation:
-    """A class to represent an animation consisting of a sequence of images.
-
-    Attributes:
-        images (List[pygame.Surface]): List of pygame Surface objects.
-        image_duration (int): Duration (in frames) each image is displayed.
-        do_loop (bool): Determines if the animation should do_loop.
-        done (bool): Flag indicating if the animation has finished playing.
-        frame (int): Current frame of the animation.
-
-    """
+    """A class to represent an animation consisting of a sequence of images."""
 
     def __init__(
         self,
@@ -32,9 +23,9 @@ class Animation:
         """Initialize the Animation object.
 
         Args:
-            images (List[pygame.Surface]): List of pygame Surface objects.
-            image_duration (int, optional): Duration (in frames) each image.
-            do_loop (bool, optional): Determines if the animation should loop.
+            images: List of pygame Surface objects.
+            image_duration: Duration (in frames) each image.
+            do_loop: Determines if the animation should loop.
 
         """
         self.images = images

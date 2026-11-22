@@ -60,7 +60,7 @@ def main() -> None:
         case Program.MAP_GENERATOR:
             world_generate_main()
         case _:
-            raise RuntimeError
+            raise NotImplementedError
 
 
 if __name__ == "__main__":

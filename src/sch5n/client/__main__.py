@@ -1,6 +1,8 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
+lazy from pathlib import Path
+
 lazy from sch5n.deprecated.__main__ import main as main_old
 lazy from sch5n.log.logger import init as init_logging
 
@@ -16,7 +18,7 @@ def main() -> None:
     # args = parser.parse_args(argv)
 
     # print(args)
-    init_logging()
+    init_logging(Path("assets/base/config/logging.json"))
     main_old()
 
 

@@ -8,7 +8,7 @@ Experimental software
 
 #### Linux
 
-    python3.15 -m venv .venv
+    uv venv .venv
     source .venv/bin/activate
     pytohn -m pip install uv
     uv pip install -e .
@@ -31,7 +31,7 @@ https://www.python.org/downloads/release/pymanager-264/
 
 ### For fast development - No documentation checking
 
-    python -m ruff check . --fix --ignore PLR0915 --ignore PLR0912 --ignore C901 --ignore D417 --ignore D103 --ignore D107 --ignore D101 --ignore D102 --ignore DOC201 --ignore D105 --ignore PLR0911 --ignore DOC501 --ignore PLR0913 --ignore PLR0917 --ignore PLR1702
+    ruff check . --fix --ignore PLR0915 --ignore PLR0912 --ignore C901 --ignore D417 --ignore D103 --ignore D107 --ignore D101 --ignore D102 --ignore DOC201 --ignore D105 --ignore PLR0911 --ignore DOC501 --ignore PLR0913 --ignore PLR0917 --ignore PLR1702
 
 ## Sources
 
