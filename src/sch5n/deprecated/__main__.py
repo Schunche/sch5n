@@ -318,12 +318,12 @@ class Main:
         self.state = state
         LOGGER.debug("Set state to '%s'", state)
 
-    def handle_events(self) -> None:
-        """Handle input game events."""
+    def handle_events(self) -> None:  # ruff: ignore[complex-structure, too-many-branches, too-many-statements]
+        """Handle input game events."""  # ruff: ignore[docstring-missing-exception]
         self.mouse_pos: tuple[int, int] = pygame.mouse.get_pos()
         # pygame.key.get_pressed()[pygame.K_q]
 
-        for event in pygame.event.get():
+        for event in pygame.event.get():  # ruff: ignore[too-many-nested-blocks]
             if event.type == pygame.QUIT:
                 exit_app()
 
@@ -752,9 +752,9 @@ class Main:
                 int(self.mouse_pos[1] + self.scroll[1]) // SETTINGS.tile_size,
             )
 
-    def update_state(self) -> None:
+    def update_state(self) -> None:  # ruff: ignore[complex-structure, too-many-branches]
         """Update game state."""
-        if self.state in {"main_game", "main_game_inventory"}:
+        if self.state in {"main_game", "main_game_inventory"}:  # ruff: ignore[too-many-nested-blocks]
             # Camera movement
             self.scroll[0] += (
                 (
@@ -1038,7 +1038,7 @@ class Main:
 
 
 @deprecated("Create substitute")
-def main() -> None:
+def main() -> None:  # ruff: ignore[undocumented-public-function]
     Main().run()
 
 

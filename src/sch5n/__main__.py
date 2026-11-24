@@ -45,14 +45,14 @@ def main() -> None:
     for program in Program:
         subparsers.add_parser(program)
 
-    args, remaining = parser.parse_known_args()
+    args, _ = parser.parse_known_args()
 
     command = Program(args.command) if args.command else Program.CLIENT
     match command:
         case Program.CLIENT:
             client_main()
         case Program.SERVER:
-            server_main(remaining)
+            server_main()
         case Program.MAP_EDITOR:
             map_editor_main()
         case Program.MAP_VIEWER:

@@ -6,8 +6,8 @@ from typing import override
 lazy import json
 
 
-class JsonFormatter(logging.Formatter):
-    def __init__(self, fmt_keys: dict[str, str] | None = None) -> None:
+class JsonFormatter(logging.Formatter):  # ruff: ignore[undocumented-public-class]
+    def __init__(self, fmt_keys: dict[str, str] | None = None) -> None:  # ruff: ignore[undocumented-public-init]
         if fmt_keys is None:
             fmt_keys = {}
 

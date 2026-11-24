@@ -24,7 +24,7 @@ def _generate_radom_map_name() -> str:
 
 
 @deprecated("This will be incorrect.")
-class Tile(TypedDict):
+class Tile(TypedDict):  # ruff: ignore[undocumented-public-class]
     block: str
     variant: int
     durability: NotRequired[int]
@@ -32,26 +32,14 @@ class Tile(TypedDict):
 
 @deprecated("Create substitute.")
 class Tilemap:
-    """A class representing a tilemap in a game.
-
-    Attributes:
-        assets (dict[str, dict[int, pygame.Surface]]): A dictionary mapping.
-        tile_size (int): The size of each tile in pixels.
-        tilemap (dict[IntTuple2, dict[str, str | int]]): A dictionary.
-
-    """
+    """A class representing a tilemap in a game."""
 
     def __init__(
         self,
         assets: dict[str, dict[int, pygame.Surface]],
         map_name: str | None = None,
     ) -> None:
-        """Initialize a Tilemap object.
-
-        Args:
-            assets (dict[str, dict[int, pygame.Surface]]): Dictionary mapping.
-
-        """
+        """Initialize a Tilemap object."""
         self.assets: dict[str, dict[int, pygame.Surface]] = assets
         self.map_name: str = (
             _generate_radom_map_name() if map_name is None else map_name
@@ -248,13 +236,7 @@ class Tilemap:
         *,
         breakage: bool = True,
     ) -> None:
-        """Render the tilemap on the given surface with an optional offset.
-
-        Args:
-            surface (pygame.Surface): The surface to render the tilemap on.
-            offset (tuple[float], optional): Offset to apply on the tilemap.
-
-        """
+        """Render the tilemap on the given surface with an optional offset."""
         for x in range(
             offset[0] // SETTINGS.tile_size - 1,
             (offset[0] + surface.width) // SETTINGS.tile_size + 1,

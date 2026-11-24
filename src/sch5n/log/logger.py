@@ -14,7 +14,9 @@ lazy from pathlib import Path
 from sch5n import __package__ as _package
 
 if TYPE_CHECKING:
-    from logging.config import _DictConfigArgs  # pyright: ignore[reportPrivateUsage]
+    from logging.config import (
+        _DictConfigArgs,  # pyright: ignore[reportPrivateUsage]
+    )
 
 LOGGER = logging.getLogger(_package)
 

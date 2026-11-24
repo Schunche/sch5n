@@ -50,7 +50,7 @@ def load_json(path: str) -> Json:
 
 
 @deprecated("Create substitute.")
-class Settings(pydantic.BaseModel):
+class Settings(pydantic.BaseModel):  # ruff: ignore[undocumented-public-class]
     window_width: int
     window_height: int
     FPS: int
@@ -64,12 +64,12 @@ SETTINGS: Settings = Settings.model_validate_json(
 
 
 @deprecated("Create substitute.")
-class FixGuiMainMenuSettings(pydantic.BaseModel):
+class FixGuiMainMenuSettings(pydantic.BaseModel):  # ruff: ignore[undocumented-public-class]
     button_padding: int
 
 
 @deprecated("Create substitute.")
-class FixGuiSettings(pydantic.BaseModel):
+class FixGuiSettings(pydantic.BaseModel):  # ruff: ignore[undocumented-public-class]
     button_border_width: int
     button_border_radius: int
     slot_border_width: int
@@ -83,7 +83,7 @@ class FixGuiSettings(pydantic.BaseModel):
 
 
 @deprecated("Create substitute.")
-class FixSettings(pydantic.BaseModel):
+class FixSettings(pydantic.BaseModel):  # ruff: ignore[undocumented-public-class]
     window_name: str
     reach: int
     inventory_column: int
@@ -224,7 +224,7 @@ def load_tiles(path: str) -> dict[str, dict[int, pygame.surface.Surface]]:
 
 
 @deprecated("Create substitute.")
-def load_tiles_resized(
+def load_tiles_resized(  # ruff: ignore[undocumented-public-function]
     path_dir: str, size: int
 ) -> dict[str, pygame.surface.Surface]:
     ret: dict[str, pygame.surface.Surface] = {}
@@ -235,7 +235,7 @@ def load_tiles_resized(
 
 
 @deprecated("Create substitute.")
-def get_bit(block: str = "_") -> str:
+def get_bit(block: str = "_") -> str:  # ruff: ignore[undocumented-public-function]
     # key <- value
     if block == "_":
         return "_"
@@ -246,13 +246,6 @@ def get_bit(block: str = "_") -> str:
 
 
 @deprecated("Create substitute.")
-def load_sys_font(
-    name: str, size: int = 16, *, bold: bool = False, italic: bool = False
-) -> pygame.font.Font:
-    return pygame.font.SysFont(name=name, size=size, bold=bold, italic=italic)
-
-
-@deprecated("Create substitute.")
 def load_icon(path: str) -> pygame.Surface:
-    """Load an icon from a file."""
+    """Load an icon from a file."""  # ruff: ignore[docstring-missing-returns]
     return load_image_resized(path, (SETTINGS.gui_size, SETTINGS.gui_size))

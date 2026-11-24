@@ -2,7 +2,7 @@
 """Experimental software."""
 
 
-def main(argv: list[str] | None = None) -> None:
+def main(args: list[str] | None = None) -> None:  # ruff: ignore[undocumented-public-function]
     # parser = argparse.ArgumentParser(prog="sch5n server")
 
     # parser.add_argument("--host", default="0.0.0.0")
@@ -13,4 +13,4 @@ def main(argv: list[str] | None = None) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main()  # pyright: ignore[reportCallIssue]

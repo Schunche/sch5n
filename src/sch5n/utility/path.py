@@ -40,4 +40,4 @@ def get_platformdirs() -> PlatformDirs:
         _SERVER_PLATFORM_DIRS
         if getenv("SCH5N_DEV", "0") == "1"
         else _CLIENT_PLATFORM_DIRS
-    )  # ruff: ignore[line-too-long]
+    )

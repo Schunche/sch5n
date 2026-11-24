@@ -57,7 +57,7 @@ class Mob:
         self.set_action("idle")
 
     def rect(self) -> pygame.rect.Rect:
-        """Return the rectangular hitbox of the mob."""
+        """Return the rectangular hitbox of the mob."""  # ruff: ignore[docstring-missing-returns]
         return pygame.Rect(
             self.pos[0] + self.pivot[0],
             self.pos[1] + self.pivot[1],
@@ -78,14 +78,8 @@ class Mob:
                 self.action
             ].copy()
 
-    def update(self, tilemap: Tilemap, movement: FloatTuple2 = (0, 0)) -> None:
-        """Update the mob's position and handle collisions with the tilemap.
-
-        Args:
-            tilemap (Tilemap): The tilemap the mob interacts with.
-            movement (FloatTuple2, optional): The movement vector.
-
-        """
+    def update(self, tilemap: Tilemap, movement: FloatTuple2 = (0, 0)) -> None:  # ruff: ignore[complex-structure, too-many-branches]
+        """Update the mob's position and handle collisions with the tilemap."""
         self.collisions: dict[str, bool] = {
             "left": False,
             "right": False,

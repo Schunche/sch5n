@@ -3,18 +3,14 @@
 
 lazy import contextlib
 lazy import json
+lazy import pickle  # ruff: ignore[suspicious-pickle-import]
 lazy import time
 lazy import zlib
 lazy from pathlib import Path
 lazy from typing import cast
 
 lazy from sch5n.log.logger import LOGGER
-lazy from sch5n.math.vector import (
-    IntTuple2,
-    IntTuple3,
-    deserialize_int_tuple_2,
-    serialize_int_tuple_2,
-)
+lazy from sch5n.math.vector import IntTuple2, IntTuple3
 
 type _Color = IntTuple3
 type _Light = int
@@ -33,26 +29,26 @@ def get_current_unix_time() -> int:
     return int(time.time())
 
 
-class Map:
+class Map:  # ruff: ignore[undocumented-public-class]
     __slots__ = ("_size", "_tiles")
 
-    def __init__(self, size: IntTuple2) -> None:
+    def __init__(self, size: IntTuple2) -> None:  # ruff: ignore[undocumented-public-init]
         if size[0] <= 0 or size[1] <= 0:
             raise ValueError
 
         self._size: IntTuple2 = size
         self._tiles: dict[IntTuple2, MapTile] = {}
 
-    def isinbound(self, position: IntTuple2) -> bool:
+    def isinbound(self, position: IntTuple2) -> bool:  # ruff: ignore[undocumented-public-method]
         return (
             0 <= position[0] < self._size[0]
             and 0 <= position[1] < self._size[1]
         )
 
-    def get(self, position: IntTuple2) -> MapTile | None:
+    def get(self, position: IntTuple2) -> MapTile | None:  # ruff: ignore[undocumented-public-method]
         return self._tiles.get(position, None)
 
-    def set(
+    def set(  # ruff: ignore[undocumented-public-method]
         self,
         position: IntTuple2,
         color: _Color,
@@ -70,14 +66,14 @@ class Map:
     ) -> None:
         self._tiles[position] = map_tile
 
-    def clear(self) -> None:
+    def clear(self) -> None:  # ruff: ignore[undocumented-public-method]
         self._tiles = {}
 
-    def empty(self, position: IntTuple2) -> None:
+    def empty(self, position: IntTuple2) -> None:  # ruff: ignore[undocumented-public-method]
         with contextlib.suppress(KeyError):
             self._tiles.pop(position)
 
-    def is_revealed(self, position: IntTuple2) -> bool:
+    def is_revealed(self, position: IntTuple2) -> bool:  # ruff: ignore[undocumented-public-method]
         tile = self.get(position)
         return tile is not None and tile[1] > 0
 
@@ -87,7 +83,7 @@ class Map:
         LOGGER.info("Removing corrupted map file.")
         path.unlink(missing_ok=True)
 
-    def load(self, path: Path, backup_path: Path | None = None) -> None:
+    def load(self, path: Path, backup_path: Path | None = None) -> None:  # ruff: ignore[undocumented-public-method]
         if not path.exists():
             LOGGER.info("Tried to load non-existing map.")
             if backup_path is not None:
@@ -120,7 +116,7 @@ class Map:
                 "dict[str, tuple[IntTuple3, int, int]]", data
             ).items():
                 other._set_unchecked_timed(
-                    deserialize_int_tuple_2(position),
+                    pickle.loads(position),  # ruff: ignore[suspicious-pickle-usage] # pyright: ignore[reportArgumentType]
                     (map_tile[0], map_tile[1], map_tile[2]),
                 )
 
@@ -131,11 +127,11 @@ class Map:
             self._size = other._size
             self._tiles = other._tiles
 
-    def save(self, path: Path) -> None:
+    def save(self, path: Path) -> None:  # ruff: ignore[undocumented-public-method]
         json_data = {  # pyright: ignore[reportUnknownVariableType]
             "size": self._size,
             "data": {
-                serialize_int_tuple_2(k): v for k, v in self._tiles.items()
+                pickle.dumps(k): v for k, v in self._tiles.items()
             },
         }
 

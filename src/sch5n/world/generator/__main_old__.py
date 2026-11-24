@@ -4,7 +4,6 @@
 import json
 import math
 import pathlib
-from warnings import deprecated
 
 from sch5n.vendor.random import choice, randbelow, randf, randint
 lazy from sch5n.log.logger import LOGGER
@@ -33,8 +32,7 @@ def _random_signed(num: float) -> float:
     return ((randbelow(1) * 2) - 1) * num
 
 
-@deprecated("Create substitute")
-def _generate_map(
+def _generate_map_old(  # ruff: ignore[complex-structure]
     x_left: int = 0, x_right: int = 100, y_top: int = 0, y_bottom: int = 100
 ) -> dict[str, dict[str, str | int]]:
     tilemap: dict[str, dict[str, str | int]] = {}
@@ -53,7 +51,7 @@ def _generate_map(
             tilemap[f"{x};{y}"] = {"block": "stone", "variant": 0}
 
     # Draw strokes of dirt/stone
-    def draw_patch_stroke(
+    def draw_patch_stroke(  # ruff: ignore[complex-structure]
         point: tuple[int, int],
         block: str,
         count: int = 0,
@@ -166,8 +164,7 @@ def _generate_map(
     return tilemap
 
 
-@deprecated("Create substitute")
-def main(filename: str = "procedural") -> None:
+def main(filename: str = "procedural") -> None:  # ruff: ignore[undocumented-public-function]
     LOGGER.info("Started making it")
     # X grows left to right
     # Y grows top to bottom
@@ -186,7 +183,7 @@ def main(filename: str = "procedural") -> None:
         map_bottom,
     )
 
-    generated_map = _generate_map(
+    generated_map = _generate_map_old(
         x_left=map_left, x_right=map_right, y_top=map_top, y_bottom=map_bottom
     )
 
@@ -195,4 +192,4 @@ def main(filename: str = "procedural") -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main()  # pyright: ignore[reportDeprecated]

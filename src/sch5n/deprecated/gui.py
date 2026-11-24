@@ -10,7 +10,6 @@ from sch5n.deprecated.loader import (
     FIX_SETTINGS,
     NAME_SPACE,
     SETTINGS,
-    load_sys_font,
 )
 lazy from sch5n.deprecated.item import Item
 lazy from sch5n.log.logger import LOGGER
@@ -19,7 +18,7 @@ lazy from sch5n.log.logger import LOGGER
 
 
 @deprecated("Create substitute.")
-def render_text(
+def render_text(  # ruff: ignore[too-many-arguments, too-many-positional-arguments]
     surface: pygame.Surface,
     pos: tuple[int, int],
     text: str,
@@ -28,7 +27,7 @@ def render_text(
     font_size: int = 16,
 ) -> None:
     """Render text to the specified surface."""
-    font: pygame.font.Font = load_sys_font(font_name, size=font_size)
+    font: pygame.font.Font = pygame.font.SysFont(font_name, font_size)
     text_rendered: pygame.Surface = font.render(
         text, antialias=True, color=NAME_SPACE["color"][color]
     )
@@ -38,8 +37,8 @@ def render_text(
 
 
 @deprecated("Create substitute.")
-class Button:
-    def __init__(
+class Button:  # ruff: ignore[undocumented-public-class]
+    def __init__(  # ruff: ignore[too-many-arguments]
         self,
         pos: tuple[int, int],
         text: str,
@@ -62,7 +61,7 @@ class Button:
 
         TODO: is_solid.
 
-        """
+        """  # ruff: ignore[docstring-missing-exception]
         if inner_color not in NAME_SPACE["color"]:
             msg = f"Invalid background color: {inner_color}"
             raise ValueError(msg)
@@ -76,7 +75,7 @@ class Button:
             raise ValueError(msg)
 
         if font is None:
-            font = load_sys_font("arial")
+            font = pygame.font.SysFont("arial", 12)
 
         self.pos: tuple[int, int] = pos
         self.size: tuple[int, int] = size
@@ -164,7 +163,7 @@ class Button:
             raise ValueError(msg)
 
     def push(self, mouse_pos: tuple[int, int]) -> bool:
-        """Pushes the button."""
+        """Pushes the button."""  # ruff: ignore[docstring-missing-returns]
         if not self.border_rect.collidepoint(*mouse_pos):  # ruff: ignore[needless-bool]
             return False
 
@@ -201,8 +200,8 @@ class Button:
 
 
 @deprecated("Create substitute.")
-class Inventory:
-    def __init__(self, *args: Item) -> None:
+class Inventory:  # ruff: ignore[undocumented-public-class]
+    def __init__(self, *args: Item) -> None:  # ruff: ignore[undocumented-public-init]
 
         self.slots: dict[int, Item | None] = dict.fromkeys(
             range(FIX_SETTINGS.inventory_column * FIX_SETTINGS.inventory_row)
@@ -256,20 +255,20 @@ class Inventory:
             for i in range(len(self.slots))
         ]
 
-    def click(self, mouse_pos: tuple[int, int]) -> bool:  # ruff: ignore[no-self-use, unused-method-argument]
+    def click(self, mouse_pos: tuple[int, int]) -> bool:  # ruff: ignore[no-self-use, undocumented-public-method, unused-method-argument]
         # Placeholder
         return False
 
         # Actual functionality here
 
-    def get_item_by_num(self, slot_num: int) -> Item | None:
+    def get_item_by_num(self, slot_num: int) -> Item | None:  # ruff: ignore[undocumented-public-method]
         return self.slots[slot_num]
 
     def is_full(self) -> bool:
-        """Whether the inventory is full."""
+        """Whether the inventory is full."""  # ruff: ignore[docstring-missing-returns]
         return None not in self.slots.values()
 
-    def render_hotbar(
+    def render_hotbar(  # ruff: ignore[undocumented-public-method]
         self,
         surface: pygame.Surface,
         hotbar_num: int,
@@ -320,7 +319,7 @@ class Inventory:
                     ),
                 )
 
-    def render_full_inventory(
+    def render_full_inventory(  # ruff: ignore[undocumented-public-method]
         self,
         surface: pygame.Surface,
         hotbar_num: int,
@@ -366,20 +365,20 @@ class Inventory:
                     ),
                 )
 
-    def does_hover(self, mouse_pos: tuple[int, int]) -> bool:
+    def does_hover(self, mouse_pos: tuple[int, int]) -> bool:  # ruff: ignore[undocumented-public-method]
         for slot_num in self.slots:
             if self.border_rects[slot_num].collidepoint(mouse_pos):
                 return True
         return False
 
-    def get_slot_num(self, mouse_pos: tuple[int, int]) -> int | None:
+    def get_slot_num(self, mouse_pos: tuple[int, int]) -> int | None:  # ruff: ignore[undocumented-public-method]
         for slot_num in self.slots:
             if self.border_rects[slot_num].collidepoint(mouse_pos):
                 return slot_num
 
         return None
 
-    def add_item(self, item: Item) -> Item | None:
+    def add_item(self, item: Item) -> Item | None:  # ruff: ignore[complex-structure, too-many-branches, too-many-return-statements, undocumented-public-method]
         if item.max_amount == 1:
             if self.is_full():
                 return item
@@ -442,19 +441,19 @@ class Inventory:
 
 
 @deprecated("Create substitute.")
-class CursorSlot:
-    def __init__(self, item: Item | None = None) -> None:
+class CursorSlot:  # ruff: ignore[undocumented-public-class]
+    def __init__(self, item: Item | None = None) -> None:  # ruff: ignore[undocumented-public-init]
         self.slot = item
 
     def is_full(self) -> bool:
-        """Whether the slot has an item."""
+        """Whether the slot has an item."""  # ruff: ignore[docstring-missing-returns]
         return self.slot is not None
 
     def get_item(self) -> Item | None:
-        """Item the cursor contains."""
+        """Item the cursor contains."""  # ruff: ignore[docstring-missing-returns]
         return self.slot
 
-    def render_item_at_cursor(
+    def render_item_at_cursor(  # ruff: ignore[undocumented-public-method]
         self, surface: pygame.Surface, mouse_pos: tuple[int, int]
     ) -> None:
         item = self.slot
@@ -467,5 +466,5 @@ class CursorSlot:
                 ),
             )
 
-    def empty(self) -> None:
+    def empty(self) -> None:  # ruff: ignore[undocumented-public-method]
         self.slot = None

@@ -116,7 +116,7 @@ class Main:
             pygame.display.update()
 
 
-def main() -> None:
+def main() -> None:  # ruff: ignore[undocumented-public-function]
     Main().run()
 
 

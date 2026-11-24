@@ -3,10 +3,14 @@
 
 from __future__ import annotations
 
-lazy from jmespath import Options as _Options
+from typing import TYPE_CHECKING
+
 lazy from jmespath import compile as _compile
 lazy from jmespath import search as _search
 lazy from jmespath.parser import ParsedResult
+
+if TYPE_CHECKING:
+    lazy from jmespath import Options as _Options
 
 type JsonArray = list[Json]
 type JsonObject = dict[str, Json]

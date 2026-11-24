@@ -25,13 +25,7 @@ class Player(Mob):
         pos: FloatTuple2,
         game_mode: str = "survival",
     ) -> None:
-        """Initialize a Player object.
-
-        Args:
-            assets (dict[str, dict[str, Animation]]): Player assets.
-            pos (FloatTuple2): The initial position of the player.
-
-        """
+        """Initialize a Player object."""
         super().__init__(species="player", assets=assets, pos=pos)
         self.airTime: int = 0
 
@@ -53,7 +47,7 @@ class Player(Mob):
 
         self.tool_use_penalty: int = 0
 
-    def get_item_in_hand(self) -> Item | None:
+    def get_item_in_hand(self) -> Item | None:  # ruff: ignore[undocumented-public-method]
         return (
             self.inventory.get_item_by_num(self.hotbar_num)
             if self.cursor_slot.get_item() is None
@@ -61,7 +55,7 @@ class Player(Mob):
         )
 
     def get_inventory(self) -> dict[int, Item | None]:
-        """You can only assingn to this for some reason."""
+        """You can only assingn to this for some reason."""  # ruff: ignore[docstring-missing-returns]
         return self.inventory.slots
 
     @override
@@ -106,7 +100,7 @@ class Player(Mob):
             else:
                 self.set_action("idle")
 
-    def jump(self) -> None:
+    def jump(self) -> None:  # ruff: ignore[undocumented-public-method]
         if self.wall_slide:
             if self.flip:
                 self.velocity = (3.5, self.velocity[1])

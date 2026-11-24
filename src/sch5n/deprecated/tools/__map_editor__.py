@@ -86,7 +86,7 @@ class Main:
         ][self.tile_list[self.tile_index][1]].copy()
         self.current_tile_img.set_alpha(100)
 
-    def handle_events(self) -> None:
+    def handle_events(self) -> None:  # ruff: ignore[complex-structure, too-many-branches, too-many-statements]
         """Handle input game events."""
         self.mouse_pos: tuple[int, int] = pygame.mouse.get_pos()
         self.tile_pos = (
@@ -208,7 +208,7 @@ class Main:
             pygame.display.update()
 
 
-def main() -> None:
+def main() -> None:  # ruff: ignore[undocumented-public-function]
     Main().run()
 
 

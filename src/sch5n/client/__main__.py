@@ -3,12 +3,12 @@
 
 lazy from pathlib import Path
 
-lazy from sch5n.deprecated.__main__ import main as main_old
+lazy from sch5n.deprecated.__main__ import main as main_old  # pyright: ignore[reportDeprecated]
 lazy from sch5n.log.logger import init as init_logging
 
 
 # def main(argv: list[str] | None = None) -> None:
-def main() -> None:
+def main() -> None:  # ruff: ignore[undocumented-public-function]
     # parser = argparse.ArgumentParser(prog="sch5n client")
 
     # parser.add_argument("--width", type=int, default=1280)

@@ -1,20 +1,22 @@
-import argparse
+# Copyright (c) 2026 Schunche
+"""Experimental software."""
+
 import math
-import random
 import secrets
 import struct
 from datetime import datetime
 from pathlib import Path
+lazy import argparse
 
 import moderngl
-import moderngl_window as mglw
+import moderngl_window
 from PIL import Image
 
 BASE_DIR = Path(__file__).resolve().parent
 SHADER_PATH = BASE_DIR / "assets" / "shader" / "compute.comp"
 SCREENSHOT_DIR = BASE_DIR / "captures" / "schreenshots"
 
-STARTER_COMPUTE_SHADER = """#version 430
+FALLBACK_COMPUTE_SHADER = """#version 430
 
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 layout (rgba32f, binding = 0) writeonly uniform image2D u_out_tex;
@@ -88,7 +90,7 @@ void main() {
 """
 
 
-class ComputeSandbox(mglw.WindowConfig):
+class ComputeSandbox(moderngl_window.WindowConfig):  # pyright: ignore[reportPrivateImportUsage]
     gl_version = (4, 3)
     title = "GLSL Compute Sandbox"
     window_size = (1280, 720)
@@ -98,7 +100,7 @@ class ComputeSandbox(mglw.WindowConfig):
     reset_shader: bool = False
 
     @classmethod
-    def add_arguments(cls, parser: argparse.ArgumentParser):
+    def add_arguments(cls, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "--seed",
             type=int,
@@ -108,29 +110,41 @@ class ComputeSandbox(mglw.WindowConfig):
         parser.add_argument(
             "--reset-shader",
             action="store_true",
-            help="Overwrite assets/shader/compute.comp with the default starter shader",
+            help="Overwrite assets/shader/compute.comp with the default starter shader",  # ruff: ignore[line-too-long]
         )
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, **kwargs) -> None:  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]  # ruff: ignore[missing-type-kwargs]
+        super().__init__(**kwargs)  # pyright: ignore[reportUnknownArgumentType]
 
-        self.seed = self.argv.seed
+        self.seed = self.argv.seed  # pyright: ignore[reportOptionalMemberAccess]
         self.paused = False
         self.sim_time = 0.0
 
         SHADER_PATH.parent.mkdir(parents=True, exist_ok=True)
-        if self.argv.reset_shader or not SHADER_PATH.exists():
-            SHADER_PATH.write_text(STARTER_COMPUTE_SHADER, encoding="utf-8")
-            print(f"[Wrote Shader] {SHADER_PATH}")
+        if self.argv.reset_shader or not SHADER_PATH.exists():  # pyright: ignore[reportOptionalMemberAccess]
+            SHADER_PATH.write_text(FALLBACK_COMPUTE_SHADER, encoding="utf-8")
+            print(f"[Wrote Shader] {SHADER_PATH}")  # ruff: ignore[print]
         else:
-            print(f"[Loaded Existing Shader] {SHADER_PATH}")
+            print(f"[Loaded Existing Shader] {SHADER_PATH}")  # ruff: ignore[print]
 
         vertices = struct.pack(
             "16f",
-            -1.0, -1.0, 0.0, 0.0,
-             1.0, -1.0, 1.0, 0.0,
-            -1.0,  1.0, 0.0, 1.0,
-             1.0,  1.0, 1.0, 1.0,
+            -1.0,
+            -1.0,
+            0.0,
+            0.0,
+            1.0,
+            -1.0,
+            1.0,
+            0.0,
+            -1.0,
+            1.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
         )
         quad_vbo = self.ctx.buffer(vertices)
 
@@ -155,8 +169,8 @@ class ComputeSandbox(mglw.WindowConfig):
                 }
             """,
         )
-        self.display_prog["u_tex"].value = 0
-        self.vao = self.ctx.vertex_array(
+        self.display_prog["u_tex"].value = 0  # pyright: ignore[reportAttributeAccessIssue]
+        self.vao = self.ctx.vertex_array(  # pyright: ignore[reportUnknownMemberType]
             self.display_prog, [(quad_vbo, "2f 2f", "in_vert", "in_uv")]
         )
 
@@ -169,14 +183,14 @@ class ComputeSandbox(mglw.WindowConfig):
         self._load_compute_shader(force=True)
         self._update_title()
 
-    def _update_title(self):
+    def _update_title(self) -> None:
         state = "PAUSED" if self.paused else "RUNNING"
         self.wnd.title = (
             f"GLSL Compute Sandbox | Seed: {self.seed} | {state} "
             f"[R: New Seed | S: Save PNG | Space: Pause]"
         )
 
-    def _ensure_target_texture(self):
+    def _ensure_target_texture(self) -> None:
         w, h = self.wnd.buffer_size
         w, h = max(1, w), max(1, h)
         if (w, h) != self._tex_size or self.out_tex is None:
@@ -185,7 +199,7 @@ class ComputeSandbox(mglw.WindowConfig):
             self.out_tex = self.ctx.texture((w, h), 4, dtype="f4")
             self._tex_size = (w, h)
 
-    def _load_compute_shader(self, force: bool = False):
+    def _load_compute_shader(self, force: bool = False) -> None:  # ruff: ignore[boolean-default-value-positional-argument, boolean-type-hint-positional-argument]
         try:
             mtime = SHADER_PATH.stat().st_mtime
         except OSError:
@@ -195,17 +209,16 @@ class ComputeSandbox(mglw.WindowConfig):
         try:
             source = SHADER_PATH.read_text(encoding="utf-8")
             new_compute = self.ctx.compute_shader(source)
-        except Exception as exc:
-            print(f"[Compute Shader Error] {exc}")
+        except Exception:  # ruff: ignore[blind-except]
             self._last_mtime = mtime
             return
         if self.compute is not None:
             self.compute.release()
         self.compute = new_compute
         self._last_mtime = mtime
-        print(f"[Reloaded] {SHADER_PATH.relative_to(BASE_DIR)}")
+        print(f"[Reloaded] {SHADER_PATH.relative_to(BASE_DIR)}")  # ruff: ignore[print]
 
-    def save_output_png(self):
+    def save_output_png(self) -> None:
         if self.out_tex is None:
             return
         SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
@@ -218,25 +231,25 @@ class ComputeSandbox(mglw.WindowConfig):
         img = Image.frombytes("RGBA", (w, h), rgba_bytes).transpose(
             Image.Transpose.FLIP_TOP_BOTTOM
         )
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # ruff: ignore[call-datetime-now-without-tzinfo]
         out_file = SCREENSHOT_DIR / f"output_seed_{self.seed}_{timestamp}.png"
         img.save(out_file)
-        print(f"[Saved Image] {out_file}")
+        print(f"[Saved Image] {out_file}")  # ruff: ignore[print]
 
-    def on_key_event(self, key, action, modifiers):
+    def on_key_event(self, key, action, modifiers) -> None:  # pyright: ignore[reportMissingParameterType]  # ruff: ignore[missing-type-function-argument, unused-method-argument]
         if action != self.wnd.keys.ACTION_PRESS:
             return
         if key == self.wnd.keys.R:
-            self.seed = random.randint(0, 999_999)
+            self.seed = secrets.randbelow(10**6)
             self._update_title()
-            print(f"[Seed] {self.seed}")
+            print(f"[Seed] {self.seed}")  # ruff: ignore[print]
         elif key == self.wnd.keys.S:
             self.save_output_png()
         elif key == self.wnd.keys.SPACE:
             self.paused = not self.paused
             self._update_title()
 
-    def on_render(self, time: float, frame_time: float):
+    def on_render(self, time: float, frame_time: float) -> None:  # ruff: ignore[unused-method-argument]
         if not self.paused:
             self.sim_time += frame_time
 
@@ -244,13 +257,13 @@ class ComputeSandbox(mglw.WindowConfig):
         self._ensure_target_texture()
 
         w, h = self._tex_size
-        self.out_tex.bind_to_image(0, read=False, write=True)
+        self.out_tex.bind_to_image(0, read=False, write=True)  # pyright: ignore[reportOptionalMemberAccess]
 
         if self.compute is not None:
             if "u_resolution" in self.compute:
-                self.compute["u_resolution"].value = (float(w), float(h))
+                self.compute["u_resolution"].value = (float(w), float(h))  # pyright: ignore[reportAttributeAccessIssue]
             if "u_time" in self.compute:
-                self.compute["u_time"].value = self.sim_time
+                self.compute["u_time"].value = self.sim_time  # pyright: ignore[reportAttributeAccessIssue]
             if "u_seed" in self.compute:
                 self.compute["u_seed"].value = int(self.seed)
 
@@ -259,9 +272,9 @@ class ComputeSandbox(mglw.WindowConfig):
         self.ctx.memory_barrier(moderngl.SHADER_IMAGE_ACCESS_BARRIER_BIT)
 
         self.ctx.clear()
-        self.out_tex.use(location=0)
+        self.out_tex.use(location=0)  # pyright: ignore[reportOptionalMemberAccess]
         self.vao.render(moderngl.TRIANGLE_STRIP)
 
 
 if __name__ == "__main__":
-    mglw.run_window_config(ComputeSandbox)
+    moderngl_window.run_window_config(ComputeSandbox)

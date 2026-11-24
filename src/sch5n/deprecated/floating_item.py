@@ -16,13 +16,13 @@ lazy from sch5n.math.vector import FloatTuple2
 
 
 @deprecated("Create substitute.")
-class FloatingItem:
-    def __init__(self, pos: FloatTuple2, item: Item) -> None:
+class FloatingItem:  # ruff: ignore[undocumented-public-class]
+    def __init__(self, pos: FloatTuple2, item: Item) -> None:  # ruff: ignore[undocumented-public-init]
         self.pos: FloatTuple2 = pos
         self.item: Item = item
         self.velocity: FloatTuple2 = (0, 0)
 
-    def get_collision_rect(self) -> pygame.Rect:
+    def get_collision_rect(self) -> pygame.Rect:  # ruff: ignore[undocumented-public-method]
         return pygame.Rect(
             self.pos[0] + ITEM_IMAGE[self.item.id].get_width() * 0.25,
             self.pos[1] + ITEM_IMAGE[self.item.id].get_height() * 0.25,
@@ -31,7 +31,7 @@ class FloatingItem:
         )
 
     @deprecated("Use delta time for your own sake!")
-    def update(
+    def update(  # ruff: ignore[complex-structure, too-many-branches, undocumented-param]
         self,
         tilemap: Tilemap,
         player_pos: FloatTuple2 = (0, 0),
@@ -185,7 +185,7 @@ class FloatingItem:
         if self.collisions["down"] or self.collisions["up"]:
             self.velocity = (self.velocity[0], 0)
 
-    def render(
+    def render(  # ruff: ignore[undocumented-public-method]
         self, surface: pygame.Surface, offset: FloatTuple2 = (0, 0)
     ) -> None:
 
