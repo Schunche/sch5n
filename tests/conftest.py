@@ -18,13 +18,24 @@ from sch5n.world.tilemap import TileMap
 
 @pytest.fixture(scope="session")
 def content() -> Content:
-    """The real game data."""
+    """Load the real game data.
+
+    Returns:
+        Content: Blocks, items and rules from `assets/base/data`.
+
+    """
     return Content.load(path.DATA_DIR)
 
 
 @pytest.fixture
 def blocks() -> BlockRegistry:
-    """Solid stone, a non solid log and a leaf turning into a log."""
+    """Register a tiny block set.
+
+    Returns:
+        BlockRegistry: Solid stone, a non solid log and a leaf turning
+            into a log.
+
+    """
     return BlockRegistry(
         BlocksFile.model_validate({
             "default_durability": 100,
@@ -54,7 +65,12 @@ def blocks() -> BlockRegistry:
 
 @pytest.fixture
 def items(blocks: BlockRegistry) -> ItemRegistry:
-    """Items matching `blocks`."""
+    """Register items for the tiny block set.
+
+    Returns:
+        ItemRegistry: A pickaxe, an axe and two stackables.
+
+    """
     return ItemRegistry(
         ItemsFile.model_validate({
             "items": {
@@ -86,7 +102,12 @@ def items(blocks: BlockRegistry) -> ItemRegistry:
 
 @pytest.fixture
 def tilemap(blocks: BlockRegistry) -> TileMap:
-    """An empty map."""
+    """Create an empty map.
+
+    Returns:
+        TileMap: A map using the tiny block set.
+
+    """
     return TileMap(blocks)
 
 

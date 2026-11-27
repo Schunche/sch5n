@@ -43,35 +43,44 @@ class TickInput:
     """Visible world area, in pixels. Particles only spawn inside it."""
 
 
+@dataclass(frozen=True, slots=True)
+class GameSetup:
+    """How a session starts."""
+
+    mode: GameMode = GameMode.SURVIVAL
+    seed: int | None = None
+    """Seed for cosmetic randomness and item scatter."""
+    spawn: tuple[float, float] = (640.0, 360.0)
+    """Preferred spawn position in pixels. The player is dropped onto the
+    ground below it."""
+    cloud_variants: int = 1
+    """Number of distinct cloud images."""
+
+
+DEFAULT_SETUP = GameSetup()
+
+
 class Game:
     """Owns the simulation state of one play session."""
 
-    def __init__(  # ruff: ignore[too-many-arguments]
+    def __init__(
         self,
         content: Content,
         tilemap: TileMap,
-        *,
-        mode: GameMode | None = None,
-        seed: int | None = None,
-        cloud_variants: int = 1,
-        spawn: tuple[float, float] = (640.0, 360.0),
+        setup: GameSetup = DEFAULT_SETUP,
     ) -> None:
         """Start a session on `tilemap`.
 
         Args:
             content: Loaded game data.
             tilemap: The world. It is modified in place.
-            mode: Game mode, defaults to the configured one.
-            seed: Seed for cosmetic randomness and item scatter.
-            cloud_variants: Number of distinct cloud images.
-            spawn: Preferred spawn position in pixels. The player is
-                dropped onto the ground below it.
+            setup: Game mode, seed and spawn point.
 
         """
         self.content = content
         self.config = content.game
         self.tilemap = tilemap
-        self.rng = np.random.default_rng(seed)
+        self.rng = np.random.default_rng(setup.seed)
         self.ticks = 0
 
         items = content.items
@@ -85,21 +94,27 @@ class Game:
         self.player = Player(
             self.config,
             inventory,
-            self._spawn_point(spawn),
-            mode or GameMode.SURVIVAL,
+            self._spawn_point(setup.spawn),
+            setup.mode,
         )
         self.floating_items: list[FloatingItem] = []
         self.ambience = Ambience(
             self.config.particles,
             self.config.clouds.count,
-            cloud_variants,
+            setup.cloud_variants,
             self.rng,
         )
 
     def _spawn_point(
         self, preferred: tuple[float, float]
     ) -> tuple[float, float]:
-        """Top left corner for the player, standing on the ground."""  # ruff: ignore[docstring-missing-returns]
+        """Find the player's top left corner, standing on the ground.
+
+        Returns:
+            tuple[float, float]: Position in pixels, `preferred` if there
+            is no ground.
+
+        """
         size = self.config.tile_size
         width, height = self.config.player.size
         x, y = preferred

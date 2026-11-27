@@ -4,13 +4,19 @@
 import math
 import secrets
 import struct
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING, override
 lazy import argparse
 
 import moderngl
 import moderngl_window
 from PIL import Image
+
+from sch5n.log.logger import LOGGER
+
+if TYPE_CHECKING:
+    from moderngl_window.context.base import KeyModifiers
 
 BASE_DIR = Path(__file__).resolve().parent
 SHADER_PATH = BASE_DIR / "assets" / "shader" / "compute.comp"
@@ -110,10 +116,13 @@ class ComputeSandbox(moderngl_window.WindowConfig):  # pyright: ignore[reportPri
         parser.add_argument(
             "--reset-shader",
             action="store_true",
-            help="Overwrite assets/shader/compute.comp with the default starter shader",  # ruff: ignore[line-too-long]
+            help=(
+                "Overwrite assets/shader/compute.comp with the default "
+                "starter shader"
+            ),
         )
 
-    def __init__(self, **kwargs) -> None:  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]  # ruff: ignore[missing-type-kwargs]
+    def __init__(self, **kwargs: object) -> None:
         super().__init__(**kwargs)  # pyright: ignore[reportUnknownArgumentType]
 
         self.seed = self.argv.seed  # pyright: ignore[reportOptionalMemberAccess]
@@ -123,9 +132,9 @@ class ComputeSandbox(moderngl_window.WindowConfig):  # pyright: ignore[reportPri
         SHADER_PATH.parent.mkdir(parents=True, exist_ok=True)
         if self.argv.reset_shader or not SHADER_PATH.exists():  # pyright: ignore[reportOptionalMemberAccess]
             SHADER_PATH.write_text(FALLBACK_COMPUTE_SHADER, encoding="utf-8")
-            print(f"[Wrote Shader] {SHADER_PATH}")  # ruff: ignore[print]
+            LOGGER.info("Wrote shader %s", SHADER_PATH)
         else:
-            print(f"[Loaded Existing Shader] {SHADER_PATH}")  # ruff: ignore[print]
+            LOGGER.info("Loaded existing shader %s", SHADER_PATH)
 
         vertices = struct.pack(
             "16f",
@@ -199,7 +208,7 @@ class ComputeSandbox(moderngl_window.WindowConfig):  # pyright: ignore[reportPri
             self.out_tex = self.ctx.texture((w, h), 4, dtype="f4")
             self._tex_size = (w, h)
 
-    def _load_compute_shader(self, force: bool = False) -> None:  # ruff: ignore[boolean-default-value-positional-argument, boolean-type-hint-positional-argument]
+    def _load_compute_shader(self, *, force: bool = False) -> None:
         try:
             mtime = SHADER_PATH.stat().st_mtime
         except OSError:
@@ -209,14 +218,15 @@ class ComputeSandbox(moderngl_window.WindowConfig):  # pyright: ignore[reportPri
         try:
             source = SHADER_PATH.read_text(encoding="utf-8")
             new_compute = self.ctx.compute_shader(source)
-        except Exception:  # ruff: ignore[blind-except]
+        except OSError, moderngl.Error:
+            LOGGER.exception("Could not load %s", SHADER_PATH)
             self._last_mtime = mtime
             return
         if self.compute is not None:
             self.compute.release()
         self.compute = new_compute
         self._last_mtime = mtime
-        print(f"[Reloaded] {SHADER_PATH.relative_to(BASE_DIR)}")  # ruff: ignore[print]
+        LOGGER.info("Reloaded %s", SHADER_PATH.relative_to(BASE_DIR))
 
     def save_output_png(self) -> None:
         if self.out_tex is None:
@@ -231,25 +241,31 @@ class ComputeSandbox(moderngl_window.WindowConfig):  # pyright: ignore[reportPri
         img = Image.frombytes("RGBA", (w, h), rgba_bytes).transpose(
             Image.Transpose.FLIP_TOP_BOTTOM
         )
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # ruff: ignore[call-datetime-now-without-tzinfo]
+        timestamp = datetime.now(tz=UTC).strftime("%Y%m%d_%H%M%S")
         out_file = SCREENSHOT_DIR / f"output_seed_{self.seed}_{timestamp}.png"
         img.save(out_file)
-        print(f"[Saved Image] {out_file}")  # ruff: ignore[print]
+        LOGGER.info("Saved image %s", out_file)
 
-    def on_key_event(self, key, action, modifiers) -> None:  # pyright: ignore[reportMissingParameterType]  # ruff: ignore[missing-type-function-argument, unused-method-argument]
+    @override
+    def on_key_event(
+        self, key: int, action: str, modifiers: KeyModifiers
+    ) -> None:
+        """Handle the demo's keys: R new seed, S save, Space pause."""
         if action != self.wnd.keys.ACTION_PRESS:
             return
         if key == self.wnd.keys.R:
             self.seed = secrets.randbelow(10**6)
             self._update_title()
-            print(f"[Seed] {self.seed}")  # ruff: ignore[print]
+            LOGGER.info("Seed %s", self.seed)
         elif key == self.wnd.keys.S:
             self.save_output_png()
         elif key == self.wnd.keys.SPACE:
             self.paused = not self.paused
             self._update_title()
 
-    def on_render(self, time: float, frame_time: float) -> None:  # ruff: ignore[unused-method-argument]
+    @override
+    def on_render(self, time: float, frame_time: float) -> None:
+        """Run the compute shader and show its output."""
         if not self.paused:
             self.sim_time += frame_time
 

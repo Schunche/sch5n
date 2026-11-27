@@ -77,7 +77,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     ).run(MainMenu)
 
 
-def _tool_main(prog: str, editor: bool, argv: Sequence[str] | None) -> None:  # ruff: ignore[boolean-type-hint-positional-argument]
+def _tool_main(
+    prog: str,
+    scene: type[ViewerScene],
+    argv: Sequence[str] | None,
+) -> None:
     parser = argparse.ArgumentParser(prog=prog)
     parser.add_argument(
         "map", type=map_file, nargs="?", default=map_file("map1")
@@ -86,7 +90,6 @@ def _tool_main(prog: str, editor: bool, argv: Sequence[str] | None) -> None:  # 
     args = parser.parse_args(argv)
 
     _init()
-    scene = EditorScene if editor else ViewerScene
     App(
         Options(map_path=args.map, max_frames=args.frames, hidden=args.hidden)
     ).run(lambda app: scene(app, args.map))
@@ -94,12 +97,12 @@ def _tool_main(prog: str, editor: bool, argv: Sequence[str] | None) -> None:  # 
 
 def editor_main(argv: Sequence[str] | None = None) -> None:
     """Edit a map."""
-    _tool_main("sch5n edit", True, argv)  # ruff: ignore[boolean-positional-value-in-call]
+    _tool_main("sch5n edit", EditorScene, argv)
 
 
 def viewer_main(argv: Sequence[str] | None = None) -> None:
     """Look at a map."""
-    _tool_main("sch5n view", False, argv)  # ruff: ignore[boolean-positional-value-in-call]
+    _tool_main("sch5n view", ViewerScene, argv)
 
 
 if __name__ == "__main__":

@@ -11,46 +11,51 @@ lazy import os
 lazy from copy import deepcopy
 lazy from pathlib import Path
 
-from sch5n import __package__ as _package
+from sch5n.about import NAME
 
 if TYPE_CHECKING:
     from logging.config import (
         _DictConfigArgs,  # pyright: ignore[reportPrivateUsage]
     )
 
-LOGGER = logging.getLogger(_package)
-
-_is_initialized = False
+LOGGER = logging.getLogger(NAME)
 
 
-def init(config_path: Path, overriide: _DictConfigArgs | None = None) -> None:
+class _State:
+    """Module state, kept on an object instead of a global variable."""
+
+    initialized = False
+
+
+_STATE = _State()
+
+
+def init(config_path: Path, override: _DictConfigArgs | None = None) -> None:
     """Initialize logging.
 
     Calling this function several times is safe.
 
     Args:
         config_path: Path to configuration.
-        overriide: Override options from file.
+        override: Override options from file.
 
     Raises:
         RuntimeError: The `logging` builtin module messed up.
 
     """
-    global _is_initialized  # ruff: ignore[global-statement]
-
-    if _is_initialized:
+    if _STATE.initialized:
         LOGGER.warning("Logging already initialized. Not doing that again.")
         return
-    _is_initialized = True
+    _STATE.initialized = True
     os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 
-    if overriide is None:
-        overriide = {"version": 1}
+    if override is None:
+        override = {"version": 1}
 
     with config_path.open(encoding="utf-8") as f:
         config: _DictConfigArgs = json.load(f)
 
-    config.update(deepcopy(overriide))
+    config.update(deepcopy(override))
 
     if "handlers" in config:
         for handler in config["handlers"].values():

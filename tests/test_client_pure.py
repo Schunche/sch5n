@@ -23,13 +23,24 @@ from sch5n.game.config import AnimationClip, UiConfig
 from sch5n.game.content import load_ui
 from sch5n.utility import path
 
+ATLAS_WIDTH = 256
+PADDING = 1
+OPAQUE = 255
+
 
 @pytest.fixture(scope="module")
 def ui() -> UiConfig:
+    """Load the real GUI style.
+
+    Returns:
+        UiConfig: The style from `ui.json`.
+
+    """
     return load_ui(path.DATA_DIR)
 
 
 def test_camera_roundtrip_and_zoom() -> None:
+    """Screen positions map to world positions, also while zooming."""
     cam = Camera(100, 50)
     assert cam.screen_to_world((10, 20)) == (110, 70)
     cam.zoom_at(2.0, (100, 100))
@@ -39,6 +50,7 @@ def test_camera_roundtrip_and_zoom() -> None:
 
 
 def test_camera_follow_converges() -> None:
+    """Following a point eventually centers it on screen."""
     cam = Camera()
     for _ in range(500):
         cam.follow((1000, 1000), (200, 100), 0.05)
@@ -47,18 +59,19 @@ def test_camera_follow_converges() -> None:
 
 
 def test_pack_shelves_no_overlap() -> None:
+    """Packed rectangles stay inside the area and keep their padding apart."""
     rng = np.random.default_rng(0)
     sizes = {
         i: (int(rng.integers(1, 60)), int(rng.integers(1, 60)))
         for i in range(200)
     }
-    positions, height = pack_shelves(sizes, 256, padding=1)
+    positions, height = pack_shelves(sizes, ATLAS_WIDTH, padding=PADDING)
     rects = [(*positions[k], *sizes[k]) for k in sizes]
     for i, (x, y, w, h) in enumerate(rects):
-        assert x >= 1
-        assert y >= 1
-        assert x + w <= 255
-        assert y + h <= height - 1
+        assert x >= PADDING
+        assert y >= PADDING
+        assert x + w <= ATLAS_WIDTH - PADDING
+        assert y + h <= height - PADDING
         for x2, y2, w2, h2 in rects[i + 1 :]:
             assert (
                 x + w + 1 <= x2
@@ -69,11 +82,13 @@ def test_pack_shelves_no_overlap() -> None:
 
 
 def test_pack_rejects_too_wide() -> None:
+    """An image wider than the atlas is an error."""
     with pytest.raises(ValueError, match="does not fit"):
         pack_shelves({"a": (300, 1)}, 256)
 
 
 def test_atlas_regions_point_at_pixels() -> None:
+    """Atlas regions address the right pixels and edges are extruded."""
     builder: AtlasBuilder[str] = AtlasBuilder(width=64)
     red = np.zeros((4, 6, 4), np.uint8)
     red[...] = (255, 0, 0, 255)
@@ -90,22 +105,27 @@ def test_atlas_regions_point_at_pixels() -> None:
 
 
 def test_colorkey() -> None:
+    """The color key turns only matching pixels transparent."""
     pixels = np.array([[[255, 0, 254, 255], [1, 2, 3, 255]]], np.uint8)
     apply_colorkey(pixels, (255, 0, 254))
     assert pixels[0, 0, 3] == 0
-    assert pixels[0, 1, 3] == 255
+    assert pixels[0, 1, 3] == OPAQUE
 
 
 def test_anchored_text() -> None:
+    """Text anchors resolve to the top left corner."""
     assert anchored((100, 100), (20, 10), Anchor.CENTER) == (90, 95)
     assert anchored((100, 100), (20, 10), Anchor.BOTTOM_RIGHT) == (80, 90)
 
 
 def test_aligned_rect() -> None:
-    assert aligned_rect((100, 100), (20, 10), Align.BOTTOM_RIGHT).x == 80
+    """Bottom right alignment puts the rectangle left of the point."""
+    rect = aligned_rect((100, 100), (20, 10), Align.BOTTOM_RIGHT)
+    assert (rect.right, rect.bottom) == (100, 100)
 
 
 def test_buttons(ui: UiConfig) -> None:
+    """Clicks hit the button they land on, and only that one."""
     buttons = button_column([("a", "A"), ("b", "B")], (200, 100), 64, ui)
     assert hit_button(buttons, (200, 100)) == "a"
     assert hit_button(buttons, (200, 164)) == "b"
@@ -113,13 +133,15 @@ def test_buttons(ui: UiConfig) -> None:
 
 
 def test_inventory_layout(ui: UiConfig) -> None:
-    layout = InventoryLayout.create(10, 50, 24, ui)
-    first, eleventh = layout.slot_rect(0), layout.slot_rect(10)
-    assert first.w == 36
-    assert eleventh.x == first.x
-    assert eleventh.y == first.y + 36 + ui.slot.padding
-    assert layout.slot_at(eleventh.center, hotbar_only=False) == 10
-    assert layout.slot_at(eleventh.center, hotbar_only=True) is None
+    """Slots are laid out in rows, and hit tests respect the hotbar mode."""
+    columns, gui_size = 10, 24
+    layout = InventoryLayout.create(columns, 50, gui_size, ui)
+    first, below = layout.slot_rect(0), layout.slot_rect(columns)
+    assert first.w == pytest.approx(gui_size * 1.5)
+    assert below.x == first.x
+    assert below.y == first.y + first.h + ui.slot.padding
+    assert layout.slot_at(below.center, hotbar_only=False) == columns
+    assert layout.slot_at(below.center, hotbar_only=True) is None
     gap = (first.right + layout.slot_rect(1).x) / 2
     assert layout.slot_at((gap, first.center[1]), hotbar_only=True) is None
     hotbar = layout.bounds(hotbar_only=True)
@@ -127,16 +149,23 @@ def test_inventory_layout(ui: UiConfig) -> None:
 
 
 @pytest.mark.parametrize(
-    ("loop", "ages", "frames"),
+    ("clip", "ages", "frames"),
     [
-        (True, [0, 4, 5, 19, 20], [0, 0, 1, 3, 0]),
-        (False, [0, 19, 20, 1000], [0, 3, 3, 3]),
+        (
+            AnimationClip(path="x", frame_ticks=5, loop=True),
+            [0, 4, 5, 19, 20],
+            [0, 0, 1, 3, 0],
+        ),
+        (
+            AnimationClip(path="x", frame_ticks=5, loop=False),
+            [0, 19, 20, 1000],
+            [0, 3, 3, 3],
+        ),
     ],
+    ids=["loop", "once"],
 )
 def test_animation_frames(
-    loop: bool,  # ruff: ignore[boolean-type-hint-positional-argument]
-    ages: list[int],
-    frames: list[int],
+    clip: AnimationClip, ages: list[int], frames: list[int]
 ) -> None:
-    clip = AnimationClip(path="x", frame_ticks=5, loop=loop)
+    """Looping clips wrap around, others stop on their last frame."""
     assert [clip.frame_index(age, 4) for age in ages] == frames

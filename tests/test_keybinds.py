@@ -24,6 +24,7 @@ from sch5n.client.video import FPS_LIMITS, WINDOW_SIZES, cycle, fps_label
 from sch5n.client.window import KeyEvent, MouseButtonEvent, ScrollEvent
 from sch5n.game.config import Settings
 from sch5n.game.content import load_settings, save_settings
+from sch5n.game.inventory import HOTBAR_SIZE
 from sch5n.utility import path
 
 if TYPE_CHECKING:
@@ -39,16 +40,35 @@ class FakeWindow:
     """Just enough of `Window` to ask what is held."""
 
     def __init__(self, *keys: int, buttons: tuple[int, ...] = ()) -> None:
+        """Hold the given keys and mouse buttons."""
         self.keys = set(keys)
         self.buttons = set(buttons)
 
     def is_key_down(self, key: int) -> bool:
+        """Check a key.
+
+        Returns:
+            bool: True if held.
+
+        """
         return key in self.keys
 
     def is_mouse_down(self, button: int) -> bool:
+        """Check a mouse button.
+
+        Returns:
+            bool: True if held.
+
+        """
         return button in self.buttons
 
     def held_mods(self) -> int:
+        """Derive the glfw modifier flags from the held keys.
+
+        Returns:
+            int: glfw `MOD_*` flags.
+
+        """
         mods = 0
         if self.keys & {glfw.KEY_LEFT_CONTROL, glfw.KEY_RIGHT_CONTROL}:
             mods |= glfw.MOD_CONTROL
@@ -58,10 +78,22 @@ class FakeWindow:
 
 
 def game() -> ContextBinds:
+    """Create the default game bindings.
+
+    Returns:
+        ContextBinds: Fresh bindings.
+
+    """
     return ContextBinds(Context.GAME)
 
 
 def editor() -> ContextBinds:
+    """Create the default map editor bindings.
+
+    Returns:
+        ContextBinds: Fresh bindings.
+
+    """
     return ContextBinds(Context.EDITOR)
 
 
@@ -86,6 +118,7 @@ def editor() -> ContextBinds:
     ],
 )
 def test_parse_and_format(text: str, binding: Binding, label: str) -> None:
+    """Bindings survive a round trip through the settings format."""
     assert Binding.parse(text) == binding
     assert Binding.parse(str(binding)) == binding
     assert binding.label == label
@@ -95,11 +128,13 @@ def test_parse_and_format(text: str, binding: Binding, label: str) -> None:
     "text", ["key:NOPE", "pad:A", "SPACE", "hyper+key:A", "wheel:LEFT"]
 )
 def test_parse_rejects_garbage(text: str) -> None:
+    """Unknown devices, names and modifiers are errors."""
     with pytest.raises(ValueError, match="Unknown"):
         Binding.parse(text)
 
 
 def test_from_event() -> None:
+    """Input events turn into the bindings they pressed."""
     assert Binding.from_event(KeyEvent(glfw.KEY_K, glfw.PRESS, 0)) == K
     assert Binding.from_event(KeyEvent(glfw.KEY_K, glfw.RELEASE, 0)) is None
     ctrl_s = KeyEvent(glfw.KEY_S, glfw.PRESS, glfw.MOD_CONTROL)
@@ -122,6 +157,7 @@ def test_from_event() -> None:
 
 
 def test_every_context_has_defaults() -> None:
+    """Each program has a full set of default slots."""
     keys = Keybinds()
     for binds in keys:
         assert [action for action, _ in binds] == list(DEFAULTS[binds.context])
@@ -129,6 +165,7 @@ def test_every_context_has_defaults() -> None:
 
 
 def test_game_defaults() -> None:
+    """The default game controls."""
     binds = game()
     assert binds.action_for(SPACE) is Action.JUMP
     assert binds.action_for(Binding.mouse(glfw.MOUSE_BUTTON_LEFT)) is (
@@ -139,11 +176,12 @@ def test_game_defaults() -> None:
     assert binds.pressed(KeyEvent(glfw.KEY_TAB, glfw.PRESS, 0)) is (
         Action.INVENTORY
     )
-    assert Action.HOTBAR_10.hotbar_slot == 9
+    assert Action.HOTBAR_10.hotbar_slot == HOTBAR_SIZE - 1
     assert Action.HOTBAR_NEXT.hotbar_slot is None
 
 
 def test_contexts_bind_independently() -> None:
+    """The same input can mean different things per program."""
     keys = Keybinds()
     # The same physical inputs mean different things per program.
     up = Binding.wheel(1)
@@ -157,6 +195,7 @@ def test_contexts_bind_independently() -> None:
 
 
 def test_most_specific_modifier_wins_on_press() -> None:
+    """A press triggers the binding with the most matching modifiers."""
     binds = editor()
     assert binds.action_for(CTRL_S) is Action.SAVE
     assert binds.action_for(S) is Action.PAN_DOWN
@@ -169,6 +208,7 @@ def test_most_specific_modifier_wins_on_press() -> None:
 
 
 def test_held_respects_modifiers_and_shadowing() -> None:
+    """Held checks need the modifiers and lose to more specific bindings."""
     binds = editor()
     assert binds.is_held(Action.PAN_DOWN, FakeWindow(glfw.KEY_S))
     # Ctrl+S is saving, the camera must not move.
@@ -190,6 +230,7 @@ def test_held_respects_modifiers_and_shadowing() -> None:
 
 
 def test_bind_moves_binding_from_other_action() -> None:
+    """Binding an input that is in use moves it."""
     binds = game()
     lost = binds.bind(Action.INVENTORY, 1, SPACE)
     assert lost is Action.JUMP
@@ -198,18 +239,21 @@ def test_bind_moves_binding_from_other_action() -> None:
 
 
 def test_bind_within_same_action_moves_slot() -> None:
+    """Binding an action's own input to another slot moves it there."""
     binds = game()
     assert binds.bind(Action.JUMP, 1, SPACE) is None
     assert binds.slots(Action.JUMP) == (None, SPACE)
 
 
 def test_modifier_variants_are_distinct_bindings() -> None:
+    """S and Ctrl+S are separate bindings."""
     binds = editor()
     assert binds.bind(Action.RESET_CAMERA, 1, S) is Action.PAN_DOWN
     assert binds.action_for(CTRL_S) is Action.SAVE
 
 
 def test_clear_and_reset() -> None:
+    """Slots can be cleared and the defaults restored."""
     keys = Keybinds()
     keys[Context.GAME].bind(Action.JUMP, 0, None)
     assert keys[Context.GAME].action_for(SPACE) is None
@@ -218,6 +262,7 @@ def test_clear_and_reset() -> None:
 
 
 def test_escape_is_reserved() -> None:
+    """Escape cannot be bound, not even from the settings file."""
     binds = game()
     with pytest.raises(ValueError, match="cannot be rebound"):
         binds.bind(Action.JUMP, 0, Binding.key(glfw.KEY_ESCAPE, Mod.CTRL))
@@ -226,6 +271,7 @@ def test_escape_is_reserved() -> None:
 
 
 def test_config_roundtrip_keeps_cleared_and_ignores_unknown() -> None:
+    """Saved bindings load back; junk is skipped and gaps use defaults."""
     keys = Keybinds()
     keys[Context.GAME].bind(Action.JUMP, 0, K)
     keys[Context.GAME].bind(Action.DEBUG, 0, None)
@@ -256,6 +302,7 @@ def test_config_roundtrip_keeps_cleared_and_ignores_unknown() -> None:
 
 
 def test_settings_file(tmp_path: Path) -> None:
+    """Settings are saved, loaded, and a broken file falls back."""
     user = tmp_path / "cfg" / "settings.json"
     bundled = load_settings(path.DATA_DIR, user)
     assert bundled.keybinds == {}
@@ -279,6 +326,7 @@ def test_settings_file(tmp_path: Path) -> None:
 
 
 def test_flat_keybinds_from_older_files_are_game_binds() -> None:
+    """Bindings saved before contexts existed belong to the game."""
     settings = Settings.model_validate({"keybinds": {"jump": ["key:K"]}})
     assert settings.keybinds == {"game": {"jump": ("key:K",)}}
 
@@ -287,6 +335,7 @@ def test_flat_keybinds_from_older_files_are_game_binds() -> None:
 
 
 def test_cycle_known_values() -> None:
+    """Cycling steps through the list and wraps around."""
     assert cycle(WINDOW_SIZES, (1280, 720), 1) == (1600, 900)
     assert cycle(WINDOW_SIZES, (1024, 576), -1) == WINDOW_SIZES[-1]
     assert cycle(FPS_LIMITS, 240, 1) == 0
@@ -294,13 +343,18 @@ def test_cycle_known_values() -> None:
 
 
 def test_cycle_custom_values_step_to_neighbours() -> None:
+    """Values outside the list step to their neighbours."""
     assert cycle(WINDOW_SIZES, (1300, 700), 1) == (1600, 900)
     assert cycle(WINDOW_SIZES, (1300, 700), -1) == (1280, 720)
-    assert cycle(FPS_LIMITS, 50, 1) == 60
-    assert cycle(FPS_LIMITS, 50, -1) == 30
+    custom = 50
+    above = min(v for v in FPS_LIMITS if v > custom)
+    below = max(v for v in FPS_LIMITS if 0 < v < custom)
+    assert cycle(FPS_LIMITS, custom, 1) == above
+    assert cycle(FPS_LIMITS, custom, -1) == below
 
 
 def test_fps_label() -> None:
+    """Frame caps are shown as text."""
     assert fps_label(0) == "Unlimited"
     assert fps_label(144) == "144 FPS"
 
@@ -309,20 +363,23 @@ def test_fps_label() -> None:
 
 
 def test_table_layout_scrolling() -> None:
-    table = TableLayout.centered(17, (1280, 720), 100, 260, row_height=32)
-    assert table.area.h == 160
-    assert table.max_scroll == 17 * 32 - 160
+    """Rows scroll, clamp, and only visible ones can be clicked."""
+    rows, top, bottom, row_height = 17, 100, 260, 32
+    table = TableLayout.centered(rows, (1280, 720), top, bottom, row_height)
+    assert table.area.h == bottom - top
+    assert table.max_scroll == rows * row_height - (bottom - top)
     assert table.clamp_scroll(-5) == 0
     assert table.clamp_scroll(10_000) == table.max_scroll
 
-    visible = [r for r in range(17) if table.is_visible(r, 0)]
+    visible = [r for r in range(rows) if table.is_visible(r, 0)]
     assert visible == [0, 1, 2, 3, 4]
-    cell = table.cell_rect(2, 1, 0)
-    assert table.cell_at(cell.center, 0) == (2, 1)
-    assert table.row_at(cell.center, 0) == 2
-    assert table.cell_at(table.label_anchor(2, 0), 0) is None
-    span = table.span_rect(2, 0)
-    assert span.x == table.cell_rect(2, 0, 0).x
+    row = 2
+    cell = table.cell_rect(row, 1, 0)
+    assert table.cell_at(cell.center, 0) == (row, 1)
+    assert table.row_at(cell.center, 0) == row
+    assert table.cell_at(table.label_anchor(row, 0), 0) is None
+    span = table.span_rect(row, 0)
+    assert span.x == table.cell_rect(row, 0, 0).x
     assert span.right == cell.right
 
     scroll = 64

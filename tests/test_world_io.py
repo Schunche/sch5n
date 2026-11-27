@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
 
 def test_legacy_format_with_aliases(blocks: BlockRegistry) -> None:
+    """Old maps load, with old block names, and save with new ones."""
     tilemap = tilemap_from_json(
         {"3;-4": {"block": "oldLog", "variant": 0}, "0;0": {"block": "stone"}},
         blocks,
@@ -46,11 +47,13 @@ def test_legacy_format_with_aliases(blocks: BlockRegistry) -> None:
 def test_invalid_maps_are_rejected(
     blocks: BlockRegistry, data: object
 ) -> None:
+    """Malformed map data is a parse error."""
     with pytest.raises(ParseError):
         tilemap_from_json(data, blocks)  # type: ignore[arg-type]
 
 
 def test_save_load_roundtrip(tmp_path: Path, tilemap: TileMap) -> None:
+    """Saved maps load back unchanged."""
     tilemap.set(-5, 9, 2)
     tilemap.set(100, -100, 1)
     target = tmp_path / "maps" / "x.json"
@@ -61,11 +64,13 @@ def test_save_load_roundtrip(tmp_path: Path, tilemap: TileMap) -> None:
 
 @pytest.mark.parametrize("name", ["map1", "procedural"])
 def test_bundled_maps_load(content: Content, name: str) -> None:
+    """The maps shipped with the game load."""
     tilemap = load_tilemap(path.MAPS_DIR / f"{name}.json", content.blocks)
     assert len(tilemap) > 0
 
 
 def test_generation_is_deterministic(content: Content) -> None:
+    """The same seed generates the same world."""
     spec = WorldSpec(right=60, bottom=40)
     a = generate(content.blocks, spec, seed=7)
     b = generate(content.blocks, spec, seed=7)

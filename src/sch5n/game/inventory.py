@@ -69,7 +69,12 @@ class Inventory:
     """
 
     def __init__(self, size: int, items: Iterable[ItemStack] = ()) -> None:
-        """Create an inventory, filling `items` into the first slots."""  # ruff: ignore[docstring-missing-exception]
+        """Create an inventory, filling `items` into the first slots.
+
+        Raises:
+            ValueError: `size` is smaller than the hotbar.
+
+        """
         if size < HOTBAR_SIZE:
             msg = f"Inventory needs at least {HOTBAR_SIZE} slots"
             raise ValueError(msg)
@@ -81,7 +86,12 @@ class Inventory:
             self.slots[index] = stack
 
     def __len__(self) -> int:
-        """Count slots."""  # ruff: ignore[docstring-missing-returns]
+        """Count slots.
+
+        Returns:
+            int: Number of slots.
+
+        """
         return len(self.slots)
 
     def __iter__(self) -> Iterator[Slot]:
@@ -94,7 +104,12 @@ class Inventory:
         return iter(self.slots)
 
     def __getitem__(self, index: int) -> Slot:
-        """Slot by index."""  # ruff: ignore[docstring-missing-returns]
+        """Get a slot by index.
+
+        Returns:
+            Slot: The stack in the slot, `None` if empty.
+
+        """
         return self.slots[index]
 
     @property

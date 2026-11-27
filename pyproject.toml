@@ -108,11 +108,5 @@ deprecated = "ignore"
 script = "uv"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = [
-    "S101",  # Tests assert
-    "D",  # Test names are the documentation
-    "DOC",
-    "PLR2004",  # Expected values are literals
-    "PLC0415",  # Window dependent imports stay inside tests
-    "SLF001",
-]
+# pytest is built on plain `assert` statements.
+"tests/**" = ["S101"]

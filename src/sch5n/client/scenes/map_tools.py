@@ -11,6 +11,7 @@ import glfw
 from sch5n.client.camera import Camera
 from sch5n.client.keybinds import Action, Context, ContextBinds
 from sch5n.client.render.batch import rgba
+from sch5n.client.render.text import TextStyle
 from sch5n.client.scenes.base import Scene
 from sch5n.client.scenes.menu import SettingsScene
 from sch5n.client.window import KeyEvent
@@ -154,7 +155,9 @@ class ViewerScene(Scene):
         for line in reversed(self.status_lines()):
             _, h = app.text.measure(line, 14)
             y -= h
-            app.text.draw(app.batch, line, (8, y), 14, color)
+            app.text.draw(
+                app.batch, line, (8, y), TextStyle(size=14, color=color)
+            )
         self.draw_screen_overlay()
         app.draw_cursor()
 
@@ -244,6 +247,5 @@ class EditorScene(ViewerScene):
             app.batch,
             name,
             (pad * 2 + size, pad + size / 4),
-            16,
-            rgba(app.ui.color("text")),
+            TextStyle(size=16, color=rgba(app.ui.color("text"))),
         )

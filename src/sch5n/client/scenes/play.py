@@ -12,6 +12,7 @@ from sch5n.client.camera import Camera
 from sch5n.client.hud import Hud
 from sch5n.client.keybinds import Action, Context
 from sch5n.client.render.batch import rgba
+from sch5n.client.render.text import TextStyle
 from sch5n.client.scenes.base import Scene
 from sch5n.client.scenes.menu import SettingsScene
 from sch5n.client.ui import Align, InventoryLayout, button_at, hit_button
@@ -28,7 +29,7 @@ from sch5n.client.world_view import (
     draw_player,
 )
 from sch5n.game.inventory import HOTBAR_SIZE
-from sch5n.game.session import Game, TickInput
+from sch5n.game.session import Game, GameSetup, TickInput
 from sch5n.utility import path
 from sch5n.world.io import load_tilemap
 
@@ -61,9 +62,11 @@ class PlayScene(Scene):
         self.game = Game(
             content,
             tilemap if tilemap is not None else load_world(app),
-            mode=app.options.game_mode,
-            seed=app.options.seed,
-            cloud_variants=len(app.assets.clouds),
+            GameSetup(
+                mode=app.options.game_mode,
+                seed=app.options.seed,
+                cloud_variants=len(app.assets.clouds),
+            ),
         )
         self.tile_size = content.game.tile_size
         self.camera = Camera()
@@ -80,6 +83,11 @@ class PlayScene(Scene):
         self.debug = False
         self._jump_requested = False
         self._place_layout()
+
+    @property
+    def jump_requested(self) -> bool:
+        """Whether a jump will happen on the next tick."""
+        return self._jump_requested
 
     def _place_layout(self) -> None:
         w, h = self.app.screen
@@ -273,5 +281,7 @@ class PlayScene(Scene):
         color = rgba(app.ui.color("text"))
         for line in lines:
             w, h = app.text.measure(line, 14)
-            app.text.draw(app.batch, line, (x - w, y), 14, color)
+            app.text.draw(
+                app.batch, line, (x - w, y), TextStyle(size=14, color=color)
+            )
             y += h + 2

@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NewType
 
 lazy from jmespath import compile as _compile
 lazy from jmespath import search as _search
@@ -17,19 +17,18 @@ type JsonObject = dict[str, Json]
 type Json = bool | float | int | str | JsonArray | JsonObject | None
 
 
-class JsonQuery(str):  # ruff: ignore[subclass-builtin]
-    """JMESPath query string."""
+JsonQuery = NewType("JsonQuery", str)
+"""JMESPath query string."""
 
-    __slots__ = ()
 
-    def compile(self) -> ParsedResult:
-        """Compile query for faster use.
+def compile_query(query: JsonQuery) -> ParsedResult:
+    """Compile a query for faster repeated use.
 
-        Returns:
-            ParsedResult: Faster query.
+    Returns:
+        ParsedResult: The compiled query.
 
-        """
-        return _compile(self)
+    """
+    return _compile(query)
 
 
 def search(

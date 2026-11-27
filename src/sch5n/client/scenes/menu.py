@@ -11,7 +11,7 @@ import glfw
 
 from sch5n.client.keybinds import MODIFIER_KEYS, Action, Binding, Context
 from sch5n.client.render.batch import WHITE, rgba
-from sch5n.client.render.text import Anchor
+from sch5n.client.render.text import Anchor, TextStyle
 from sch5n.client.scenes.base import Scene
 from sch5n.client.ui import (
     Align,
@@ -425,11 +425,17 @@ class SettingsScene(Scene):
         match row:
             case HeaderRow(title):
                 app.text.draw(
-                    app.batch, title, anchor, 20, color, Anchor.MIDDLE_LEFT
+                    app.batch,
+                    title,
+                    anchor,
+                    TextStyle(size=20, color=color, anchor=Anchor.MIDDLE_LEFT),
                 )
             case OptionRow(option):
                 app.text.draw(
-                    app.batch, option, anchor, 16, color, Anchor.MIDDLE_LEFT
+                    app.batch,
+                    option,
+                    anchor,
+                    TextStyle(size=16, color=color, anchor=Anchor.MIDDLE_LEFT),
                 )
                 rect = table.span_rect(index, self.scroll)
                 Button(option, option_value(app, option), rect).draw(
@@ -440,9 +446,7 @@ class SettingsScene(Scene):
                     app.batch,
                     action.label,
                     anchor,
-                    16,
-                    color,
-                    Anchor.MIDDLE_LEFT,
+                    TextStyle(size=16, color=color, anchor=Anchor.MIDDLE_LEFT),
                 )
                 slots = app.keybinds[context].slots(action)
                 for slot, binding in enumerate(slots):
@@ -471,7 +475,10 @@ class SettingsScene(Scene):
         app.clear(style.color("main_theme"))
         app.batch.begin(app.screen)
         app.text.draw(
-            app.batch, "Settings", (w / 2, 40), 32, text_color, Anchor.CENTER
+            app.batch,
+            "Settings",
+            (w / 2, 40),
+            TextStyle(size=32, color=text_color, anchor=Anchor.CENTER),
         )
 
         for index, row in enumerate(self.rows):
@@ -485,9 +492,7 @@ class SettingsScene(Scene):
                 app.batch,
                 self.message,
                 (w / 2, h - 95),
-                16,
-                text_color,
-                Anchor.CENTER,
+                TextStyle(size=16, color=text_color, anchor=Anchor.CENTER),
             )
         for button in self.buttons:
             button.draw(app.batch, app.text, style, mouse)

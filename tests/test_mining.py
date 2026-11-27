@@ -9,6 +9,7 @@ lazy from sch5n.world.tilemap import TileMap
 
 
 def test_needs_the_right_tool(tilemap: TileMap, items: ItemRegistry) -> None:
+    """Only a matching tool damages a block."""
     tilemap.set(0, 0, tilemap.blocks.id_of("stone"))
     assert hit_tile(tilemap, 0, 0, items["axe"]).result is HitResult.WRONG_TOOL
     assert hit_tile(tilemap, 0, 0, items["rock"]).result is HitResult.NOTHING
@@ -20,6 +21,7 @@ def test_needs_the_right_tool(tilemap: TileMap, items: ItemRegistry) -> None:
 def test_breaks_after_enough_hits(
     tilemap: TileMap, items: ItemRegistry
 ) -> None:
+    """Durability goes down per hit until the block breaks."""
     tilemap.set(
         0, 0, tilemap.blocks.id_of("stone")
     )  # 100 durability, 40 per hit.
@@ -35,6 +37,7 @@ def test_breaks_after_enough_hits(
 
 
 def test_transforming_block(tilemap: TileMap, items: ItemRegistry) -> None:
+    """Some blocks leave another block behind."""
     tilemap.set(0, 0, tilemap.blocks.id_of("leaf"))
     for _ in range(4):
         hit_tile(tilemap, 0, 0, items["axe"])

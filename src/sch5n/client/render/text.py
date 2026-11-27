@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from collections import OrderedDict
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
@@ -54,6 +55,20 @@ def anchored(
     return round(x), round(y)
 
 
+@dataclass(frozen=True, slots=True)
+class TextStyle:
+    """How text is drawn."""
+
+    size: int = 16
+    """Font size in pixels."""
+    color: RGBA = WHITE
+    anchor: Anchor = Anchor.TOP_LEFT
+    """Which point of the text box the position refers to."""
+
+
+DEFAULT_STYLE = TextStyle()
+
+
 class TextRenderer:
     """Renders strings with pygame and keeps recently used ones on the GPU.
 
@@ -92,6 +107,11 @@ class TextRenderer:
             font = self._fonts[size] = pygame.font.Font(self.font_path, scaled)
         return font
 
+    @property
+    def cached_count(self) -> int:
+        """Number of strings currently kept as textures."""
+        return len(self._cache)
+
     def measure(self, text: str, size: int) -> tuple[int, int]:
         """Size of rendered text in pixels.
 
@@ -110,7 +130,9 @@ class TextRenderer:
             self._cache.move_to_end(key)
             return cached
 
-        surface = self.font(size).render(text, True, (255, 255, 255))  # ruff: ignore[boolean-positional-value-in-call]
+        surface = self.font(size).render(
+            text, antialias=True, color=(255, 255, 255)
+        )
         texture = create_texture(
             self.ctx, surface_to_rgba(surface), smooth=True
         )
@@ -121,14 +143,12 @@ class TextRenderer:
             old.release()
         return entry
 
-    def draw(  # ruff: ignore[too-many-arguments, too-many-positional-arguments]
+    def draw(
         self,
         batch: SpriteBatch,
         text: str,
         pos: tuple[float, float],
-        size: int = 16,
-        color: RGBA = WHITE,
-        anchor: Anchor = Anchor.TOP_LEFT,
+        style: TextStyle = DEFAULT_STYLE,
     ) -> tuple[int, int]:
         """Queue text for drawing.
 
@@ -138,9 +158,9 @@ class TextRenderer:
         """
         if not text:
             return (0, 0)
-        texture, (w, h) = self._texture(text, size)
-        x, y = anchored(pos, (w, h), anchor)
-        batch.sprite(texture, (x, y, w, h), color=color)
+        texture, (w, h) = self._texture(text, style.size)
+        x, y = anchored(pos, (w, h), style.anchor)
+        batch.sprite(texture, (x, y, w, h), color=style.color)
         return (w, h)
 
     def release(self) -> None:

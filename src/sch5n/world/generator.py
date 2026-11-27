@@ -10,8 +10,9 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from random import Random
 from typing import TYPE_CHECKING
+
+import numpy as np
 
 from sch5n.log.logger import LOGGER
 from sch5n.world.tilemap import TileMap
@@ -28,6 +29,7 @@ ORE_PAIRS: tuple[tuple[str, str], ...] = (
 """Each world contains exactly one ore of every pair."""
 
 MAX_STROKE_LENGTH = 32
+SIGNS = (-1, 1)
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,7 +58,7 @@ class WorldSpec:
 
 class _Generator:
     def __init__(
-        self, spec: WorldSpec, blocks: BlockRegistry, rng: Random
+        self, spec: WorldSpec, blocks: BlockRegistry, rng: np.random.Generator
     ) -> None:
         self.spec = spec
         self.rng = rng
@@ -65,7 +67,12 @@ class _Generator:
         self.stone = blocks.id_of("stone")
 
     def jitter(self, value: float) -> float:
-        """`value` changed by at most ±25 %."""  # ruff: ignore[docstring-missing-returns]
+        """Randomly change `value` by at most 25 percent.
+
+        Returns:
+            float: The changed, non negative value.
+
+        """
         return abs(value * (1 + math.sin(self.rng.random() * 2 * math.pi) / 4))
 
     def fill_layers(self) -> None:
@@ -76,7 +83,12 @@ class _Generator:
                 self.tilemap.set(x, y, block)
 
     def stroke_length(self, y: int, block: int) -> int:
-        """More stone strokes deeper in the dirt and vice versa."""  # ruff: ignore[docstring-missing-returns]
+        """Pick a stroke length: more stone deeper in dirt and vice versa.
+
+        Returns:
+            int: Number of discs, between 0 and `MAX_STROKE_LENGTH`.
+
+        """
         spec = self.spec
         if block == self.stone:
             depth = (y - spec.top) / max(spec.dirt_until - spec.top, 1)
@@ -102,7 +114,7 @@ class _Generator:
         """Draw a chain of overlapping discs wandering from `start`."""
         rng = self.rng
         x, y = start
-        radius = rng.randint(9, 50) / rng.randint(9, 12)
+        radius = int(rng.integers(9, 51)) / int(rng.integers(9, 13))
         length = self.stroke_length(y, block)
         if length == 0:
             return
@@ -110,7 +122,7 @@ class _Generator:
         for _ in range(length + 1):
             self.disc(x, y, radius, block)
             direction = math.pi * (1 + rng.random())
-            sign = rng.choice((-1, 1))
+            sign = int(rng.choice(SIGNS))
             x = int(x + sign * radius / 2 * math.cos(direction))
             y = int(y + radius / 2 * math.sin(direction))
             radius = min(max(self.jitter(radius), 1), 5)
@@ -137,7 +149,7 @@ class _Generator:
         stone = self.scatter(self.stone, spec.top, spec.dirt_until, 0.003)
         dirt = self.scatter(self.dirt, spec.dirt_until, spec.bottom, 0.004)
         LOGGER.info("Strokes: %s stone in dirt, %s dirt in stone", stone, dirt)
-        ores = [self.rng.choice(pair) for pair in ORE_PAIRS]
+        ores = [pair[int(self.rng.integers(len(pair)))] for pair in ORE_PAIRS]
         LOGGER.info("This world contains the ores: %s", ", ".join(ores))
         return self.tilemap
 
@@ -153,4 +165,4 @@ def generate(
     """
     spec = spec or WorldSpec()
     LOGGER.info("Generating world %s with seed %s", spec, seed)
-    return _Generator(spec, blocks, Random(seed)).run()  # ruff: ignore[suspicious-non-cryptographic-random-usage]
+    return _Generator(spec, blocks, np.random.default_rng(seed)).run()

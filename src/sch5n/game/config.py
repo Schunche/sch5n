@@ -138,7 +138,12 @@ class Settings(_Model):
     @field_validator("keybinds", mode="before")
     @classmethod
     def _upgrade_flat_keybinds(cls, value: object) -> object:
-        """Accept the old format without contexts as the game's binds."""  # ruff: ignore[docstring-missing-returns]
+        """Accept the old format without contexts as the game's binds.
+
+        Returns:
+            object: Keybinds grouped by context.
+
+        """
         if isinstance(value, dict) and any(
             isinstance(v, list | tuple) for v in value.values()
         ):

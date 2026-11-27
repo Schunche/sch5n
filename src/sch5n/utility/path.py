@@ -6,8 +6,7 @@ from pathlib import Path
 
 import platformdirs
 
-from sch5n import __author__, __version__
-from sch5n import __package__ as _package
+from sch5n.about import NAME, __author__, __version__
 
 ASSETS_ENV_VAR = "SCH5N_ASSETS"
 """Environment variable overriding the assets directory."""
@@ -17,10 +16,18 @@ class DevPlatformDirs(platformdirs.PlatformDirs):
     """Custom directory for developers."""
 
 
-_args = (_package, __author__, __version__, False, False, True, False, False)
+_args = {
+    "appname": NAME,
+    "appauthor": __author__,
+    "version": __version__,
+    "roaming": False,
+    "multipath": False,
+    "opinion": True,
+    "ensure_exists": False,
+}
 
-_SERVER_PLATFORM_DIRS = DevPlatformDirs(*_args)
-_CLIENT_PLATFORM_DIRS = platformdirs.PlatformDirs(*_args)
+_SERVER_PLATFORM_DIRS = DevPlatformDirs(**_args)
+_CLIENT_PLATFORM_DIRS = platformdirs.PlatformDirs(**_args)
 
 
 def get_platformdirs() -> platformdirs.PlatformDirs:
@@ -78,4 +85,6 @@ def user_settings_file() -> Path:
         Path: A file in the per-user config directory.
 
     """
-    return get_platformdirs().user_config_path / "settings.json"
+    dirs = platformdirs.PlatformDirs(appname=NAME, appauthor=__author__)
+    # Not versioned: settings carry over between releases.
+    return dirs.user_config_path / "settings.json"

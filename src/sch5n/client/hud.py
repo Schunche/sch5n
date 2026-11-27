@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from sch5n.client.render.batch import rgba
-from sch5n.client.render.text import Anchor
+from sch5n.client.render.text import Anchor, TextStyle
 from sch5n.game.inventory import HOTBAR_SIZE
 
 if TYPE_CHECKING:
@@ -50,9 +50,11 @@ class Hud:
                 batch,
                 str(stack.amount),
                 (x + size, y + size),
-                self.style.slot.amount_font_size,
-                rgba(self.style.color("text")),
-                Anchor.BOTTOM_RIGHT,
+                TextStyle(
+                    size=self.style.slot.amount_font_size,
+                    color=rgba(self.style.color("text")),
+                    anchor=Anchor.BOTTOM_RIGHT,
+                ),
             )
 
     def draw_inventory(
@@ -100,8 +102,10 @@ class Hud:
                     batch,
                     held.display_name,
                     (bounds.x, bounds.bottom + 6),
-                    style.button.font_size,
-                    rgba(style.color("text")),
+                    TextStyle(
+                        size=style.button.font_size,
+                        color=rgba(style.color("text")),
+                    ),
                 )
 
     def draw_cursor_stack(

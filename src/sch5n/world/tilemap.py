@@ -67,7 +67,12 @@ class TileMap:
         """Remaining durability of partially broken tiles."""
 
     def __len__(self) -> int:
-        """Count non-air tiles."""  # ruff: ignore[docstring-missing-returns]
+        """Count non-air tiles.
+
+        Returns:
+            int: Number of tiles.
+
+        """
         return sum(chunk.filled for chunk in self.chunks.values())
 
     def get(self, x: int, y: int) -> int:

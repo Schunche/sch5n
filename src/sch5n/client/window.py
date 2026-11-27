@@ -97,9 +97,9 @@ class Window:
         glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
         glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
         glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
-        glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, True)  # ruff: ignore[boolean-positional-value-in-call]
-        glfw.window_hint(glfw.VISIBLE, visible)
-        glfw.window_hint(glfw.RESIZABLE, True)  # ruff: ignore[boolean-positional-value-in-call]
+        glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, glfw.TRUE)
+        glfw.window_hint(glfw.VISIBLE, glfw.TRUE if visible else glfw.FALSE)
+        glfw.window_hint(glfw.RESIZABLE, glfw.TRUE)
 
         self.handle = glfw.create_window(size[0], size[1], title, None, None)
         if not self.handle:
@@ -251,7 +251,7 @@ class Window:
 
     def close(self) -> None:
         """Request the window to close."""
-        glfw.set_window_should_close(self.handle, True)  # ruff: ignore[boolean-positional-value-in-call]
+        glfw.set_window_should_close(self.handle, glfw.TRUE)
 
     def swap(self) -> None:
         """Present the frame."""

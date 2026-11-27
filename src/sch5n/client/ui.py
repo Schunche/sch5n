@@ -8,7 +8,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sch5n.client.render.batch import rgba
-from sch5n.client.render.text import Anchor
+from sch5n.client.render.text import Anchor, TextStyle
 from sch5n.game.inventory import HOTBAR_SIZE
 from sch5n.math.rect import Rect
 
@@ -88,9 +88,11 @@ class Button:
             batch,
             self.label,
             r.center,
-            b.font_size,
-            rgba(style.color("text")),
-            Anchor.CENTER,
+            TextStyle(
+                size=b.font_size,
+                color=rgba(style.color("text")),
+                anchor=Anchor.CENTER,
+            ),
         )
 
 
@@ -259,24 +261,24 @@ class TableLayout:
     """Vertical space between a row's edge and its buttons."""
 
     @classmethod
-    def centered(  # ruff: ignore[too-many-arguments]
+    def centered(
         cls,
         rows: int,
         screen: tuple[float, float],
         top: float,
         bottom: float,
-        *,
         row_height: float = 32,
-        label_width: float = 200,
-        cell_width: float = 160,
     ) -> TableLayout:
-        """Table centered horizontally between `top` and `bottom`.
+        """Lay out a table with the default column widths.
+
+        It is centered horizontally and fills `top` to `bottom`.
 
         Returns:
             TableLayout: The layout.
 
         """
-        width = label_width + 2 * (cell_width + 12)
+        label_width, cell_width, gap, columns = 200, 160, 12, 2
+        width = label_width + columns * (cell_width + gap)
         return cls(
             rows=rows,
             area=Rect(
@@ -285,6 +287,8 @@ class TableLayout:
             row_height=row_height,
             label_width=label_width,
             cell_width=cell_width,
+            columns=columns,
+            gap=gap,
         )
 
     @property

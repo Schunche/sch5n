@@ -57,7 +57,12 @@ class Body:
 
 
 def _tile_span(start: float, end: float, tile_size: int) -> range:
-    """Tiles overlapped by the open interval `(start, end)`."""  # ruff: ignore[docstring-missing-returns]
+    """Find the tiles overlapped by the open interval `(start, end)`.
+
+    Returns:
+        range: Tile indices along one axis.
+
+    """
     return range(math.floor(start / tile_size), math.ceil(end / tile_size))
 
 

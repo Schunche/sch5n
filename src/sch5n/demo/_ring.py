@@ -1,6 +1,8 @@
 # Copyright (c) 2026 Schunche
 """Experimental software."""
 
+from typing import override
+
 import moderngl
 import moderngl_window
 
@@ -83,7 +85,7 @@ class ShaderViewer(moderngl_window.WindowConfig):  # pyright: ignore[reportPriva
     window_size = (1280, 720)
     aspect_ratio = None
 
-    def __init__(self, **kwargs) -> None:  # pyright: ignore[reportMissingParameterType, reportUnknownParameterType]  # ruff: ignore[missing-type-kwargs]
+    def __init__(self, **kwargs: object) -> None:
         super().__init__(**kwargs)  # pyright: ignore[reportUnknownArgumentType]
 
         vertices = self.ctx.buffer(
@@ -104,7 +106,9 @@ class ShaderViewer(moderngl_window.WindowConfig):  # pyright: ignore[reportPriva
             self.prog, [(vertices, "2f", "in_vert")]
         )
 
-    def on_render(self, time: float, frame_time: float) -> None:  # ruff: ignore[unused-method-argument]
+    @override
+    def on_render(self, time: float, frame_time: float) -> None:
+        """Draw the shader."""
         self.ctx.clear()
         self.prog["u_resolution"].value = self.wnd.buffer_size  # pyright: ignore[reportAttributeAccessIssue]
         self.prog["u_time"].value = time  # pyright: ignore[reportAttributeAccessIssue]

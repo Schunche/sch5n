@@ -9,5 +9,10 @@ R = TypeVar("R")
 
 
 def instant_call(func: Callable[[], None]) -> Callable[[], None]:
-    """Evaluate a function instantly."""  # ruff: ignore[docstring-missing-returns]
+    """Evaluate a function instantly.
+
+    Returns:
+        Callable[[], None]: `func` itself, after calling it once.
+
+    """
     return (func, func())[0]

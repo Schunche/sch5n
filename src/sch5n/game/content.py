@@ -115,7 +115,12 @@ class BlockRegistry:
     """Maps block names to dense integer ids used by the tilemap."""
 
     def __init__(self, data: BlocksFile) -> None:
-        """Register all blocks. Id 0 is reserved for air."""  # ruff: ignore[docstring-missing-exception]
+        """Register all blocks. Id 0 is reserved for air.
+
+        Raises:
+            ValueError: A block transforms into an unknown block.
+
+        """
         self._blocks: list[BlockDef | None] = [None]
         self._by_name: dict[str, BlockDef] = {}
         self._aliases: dict[str, str] = {}
@@ -148,7 +153,12 @@ class BlockRegistry:
             self.particle[block.id] = block.spec.particle is not None
 
     def __len__(self) -> int:
-        """Count block ids, air included."""  # ruff: ignore[docstring-missing-returns]
+        """Count block ids, air included.
+
+        Returns:
+            int: Number of ids.
+
+        """
         return len(self._blocks)
 
     def __iter__(self) -> Iterator[BlockDef]:
@@ -199,7 +209,13 @@ class ItemRegistry:
     """All known items by name."""
 
     def __init__(self, data: ItemsFile, blocks: BlockRegistry) -> None:
-        """Register items and validate references to blocks."""  # ruff: ignore[docstring-missing-exception]
+        """Register items and validate references to blocks.
+
+        Raises:
+            ValueError: An item or block refers to something unknown, or
+                a stack size is not positive.
+
+        """
         self._items = {
             name: ItemDef(name=name, spec=spec)
             for name, spec in data.items.items()
@@ -217,7 +233,12 @@ class ItemRegistry:
                 raise ValueError(msg)
 
     def __contains__(self, name: object) -> bool:
-        """Whether an item exists."""  # ruff: ignore[docstring-missing-returns]
+        """Check whether an item exists.
+
+        Returns:
+            bool: True if `name` is a registered item.
+
+        """
         return name in self._items
 
     def __iter__(self) -> Iterator[ItemDef]:
@@ -230,7 +251,12 @@ class ItemRegistry:
         return iter(self._items.values())
 
     def __getitem__(self, name: str) -> ItemDef:
-        """Item by name."""  # ruff: ignore[docstring-missing-returns]
+        """Get an item by name.
+
+        Returns:
+            ItemDef: The item.
+
+        """
         return self._items[name]
 
 

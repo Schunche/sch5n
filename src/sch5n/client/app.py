@@ -16,7 +16,7 @@ from sch5n.client.render.atlas import create_texture
 from sch5n.client.render.batch import SpriteBatch, rgba
 from sch5n.client.render.text import TextRenderer
 from sch5n.client.window import ResizeEvent, Window
-from sch5n.game.config import Settings
+from sch5n.game.config import GameMode, Settings
 from sch5n.game.content import (
     Content,
     load_animations,
@@ -31,7 +31,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from sch5n.client.scenes.base import Scene
-    from sch5n.game.config import GameMode
 
 MAX_TICKS_PER_FRAME = 5
 """Ticks are dropped beyond this, so a slow frame does not snowball."""
@@ -44,7 +43,7 @@ class Options:
 
     map_path: Path | None = None
     """Map to play or edit. `None` plays the default map."""
-    game_mode: GameMode | None = None
+    game_mode: GameMode = GameMode.SURVIVAL
     seed: int | None = None
     max_frames: int | None = None
     """Stop after this many frames. For automated runs."""
@@ -165,14 +164,27 @@ class App:
         fb_w, fb_h = self.window.framebuffer_size
         self.ctx.viewport = (0, 0, fb_w, fb_h)
 
-    def _apply_scene_switch(self) -> None:
-        if self._next_scene is None:
-            return
-        if self.scene is not None:
-            self.scene.on_exit()
-        self.scene, self._next_scene = self._next_scene, None
-        LOGGER.debug("Scene: %s", type(self.scene).__name__)
-        self.scene.on_enter()
+    @property
+    def pending_scene(self) -> Scene | None:
+        """Scene that becomes active at the end of the frame, if any."""
+        return self._next_scene
+
+    def _apply_scene_switch(self, current: Scene) -> Scene:
+        """Activate the pending scene, if any.
+
+        Returns:
+            Scene: The active scene.
+
+        """
+        upcoming = self._next_scene
+        if upcoming is None:
+            return current
+        self._next_scene = None
+        current.on_exit()
+        self.scene = upcoming
+        LOGGER.debug("Scene: %s", type(upcoming).__name__)
+        upcoming.on_enter()
+        return upcoming
 
     def draw_cursor(self) -> None:
         """Draw the custom mouse cursor in screen space."""
@@ -191,8 +203,8 @@ class App:
 
     def run(self, first: Callable[[App], Scene]) -> None:
         """Run the main loop until the window closes."""
-        self.switch(first(self))
-        self._apply_scene_switch()
+        scene = self.scene = first(self)
+        scene.on_enter()
 
         tick = 1.0 / self.tick_rate
         previous = Window.time()
@@ -205,8 +217,6 @@ class App:
                 lag += min(now - previous, tick * MAX_TICKS_PER_FRAME)
                 previous = now
 
-                scene = self.scene
-                assert scene is not None  # ruff: ignore[assert]
                 for event in self.window.poll():
                     if isinstance(event, ResizeEvent):
                         self._update_viewport()
@@ -220,7 +230,7 @@ class App:
                 scene.render()
                 self.batch.flush()
                 self.window.swap()
-                self._apply_scene_switch()
+                scene = self._apply_scene_switch(scene)
 
                 self.frame += 1
                 fps_frames += 1
@@ -241,8 +251,7 @@ class App:
                     if remaining > 0:
                         time.sleep(remaining)
         finally:
-            if self.scene is not None:
-                self.scene.on_exit()
+            scene.on_exit()
             self.release()
 
     def release(self) -> None:

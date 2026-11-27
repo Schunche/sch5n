@@ -135,7 +135,12 @@ WHEEL_DOWN = -1
 
 
 def _names(prefix: str, preferred: Iterable[str]) -> dict[int, str]:
-    """Map glfw constant values to names, preferring readable aliases."""  # ruff: ignore[docstring-missing-returns]
+    """Map glfw constant values to names, preferring readable aliases.
+
+    Returns:
+        dict[int, str]: Constant value to name without `prefix`.
+
+    """
     names = {getattr(glfw, prefix + name): name for name in preferred}
     for attr in dir(glfw):
         name = attr.removeprefix(prefix)
@@ -274,7 +279,12 @@ class Binding:
         return "+".join([*mods, text])
 
     def __str__(self) -> str:
-        """Format for the settings file."""  # ruff: ignore[docstring-missing-returns]
+        """Format for the settings file.
+
+        Returns:
+            str: E.g. `ctrl+key:S`.
+
+        """
         mods = [name for mod, name in _MOD_NAMES.items() if mod in self.mods]
         return "+".join([*mods, f"{self.device}:{self.name}"])
 
@@ -364,6 +374,21 @@ def _slots(texts: Iterable[str]) -> Slots:
     return tuple(bindings + [None] * (SLOTS - len(bindings)))
 
 
+def _context_slots(
+    context: Context, config: Mapping[str, Iterable[str]]
+) -> dict[Action, Slots]:
+    """Parse the bindings of a context, using defaults for missing actions.
+
+    Returns:
+        dict[Action, Slots]: Slots of every action of the context.
+
+    """
+    return {
+        action: _slots(config.get(action.value, texts))
+        for action, texts in DEFAULTS[context].items()
+    }
+
+
 class ContextBinds:
     """Bindings of one context. Each action has `SLOTS` slots.
 
@@ -379,13 +404,9 @@ class ContextBinds:
         """Build from settings data. Missing actions get their defaults."""
         self.context = context
         config = config or {}
-        defaults = DEFAULTS[context]
-        self._slots: dict[Action, Slots] = {
-            action: _slots(config.get(action.value, texts))
-            for action, texts in defaults.items()
-        }
+        self._slots = _context_slots(context, config)
         for name in config:
-            if name not in {action.value for action in defaults}:
+            if name not in {action.value for action in DEFAULTS[context]}:
                 LOGGER.warning("Ignoring unknown %s action %r", context, name)
         self._by_input: dict[
             tuple[Device, int], list[tuple[Binding, Action]]
@@ -506,7 +527,7 @@ class ContextBinds:
 
     def reset(self) -> None:
         """Restore the defaults of this context."""
-        self._slots = ContextBinds(self.context)._slots  # ruff: ignore[private-member-access]
+        self._slots = _context_slots(self.context, {})
         self._reindex()
 
     def to_config(self) -> dict[str, list[str]]:
@@ -539,7 +560,12 @@ class Keybinds:
         }
 
     def __getitem__(self, context: Context) -> ContextBinds:
-        """Bindings of one context."""  # ruff: ignore[docstring-missing-returns]
+        """Get the bindings of one context.
+
+        Returns:
+            ContextBinds: The context's bindings.
+
+        """
         return self._contexts[context]
 
     def __iter__(self) -> Iterator[ContextBinds]:
