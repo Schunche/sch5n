@@ -84,8 +84,9 @@ def test_place_block(game: Game, content: Content) -> None:
     game.inventory.select(slot)
     run(game, 40, place=True, target=(5, 9))
     assert game.tilemap.get(5, 9) == content.blocks.id_of("dirt")
-    assert game.inventory[slot] is not None
-    assert game.inventory[slot].amount == amount - 1
+    placed = game.inventory[slot]
+    assert placed is not None
+    assert placed.amount == amount - 1
 
 
 def test_cannot_place_inside_player(game: Game, content: Content) -> None:

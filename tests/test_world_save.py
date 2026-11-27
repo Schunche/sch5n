@@ -46,9 +46,10 @@ def test_world_round_trip(tmp_path: Path, content: Content) -> None:
     assert world.name == "My world"
     assert sorted(world.tilemap.iter_tiles()) == sorted(tilemap.iter_tiles())
     loaded = world.inventories["Ann"]
-    assert loaded[4] is not None
-    assert loaded[4].item.name == "dirt_block"
-    assert loaded[4].amount == DIRT_AMOUNT
+    stack = loaded[4]
+    assert stack is not None
+    assert stack.item.name == "dirt_block"
+    assert stack.amount == DIRT_AMOUNT
     assert loaded.selected == SELECTED
 
 

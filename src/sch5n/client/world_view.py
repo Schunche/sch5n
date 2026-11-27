@@ -33,7 +33,7 @@ NAME_TAG_COLOR = (1.0, 1.0, 1.0, 0.95)
 NAME_TAG_SHADOW = (0.0, 0.0, 0.0, 0.6)
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
 
     from sch5n.client.app import App
     from sch5n.client.assets import ClientAssets
@@ -333,7 +333,7 @@ class PlayerRenderer:
 
 
 def draw_floating_items(
-    batch: SpriteBatch, assets: ClientAssets, items: list[FloatingItem]
+    batch: SpriteBatch, assets: ClientAssets, items: Sequence[FloatingItem]
 ) -> None:
     """Queue dropped items."""
     for floating in items:
@@ -457,13 +457,35 @@ def draw_wind_streaks(batch: SpriteBatch, ambience: Ambience) -> None:
 
 
 class WorldView(Protocol):
-    """What drawing needs of a world: a `Game`, or a client's mirror."""
+    """What drawing needs of a world: a `Game`, or a client's mirror.
 
-    tilemap: TileMap
-    ambience: Ambience
-    horizon: float
-    floating_items: list[FloatingItem]
-    players: dict[int, Player]
+    Read only, so either may keep its own, narrower types.
+    """
+
+    @property
+    def tilemap(self) -> TileMap:
+        """The tiles."""
+        ...
+
+    @property
+    def ambience(self) -> Ambience:
+        """Wind, clouds and particles."""
+        ...
+
+    @property
+    def horizon(self) -> float:
+        """World y where the sky begins."""
+        ...
+
+    @property
+    def floating_items(self) -> Sequence[FloatingItem]:
+        """Dropped items."""
+        ...
+
+    @property
+    def players(self) -> Mapping[int, Player]:
+        """Players by id."""
+        ...
 
 
 class WorldRenderer:

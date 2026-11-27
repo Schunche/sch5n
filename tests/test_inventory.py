@@ -50,8 +50,9 @@ def test_add_returns_leftover_when_full(items: ItemRegistry) -> None:
     leftover = inv.add(ItemStack(items["rock"], 5))
     assert leftover is not None
     assert leftover.amount == 5 - 2
-    assert inv[last] is not None
-    assert inv[last].amount == ROCK_STACK
+    full = inv[last]
+    assert full is not None
+    assert full.amount == ROCK_STACK
     assert inv.is_full
 
 

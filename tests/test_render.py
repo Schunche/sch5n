@@ -564,7 +564,11 @@ def test_each_program_edits_only_its_own_controls(
     for context, scenes in origins.items():
         for scene in scenes:
             settings = SettingsScene(app, back=scene, page=Page.CONTROLS)
-            contexts = {row.context for row in settings.rows}
+            contexts = {
+                row.context
+                for row in settings.rows
+                if isinstance(row, BindRow)
+            }
             assert contexts == {context}, type(scene).__name__
 
 

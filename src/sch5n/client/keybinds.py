@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntFlag, StrEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 import glfw
 
@@ -20,10 +20,26 @@ from sch5n.log.logger import LOGGER
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
 
-    from sch5n.client.window import Event, Window
+    from sch5n.client.window import Event
 
 SLOTS = 2
 """Bindings per action: primary and secondary."""
+
+
+class InputState(Protocol):
+    """What is held down: a `Window`, or a stand in for tests."""
+
+    def is_key_down(self, key: int) -> bool:
+        """Whether a key is held."""
+        ...
+
+    def is_mouse_down(self, button: int) -> bool:
+        """Whether a mouse button is held."""
+        ...
+
+    def held_mods(self) -> int:
+        """Glfw modifier flags of the held modifier keys."""
+        ...
 
 
 class Context(StrEnum):
@@ -159,7 +175,7 @@ _CODES: dict[Device, dict[str, int]] = {
 }
 
 
-def mods_of(window: Window) -> Mod:
+def mods_of(window: InputState) -> Mod:
     """Read the modifier keys currently held.
 
     Returns:
@@ -292,7 +308,7 @@ class Binding:
         """The physical input, ignoring modifiers."""
         return (self.device, self.code)
 
-    def is_down(self, window: Window, held: Mod) -> bool:
+    def is_down(self, window: InputState, held: Mod) -> bool:
         """Whether it is held. Wheel bindings are never held.
 
         Returns:
@@ -467,7 +483,7 @@ class ContextBinds:
         """
         return self.action_for(Binding.from_event(event))
 
-    def is_held(self, action: Action, window: Window) -> bool:
+    def is_held(self, action: Action, window: InputState) -> bool:
         """Whether any binding of `action` is held and not overridden.
 
         Returns:

@@ -216,7 +216,7 @@ _CLIENT_MESSAGES: TypeAdapter[ClientMessage] = TypeAdapter(ClientMessage)
 _SERVER_MESSAGES: TypeAdapter[ServerMessage] = TypeAdapter(ServerMessage)
 
 
-def encode(message: _Message) -> bytes:
+def encode(message: BaseModel) -> bytes:
     """Serialize a message.
 
     Returns:

@@ -42,6 +42,10 @@ jobs:
       - name: Build
         run: uv build
 
+      - name: Type check (Linux)
+        if: runner.os == 'Linux'
+        run: uv run pyright
+
       - name: Run tests (Linux)
         if: runner.os == 'Linux'
         run: xvfb-run -a uv run pytest -rs

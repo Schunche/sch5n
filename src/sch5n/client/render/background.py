@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from sch5n.client.render.program import uniform
 from sch5n.game.config import BackgroundKind
 
 if TYPE_CHECKING:
@@ -37,17 +38,17 @@ class BackgroundRenderer:
         if background.kind is not BackgroundKind.SHADER:
             return
         program = self.program
-        program["u_resolution"].value = tuple(
+        uniform(program, "u_resolution").value = tuple(
             float(v) for v in self.ctx.viewport[2:]
         )
-        program["u_time"].value = seconds * background.speed
-        program["u_pixel"].value = float(background.pixel_size)
+        uniform(program, "u_time").value = seconds * background.speed
+        uniform(program, "u_pixel").value = float(background.pixel_size)
         dark, mid, light = (
             tuple(c / 255 for c in color) for color in background.colors
         )
-        program["u_dark"].value = dark
-        program["u_mid"].value = mid
-        program["u_light"].value = light
+        uniform(program, "u_dark").value = dark
+        uniform(program, "u_mid").value = mid
+        uniform(program, "u_light").value = light
         self.vao.render(vertices=3)
 
     def release(self) -> None:

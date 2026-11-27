@@ -11,6 +11,7 @@ import numpy as np
 lazy import moderngl
 
 from sch5n.client.render.atlas import FULL, Region
+from sch5n.client.render.program import uniform
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -158,9 +159,9 @@ class SpriteBatch:
     ) -> None:
         """Set the projection: world pixel `offset` maps to the top left."""
         self.flush()
-        self.program["u_screen"].value = screen
-        self.program["u_offset"].value = offset
-        self.program["u_zoom"].value = zoom
+        uniform(self.program, "u_screen").value = screen
+        uniform(self.program, "u_offset").value = offset
+        uniform(self.program, "u_zoom").value = zoom
 
     def _use_texture(self, texture: moderngl.Texture | None) -> None:
         if texture is not None and texture is not self._texture:

@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from sch5n.client.render.program import uniform
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -66,23 +68,23 @@ class SkyRenderer:
         """
         width, height = self.ctx.viewport[2:]
         program = self.program
-        program["u_resolution"].value = (float(width), float(height))
-        program["u_scale"].value = height / max(screen[1], 1)
-        program["u_horizon_y"].value = horizon_on_screen(
+        uniform(program, "u_resolution").value = (float(width), float(height))
+        uniform(program, "u_scale").value = height / max(screen[1], 1)
+        uniform(program, "u_horizon_y").value = horizon_on_screen(
             camera, horizon, screen[1], config.parallax
         )
-        program["u_height"].value = float(config.height)
-        program["u_view_top"].value = camera.top_left(screen)[1]
-        program["u_world_per_px"].value = 1 / camera.zoom
-        program["u_surface"].value = horizon
-        program["u_underground"].value = config.underground
-        program["u_horizon"].value = _rgb(config.horizon)
-        program["u_middle"].value = _rgb(config.middle)
-        program["u_zenith"].value = _rgb(config.zenith)
-        program["u_sun"].value = config.sun_position
-        program["u_sun_size"].value = config.sun_size
-        program["u_sun_color"].value = _rgb(config.sun)
-        program["u_deep"].value = _rgb(config.deep)
+        uniform(program, "u_height").value = float(config.height)
+        uniform(program, "u_view_top").value = camera.top_left(screen)[1]
+        uniform(program, "u_world_per_px").value = 1 / camera.zoom
+        uniform(program, "u_surface").value = horizon
+        uniform(program, "u_underground").value = config.underground
+        uniform(program, "u_horizon").value = _rgb(config.horizon)
+        uniform(program, "u_middle").value = _rgb(config.middle)
+        uniform(program, "u_zenith").value = _rgb(config.zenith)
+        uniform(program, "u_sun").value = config.sun_position
+        uniform(program, "u_sun_size").value = config.sun_size
+        uniform(program, "u_sun_color").value = _rgb(config.sun)
+        uniform(program, "u_deep").value = _rgb(config.deep)
         self.vao.render(vertices=3)
 
     def release(self) -> None:

@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import glfw
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     import numpy as np
 
 
@@ -78,13 +80,21 @@ type Event = (
 )
 
 
+# The glfw type stubs are stricter than glfw: it takes images as plain
+# `(width, height, pixels)` tuples, and `None` as "no monitor". The stubs'
+# own types are private, so these calls are typed loosely instead.
+_create_cursor: Callable[..., Any] = glfw.create_cursor
+_set_window_icon: Callable[..., None] = glfw.set_window_icon
+_set_window_monitor: Callable[..., None] = glfw.set_window_monitor
+
+
 class Cursor:
     """The OS mouse cursor over a window."""
 
-    def __init__(self, window: object) -> None:
-        """Control the cursor of a glfw window handle."""
-        self._window = window
-        self._image: object | None = None
+    def __init__(self, window: Window) -> None:
+        """Control the cursor of a window."""
+        self._window = window.handle
+        self._image = None
         """glfw cursor handle made by `set_image`."""
 
     def hide(self) -> None:
@@ -99,7 +109,7 @@ class Cursor:
         The operating system draws it, so it never lags behind the mouse.
         """
         height, width = pixels.shape[:2]
-        image = glfw.create_cursor((width, height, pixels), *hotspot)
+        image = _create_cursor((width, height, pixels), *hotspot)
         glfw.set_cursor(self._window, image)
         self.release()
         self._image = image
@@ -160,7 +170,7 @@ class Window:
         glfw.swap_interval(1 if vsync else 0)
 
         self._events: list[Event] = []
-        self.cursor = Cursor(self.handle)
+        self.cursor = Cursor(self)
         glfw.set_key_callback(self.handle, self._on_key)
         glfw.set_mouse_button_callback(self.handle, self._on_mouse_button)
         glfw.set_scroll_callback(self.handle, self._on_scroll)
@@ -265,7 +275,7 @@ class Window:
     def set_icon(self, pixels: np.ndarray) -> None:
         """Set the window icon from an RGBA array `(height, width, 4)`."""
         height, width = pixels.shape[:2]
-        glfw.set_window_icon(self.handle, 1, [(width, height, pixels)])
+        _set_window_icon(self.handle, 1, [(width, height, pixels)])
 
     @property
     def is_fullscreen(self) -> bool:
@@ -298,7 +308,7 @@ class Window:
                 mode.refresh_rate,
             )
         else:
-            glfw.set_window_monitor(
+            _set_window_monitor(
                 self.handle, None, 100, 100, size[0], size[1], 0
             )
 
