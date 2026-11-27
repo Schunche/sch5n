@@ -140,7 +140,7 @@ Every program uses the same settings. They are saved immediately to
 `data/settings.json`.
 
 The mouse cursor is the operating system cursor showing
-`textures/icon/cursor.png`, so it never lags. Setting `cursor_color` in
+`assets/textures/icon/cursor.png`, so it never lags. Setting `cursor_color` in
 `settings.json` (e.g. `[255, 120, 120]`) hides it and has the game draw the
 image tinted with that color instead.
 
@@ -165,7 +165,7 @@ own by copying an entry.
 ## Layout
 
     assets/              what draws the game
-        base/textures/   images
+        textures/        images
         shaders/         GLSL shaders
     data/                what defines the game: rules, blocks, items, animations, UI style, default settings (JSON)
         maps/            bundled maps, and the ones made with the editor

@@ -36,7 +36,7 @@ def find_assets_dir(start: Path | None = None) -> Path:
     here = (start or Path(__file__)).resolve()
     for parent in (here, *here.parents):
         candidate = parent / "assets"
-        if (candidate / "base").is_dir():
+        if (candidate / "textures").is_dir():
             return candidate
 
     return Path.cwd() / "assets"
@@ -44,9 +44,7 @@ def find_assets_dir(start: Path | None = None) -> Path:
 
 ASSETS_DIR = find_assets_dir()
 """Pictures and shaders: what draws the game."""
-BASE_DIR = ASSETS_DIR / "base"
-"""The base game's assets."""
-TEXTURES_DIR = BASE_DIR / "textures"
+TEXTURES_DIR = ASSETS_DIR / "textures"
 SHADER_DIR = ASSETS_DIR / "shaders"
 DATA_DIR = Path(getenv(DATA_ENV_VAR) or ASSETS_DIR.parent / "data")
 """Game rules, blocks, items, UI and default settings: what defines the
