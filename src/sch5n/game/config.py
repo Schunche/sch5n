@@ -48,7 +48,8 @@ class PhysicsConfig(_Model):
 class PlayerConfig(_Model):
     """Player movement tuning. Units are pixels and ticks."""
 
-    size: tuple[int, int] = (48, 48)
+    size: tuple[int, int] = (20, 46)
+    """Hitbox in pixels. The sprite is drawn bottom centered on it."""
     walk_speed: float = 1.0
     acceleration: float = 0.1
     max_speed: float = 2.0

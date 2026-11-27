@@ -4,13 +4,14 @@
 import numpy as np
 import pytest
 
+from sch5n.client.assets import frame_files
 from sch5n.client.camera import MAX_ZOOM, Camera
 from sch5n.client.render.atlas import (
     AtlasBuilder,
     next_power_of_two,
     pack_shelves,
 )
-from sch5n.client.render.image import apply_colorkey
+from sch5n.client.render.image import apply_colorkey, load_rgba
 from sch5n.client.render.text import Anchor, anchored
 from sch5n.client.style import Style
 from sch5n.client.ui import (
@@ -20,8 +21,8 @@ from sch5n.client.ui import (
     button_column,
     hit_button,
 )
-from sch5n.game.config import AnimationClip
-from sch5n.game.content import load_ui
+from sch5n.game.config import AnimationClip, GameConfig, load_model
+from sch5n.game.content import load_animations, load_ui
 from sch5n.utility import path
 
 ATLAS_WIDTH = 256
@@ -171,3 +172,34 @@ def test_animation_frames(
 ) -> None:
     """Looping clips wrap around, others stop on their last frame."""
     assert [clip.frame_index(age, 4) for age in ages] == frames
+
+
+MIN_COLORS = 6
+"""A real character has hair, skin, clothes and an outline."""
+
+
+def test_player_frames_are_real_sprites() -> None:
+    """Player frames are real art that fits around the hitbox.
+
+    Every animation has frames of one size, with transparency and several
+    colors, at least as big as the hitbox.
+    """
+    animations = load_animations(path.DATA_DIR)
+    width, height = load_model(
+        GameConfig, path.DATA_DIR / "game.json"
+    ).player.size
+    sizes = set()
+    for clip in animations.mobs["player"].values():
+        files = frame_files(path.TEXTURES_DIR / clip.path)
+        assert files, clip.path
+        for file in files:
+            pixels = load_rgba(file)
+            sizes.add(pixels.shape[:2])
+            alpha = pixels[..., 3]
+            assert (alpha == 0).any(), file  # Not a filled box.
+            opaque = pixels[alpha > 0][:, :3]
+            assert len({tuple(c) for c in opaque.tolist()}) >= MIN_COLORS
+    assert len(sizes) == 1
+    ((frame_height, frame_width),) = sizes
+    assert frame_width >= width
+    assert frame_height >= height

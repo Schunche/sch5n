@@ -35,7 +35,7 @@ def test_falls_and_lands(tilemap: TileMap) -> None:
     floor(tilemap, 4)
     player = make_player()
     settle(player, tilemap)
-    assert player.body.y == 4 * 32 - 48
+    assert player.body.y == 4 * 32 - CONFIG.player.size[1]
     assert player.action is Action.IDLE
 
 
@@ -76,7 +76,8 @@ def test_wall_slide_and_wall_jump(tilemap: TileMap) -> None:
     stone = tilemap.blocks.id_of("stone")
     for y in range(-20, 20):
         tilemap.set(3, y, stone)
-    player = make_player(GameMode.ADMIN, pos=(3 * 32 - 49, 0))
+    width = CONFIG.player.size[0]
+    player = make_player(GameMode.ADMIN, pos=(3 * 32 - width - 1, 0))
     for _ in range(30):
         player.tick(tilemap, 1)
     assert player.wall_slide

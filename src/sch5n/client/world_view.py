@@ -125,13 +125,20 @@ class TileRenderer:
 def draw_player(
     batch: SpriteBatch, assets: ClientAssets, player: Player
 ) -> None:
-    """Queue the player sprite."""
+    """Queue the player sprite, standing on the bottom of the hitbox.
+
+    Frames are drawn at their own size, centered on the hitbox, so they
+    may be wider than the body for swinging arms and legs.
+    """
     animation = assets.mobs["player", player.action.value]
+    frame = animation.frame(player.action_age)
     body = player.body
+    x = round(body.x + (body.w - frame.width) / 2)
+    y = round(body.y + body.h - frame.height)
     batch.sprite(
         assets.atlas,
-        (body.x, body.y, body.w, body.h),
-        animation.frame(player.action_age),
+        (x, y, frame.width, frame.height),
+        frame,
         flip_x=player.facing_left,
     )
 

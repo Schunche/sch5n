@@ -1,11 +1,11 @@
 {
     "mobs": {
         "player": {
-            "idle": {"path": "mob/player/idle", "frame_ticks": 6, "loop": true},
-            "run": {"path": "mob/player/run", "frame_ticks": 4, "loop": true},
-            "jump": {"path": "mob/player/jump", "frame_ticks": 10, "loop": false},
+            "idle": {"path": "mob/player/idle", "frame_ticks": 18, "loop": true},
+            "run": {"path": "mob/player/run", "frame_ticks": 5, "loop": true},
+            "jump": {"path": "mob/player/jump", "frame_ticks": 8, "loop": false},
             "slide": {"path": "mob/player/slide", "frame_ticks": 5, "loop": false},
-            "wall_slide": {"path": "mob/player/wall_slide", "frame_ticks": 5, "loop": true}
+            "wall_slide": {"path": "mob/player/wall_slide", "frame_ticks": 12, "loop": true}
         }
     },
     "particles": {
