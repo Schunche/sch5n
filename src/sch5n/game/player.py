@@ -108,7 +108,9 @@ class Player:
         self.use_cooldown += 1
         if self.swing is not None:
             self.swing.age += 1
-            if self.swing.age >= self.swing.duration:
+            # Hold the last pose for a tick: a held button starts the next
+            # swing then, so back to back swings never blink out.
+            if self.swing.age > self.swing.duration:
                 self.swing = None
 
     def start_swing(self, item: ItemDef, toward_x: float) -> None:

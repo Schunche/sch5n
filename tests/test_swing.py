@@ -87,11 +87,22 @@ def test_swing_lasts_the_use_time(game: Game) -> None:
     """A single swing takes the item's use time, then ends."""
     pickaxe = held_item(game)
     game.player.start_swing(pickaxe, toward_x=1000)
-    for _ in range(pickaxe.spec.use_time - 1):
+    for _ in range(pickaxe.spec.use_time):
         game.tick(TickInput())
     assert game.player.swing is not None
+    assert game.player.swing.progress == pytest.approx(1.0)
     game.tick(TickInput())
     assert game.player.swing is None
+
+
+def test_back_to_back_swings_never_blink(game: Game) -> None:
+    """Holding the button, the item stays visible between swings."""
+    use_time = held_item(game).spec.use_time
+    inputs = TickInput(move_x=1, use=True, target=(3, 10))
+    swings(game, use_time, inputs)  # Wait for the first swing.
+    for _ in range(use_time * 3):
+        game.tick(inputs)
+        assert game.player.swing is not None
 
 
 def test_swinging_at_air_and_wrong_blocks_still_swings(
