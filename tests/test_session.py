@@ -287,3 +287,16 @@ def test_lopper_trims_leafy_logs(content: Content) -> None:
     run(game, 120)
     assert not game.floating_items
     assert not any(s and s.item.name == "oak_log" for s in game.inventory)
+
+
+def test_every_felled_log_drops_where_it_was(content: Content) -> None:
+    """Felled logs, leafy ones too, each drop from their own place."""
+    game, _ = planted(content)
+    chop = TickInput(use=True, target=(2, 7))
+    while game.tilemap.get(2, 7) != AIR:
+        game.tick(chop)
+    places = sorted(
+        round(f.body.center[1] / TILE - 0.5) for f in game.floating_items
+    )
+    assert len(game.floating_items) == LOGS_ABOVE_AND_CHOPPED
+    assert places[0] < places[-1]  # From up the tree, not all at the cut.

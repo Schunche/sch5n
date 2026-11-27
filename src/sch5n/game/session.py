@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import math
-from collections import Counter
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -297,25 +296,21 @@ class Game:
             player.use_cooldown = 0
 
     def _broken(self, block: BlockDef, tile: tuple[int, int]) -> None:
-        """Drop what a broken block leaves, and fell a tree above it."""
-        drops = Counter[str]()
+        """Drop what a broken block leaves, and fell a tree above it.
+
+        Every felled log drops where it was, so the whole tree comes down.
+        """
         if block.spec.drop is not None:
-            drops[block.spec.drop] += 1
+            self.drop(ItemStack(self.content.items[block.spec.drop]), tile)
         if (
-            self.tilemap.get(*tile) == AIR
-            and block.spec.tree is TreePart.TRUNK
+            self.tilemap.get(*tile) != AIR
+            or block.spec.tree is not TreePart.TRUNK
         ):
-            for felled in fell_tree(self.tilemap, *tile):
-                drop = log_of(self.tilemap.blocks, felled)
-                if drop is not None:
-                    drops[drop] += 1
-        for name, count in drops.items():
-            item = self.content.items[name]
-            left = count
-            while left > 0:
-                stack = ItemStack(item, min(left, item.spec.max_stack))
-                left -= stack.amount
-                self.drop(stack, tile)
+            return
+        for felled, where in fell_tree(self.tilemap, *tile):
+            drop = log_of(self.tilemap.blocks, felled)
+            if drop is not None:
+                self.drop(ItemStack(self.content.items[drop]), where)
 
     def _nearest_player(self, pos: tuple[float, float]) -> Player | None:
         return min(

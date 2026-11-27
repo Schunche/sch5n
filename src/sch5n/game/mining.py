@@ -121,7 +121,9 @@ CROWN_REACH = 3
 """Leaves this many tiles beside a trunk fall with its tree."""
 
 
-def fell_tree(tilemap: TileMap, x: int, y: int) -> list[BlockDef]:
+def fell_tree(
+    tilemap: TileMap, x: int, y: int
+) -> list[tuple[BlockDef, tuple[int, int]]]:
     """Bring down the tree above a trunk tile that was just broken.
 
     The rest of the trunk above, in the same column, and the leaves joined
@@ -129,11 +131,12 @@ def fell_tree(tilemap: TileMap, x: int, y: int) -> list[BlockDef]:
     trunks stay, and so do their crowns beyond that reach.
 
     Returns:
-        list[BlockDef]: The removed blocks.
+        list[tuple[BlockDef, tuple[int, int]]]: The removed blocks and
+        where they were.
 
     """
     blocks = tilemap.blocks
-    removed: list[BlockDef] = []
+    removed: list[tuple[BlockDef, tuple[int, int]]] = []
     seen = {(x, y)}
     todo = [(x, y - 1)]
     while todo:
@@ -148,7 +151,7 @@ def fell_tree(tilemap: TileMap, x: int, y: int) -> list[BlockDef]:
             continue
         if abs(tx - x) > CROWN_REACH:
             continue
-        removed.append(block)
+        removed.append((block, (tx, ty)))
         tilemap.set(tx, ty, AIR)
         todo += [(tx, ty - 1), (tx - 1, ty), (tx + 1, ty)]
     return removed
