@@ -151,8 +151,11 @@ The game comes with a map viewer that can also edit maps. Start it with
 
 - **Viewing:** look at a whole map. WASD to move, mouse wheel to zoom.
 - **Editing** (`--edit`): change a map. The same controls, and: left click
-  places, right click erases, Shift+mouse wheel or Q and E pick the block,
-  Ctrl+S saves, Esc saves and quits.
+  places, right click erases, Ctrl+S saves (a message says whether it
+  worked), Esc quits. Click a block in the list on the right to pick it, and
+  use the mouse wheel over the list to scroll it; Q and E pick the previous
+  or next block. With unsaved changes, Esc or closing the window asks
+  whether to save them first.
 
 On **Windows**, open the game folder, click the address bar at the top of the
 window, type `cmd` and press Enter. A black window opens in the game folder.
@@ -160,7 +163,7 @@ Then type one of these and press Enter:
 
 ```bat
 play.bat view --map map1
-play.bat view --edit --map map1
+play.bat view --edit --map mymap
 play.bat view --map procedural
 ```
 
@@ -168,13 +171,16 @@ On **Linux**, in the terminal:
 
 ```sh
 ./play.sh view --map map1
-./play.sh view --edit --map map1
+./play.sh view --edit --map mymap
 ```
 
 Maps are in `data/maps`. Editing a map name that doesn't exist yet,
 like `play.bat view --edit --map mymap`, starts a new, empty map. To play on it, start
 the game with `play.bat client --map mymap` and create a new world under
 **Singleplayer**: new worlds start from that map.
+
+The default map, `map1`, is where new worlds start, so it can't be changed.
+Edit a map with another name instead.
 
 ## Updating
 

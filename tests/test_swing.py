@@ -17,6 +17,7 @@ from sch5n.client.world_view import (
     SwingMoment,
     held_item_pose,
     keyframe_pose,
+    scissor_pose,
     swing_direction,
     swing_frame,
     tool_kind,
@@ -168,12 +169,17 @@ def test_rig_matches_the_frames(rig: Rig) -> None:
     for action, clip in animations.mobs["player"].items():
         frames = frame_files(path.TEXTURES_DIR / clip.path)
         armless = frame_files(path.TEXTURES_DIR / tool_use.armless / action)
+        bare = frame_files(path.TEXTURES_DIR / tool_use.bare / action)
         assert len(armless) == len(frames) == len(rig.shoulders[action])
-        for normal, bare in zip(frames, armless, strict=True):
-            assert load_rgba(normal).shape == load_rgba(bare).shape
-            assert (load_rgba(bare)[..., 3] > 0).sum() < (
-                load_rgba(normal)[..., 3] > 0
-            ).sum()
+        assert len(bare) == len(frames)
+        for normal, one_arm, no_arms in zip(
+            frames, armless, bare, strict=True
+        ):
+            sizes = [load_rgba(f) for f in (normal, one_arm, no_arms)]
+            assert sizes[0].shape == sizes[1].shape == sizes[2].shape
+            opaque = [(image[..., 3] > 0).sum() for image in sizes]
+            assert opaque[1] < opaque[0]
+            assert opaque[2] < opaque[0]
     arms = frame_files(path.TEXTURES_DIR / tool_use.arm)
     assert len(arms) == len(rig.arm.angles) == len(rig.arm.hands)
 
@@ -326,7 +332,13 @@ def test_keyframes_blend_the_item() -> None:
     assert quarter.arm == "back"
     assert swing_frame(keys, 0.75).arm == "forward"
     with pytest.raises(pydantic.ValidationError):
-        ToolUseConfig(armless="a", arm="b", rig="c", styles={"axe": keys[:1]})
+        ToolUseConfig(
+            armless="a",
+            bare="d",
+            arm="b",
+            rig="c",
+            styles={"axe": keys[:1]},
+        )
 
 
 def drawn_at(pose: HeldItemPose, u: float, v: float) -> tuple[float, float]:
@@ -408,14 +420,90 @@ def test_axe_blade_leads_the_chop(rig: Rig) -> None:
 def test_only_keyframed_swings_are_mirrored() -> None:
     """Overhead swings cannot be mirrored."""
     with pytest.raises(pydantic.ValidationError):
-        ToolUseConfig(armless="a", arm="b", rig="c", mirrored=("pickaxe",))
+        ToolUseConfig(
+            armless="a",
+            bare="d",
+            arm="b",
+            rig="c",
+            mirrored=("pickaxe",),
+        )
 
 
-def test_lopper_opens_like_scissors_in_two_hands() -> None:
-    """The lopper's blades part and snap shut, a second hand holds it."""
-    keys = load_animations(path.DATA_DIR).tool_use["player"].styles["lopper"]
-    spreads = [swing_frame(keys, p / 20).spread for p in range(21)]
-    assert spreads[0] == 0
-    assert max(spreads) > 0
-    assert spreads[-1] == 0
+LOPPER_SHUT = 15
+"""Degrees between the lopper's halves, at most, when shut."""
+LOPPER_OPEN = 40
+"""Degrees between the lopper's halves, at least, when wide open."""
+
+
+def lopper_opening(rig: Rig, progress: float, *, facing_left: bool) -> float:
+    """Degrees between the drawn halves of the copper lopper.
+
+    Returns:
+        float: Angle between the two blades.
+
+    """
+    tool_use = load_animations(path.DATA_DIR).tool_use["player"]
+    keys = tool_use.styles["lopper"]
+    tool = tool_use.scissors["copper_lopper"]
+    image = load_rgba(path.TEXTURES_DIR / f"{tool.front}.png")
+    pose = scissor_pose(
+        rig,
+        moment(progress, facing_left=facing_left),
+        swing_frame(keys, progress),
+        tool,
+        (image.shape[1], image.shape[0]),
+    )
+    turn = pose.front[1].rotation - pose.back[1].rotation
+    return abs(math.degrees(math.atan2(math.sin(turn), math.cos(turn))))
+
+
+def test_lopper_opens_like_scissors_in_two_hands(rig: Rig) -> None:
+    """One lopper, a handle in each hand: it opens wide, then snaps shut."""
+    tool_use = load_animations(path.DATA_DIR).tool_use["player"]
+    keys = tool_use.styles["lopper"]
     assert all(key.off_arm is not None for key in keys)
+    for item in ("copper_lopper", "iron_lopper"):
+        tool = tool_use.scissors[item]
+        front = load_rgba(path.TEXTURES_DIR / f"{tool.front}.png")
+        back = load_rgba(path.TEXTURES_DIR / f"{tool.back}.png")
+        assert front.shape == back.shape
+        assert front[..., 3].any()
+    openings = [
+        lopper_opening(rig, p / 20, facing_left=False) for p in range(21)
+    ]
+    assert openings[0] < LOPPER_SHUT
+    assert openings[-1] < LOPPER_SHUT
+    wide = [i for i, o in enumerate(openings) if o > LOPPER_OPEN]
+    assert wide
+    # Opens over a few frames, but snaps shut from wide open at once.
+    assert openings[wide[-1] + 1] < LOPPER_SHUT
+
+
+@pytest.mark.parametrize("progress", [0.0, 0.5, 1.0])
+def test_lopper_halves_share_their_hinge(rig: Rig, progress: float) -> None:
+    """Both halves turn on one hinge, mirrored when facing left."""
+    tool_use = load_animations(path.DATA_DIR).tool_use["player"]
+    tool = tool_use.scissors["copper_lopper"]
+    keys = tool_use.styles["lopper"]
+    size = (40.0, 14.0)
+    poses = [
+        scissor_pose(
+            rig,
+            moment(progress, facing_left=left),
+            swing_frame(keys, progress),
+            tool,
+            size,
+        )
+        for left in (False, True)
+    ]
+    for pose in poses:
+        for (x, y, w, h), transform in (pose.front, pose.back):
+            px, py = transform.pivot
+            assert (x + px * w, y + py * h) == pytest.approx(pose.hinge)
+    right, left = poses
+    assert left.hinge[0] == pytest.approx(40 - right.hinge[0])
+    assert left.front[1].rotation == pytest.approx(-right.front[1].rotation)
+    assert left.front[1].flip_x
+    assert lopper_opening(rig, progress, facing_left=True) == pytest.approx(
+        lopper_opening(rig, progress, facing_left=False)
+    )

@@ -6,8 +6,11 @@ lazy from pathlib import Path
 
 import pytest
 
+from sch5n.client import __main__ as client_main
 from sch5n.error.exceptions import ParseError
 from sch5n.utility import path
+from sch5n.world import io
+from sch5n.world.__main__ import main as generate_main
 from sch5n.world.generator import WorldSpec, generate
 from sch5n.world.io import (
     load_tilemap,
@@ -18,6 +21,8 @@ from sch5n.world.io import (
 lazy from sch5n.world.tilemap import TileMap
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from sch5n.game.content import BlockRegistry, Content
 
 
@@ -67,6 +72,144 @@ def test_bundled_maps_load(content: Content, name: str) -> None:
     """The maps shipped with the game load."""
     tilemap = load_tilemap(path.MAPS_DIR / f"{name}.json", content.blocks)
     assert len(tilemap) > 0
+
+
+@pytest.fixture
+def default_map(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Stand a temporary default map in for the real one, while developing.
+
+    Returns:
+        Path: The stand in.
+
+    """
+    monkeypatch.setenv(path.DEV_ENV_VAR, "1")
+    monkeypatch.setattr(io, "MAPS_DIR", tmp_path)
+    monkeypatch.setattr(path, "MAPS_DIR", tmp_path)
+    target = tmp_path / f"{io.DEFAULT_MAP}.json"
+    target.write_text("{}", encoding="utf-8")
+    return target
+
+
+def test_only_the_default_map_is_protected(default_map: Path) -> None:
+    """The default map is recognised however its path is written."""
+    assert io.is_protected(default_map)
+    assert io.is_protected(
+        default_map.parent / ".." / default_map.parent.name / default_map.name
+    )
+    assert not io.is_protected(default_map.with_name("other.json"))
+    default_map.unlink()
+    assert io.is_protected(default_map)
+
+
+def test_saving_the_default_map_backs_it_up(
+    default_map: Path, tilemap: TileMap
+) -> None:
+    """Every change keeps the previous version; no change keeps nothing."""
+    backups = default_map.parent / io.BACKUP_DIR
+    tilemap.set(1, 2, 1)
+    save_tilemap(default_map, tilemap)
+    first = default_map.read_bytes()
+    save_tilemap(default_map, tilemap)
+    assert [file.read_bytes() for file in backups.iterdir()] == [b"{}"]
+    tilemap.set(3, 4, 1)
+    save_tilemap(default_map, tilemap)
+    assert sorted(file.read_bytes() for file in backups.iterdir()) == sorted([
+        b"{}",
+        first,
+    ])
+
+
+def test_failed_backup_leaves_the_default_map(
+    default_map: Path, tilemap: TileMap
+) -> None:
+    """Without a backup the default map is not overwritten."""
+    (default_map.parent / io.BACKUP_DIR).write_text("", encoding="utf-8")
+    tilemap.set(1, 2, 1)
+    with pytest.raises(io.BackupError, match=io.BACKUP_DIR):
+        save_tilemap(default_map, tilemap)
+    assert default_map.read_bytes() == b"{}"
+
+
+def test_other_maps_are_not_backed_up(
+    default_map: Path, tilemap: TileMap
+) -> None:
+    """Ordinary maps are saved without backups."""
+    other = default_map.with_name("other.json")
+    save_tilemap(other, tilemap)
+    tilemap.set(1, 2, 1)
+    save_tilemap(other, tilemap)
+    assert not (default_map.parent / io.BACKUP_DIR).exists()
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["--edit"],
+        ["--edit", "--map", "map1"],
+        ["--edit-default", "--map", "other"],
+        ["--edit", "--edit-default"],
+    ],
+)
+@pytest.mark.usefixtures("default_map")
+def test_viewer_refuses_wrong_edit_flags(argv: list[str]) -> None:
+    """The default map is edited with its own flag only, before any window."""
+    if "map1" in argv:
+        argv = [*argv[:-1], str(path.MAPS_DIR / "map1.json")]
+    with pytest.raises(SystemExit):
+        client_main.viewer_main(argv)
+
+
+def test_generator_refuses_the_default_map(default_map: Path) -> None:
+    """Generating over the default map must be asked for."""
+    with pytest.raises(SystemExit):
+        generate_main([io.DEFAULT_MAP])
+    assert default_map.read_bytes() == b"{}"
+
+
+def test_default_map_is_read_only_outside_development(
+    default_map: Path, tilemap: TileMap, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Players' copies never write the default map, but save other maps."""
+    monkeypatch.setenv(path.DEV_ENV_VAR, "0")
+    tilemap.set(1, 2, 1)
+    with pytest.raises(PermissionError, match="read-only"):
+        save_tilemap(default_map, tilemap)
+    assert default_map.read_bytes() == b"{}"
+    assert not (default_map.parent / io.BACKUP_DIR).exists()
+    save_tilemap(default_map.with_name("other.json"), tilemap)
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        (client_main.viewer_main, ["--edit-default"]),
+        (client_main.viewer_main, ["--edit"]),
+        (generate_main, [io.DEFAULT_MAP]),
+        (generate_main, [io.DEFAULT_MAP, "--overwrite-default"]),
+    ],
+)
+@pytest.mark.parametrize("developing", ["0", "1"])
+def test_default_map_options_are_for_developers(
+    command: tuple[Callable[[list[str]], None], list[str]],
+    developing: str,
+    default_map: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Only developers are offered, or told about, the override options."""
+    main, argv = command
+    monkeypatch.setenv(path.DEV_ENV_VAR, developing)
+    with pytest.raises(SystemExit):
+        main(["--help"])
+    offered = "-default" in capsys.readouterr().out
+    assert offered == (developing == "1")
+    if developing == "0":
+        with pytest.raises(SystemExit):
+            main(argv)
+        error = capsys.readouterr().err.split("error:")[1]
+        if not any(arg.endswith("-default") for arg in argv):
+            assert "-default" not in error
+        assert default_map.read_bytes() == b"{}"
 
 
 def test_generation_is_deterministic(content: Content) -> None:

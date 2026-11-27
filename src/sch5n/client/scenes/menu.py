@@ -37,6 +37,8 @@ ENTRIES = (
     ("exit", "Exit"),
 )
 NOTICE_SIZE = 16
+VERSION_SIZE = 14
+VERSION_ICON_GAP = 6
 
 DRIFT_PERIOD = (2400, 3700)
 """Ticks for one camera sway, horizontally and vertically."""
@@ -225,10 +227,33 @@ class MainMenu(Scene):
                     NOTICE_SIZE, rgba(style.color("accent")), Anchor.CENTER
                 ),
             )
+        self._draw_version()
+        app.draw_cursor()
+
+    def _draw_version(self) -> None:
+        """Draw the game icon and version in the bottom right corner."""
+        app = self.app
+        style = app.ui
+        w, h = app.screen
+        text = f"v{__version__}"
+        right = w - style.outer_padding
+        bottom = h - style.outer_padding
         app.text.draw(
             app.batch,
-            f"v{__version__}",
-            (w - style.outer_padding, h - style.outer_padding),
-            TextStyle(14, rgba(style.color("text")), Anchor.BOTTOM_RIGHT),
+            text,
+            (right, bottom),
+            TextStyle(
+                VERSION_SIZE, rgba(style.color("text")), Anchor.BOTTOM_RIGHT
+            ),
         )
-        app.draw_cursor()
+        width, height = app.text.measure(text, VERSION_SIZE)
+        icon = app.texture(app.animations.window_icon, (height, height))
+        app.batch.sprite(
+            icon,
+            (
+                round(right - width - VERSION_ICON_GAP - height),
+                round(bottom - height),
+                height,
+                height,
+            ),
+        )

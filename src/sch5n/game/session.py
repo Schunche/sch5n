@@ -13,20 +13,24 @@ from sch5n.game.ambient import Ambience
 from sch5n.game.config import GameMode
 from sch5n.game.content import AIR, TreePart
 from sch5n.game.floating_item import FloatingItem
-from sch5n.game.inventory import Inventory, ItemStack
+from sch5n.game.inventory import CRAFTING_SIDE, Inventory, ItemStack
 from sch5n.game.mining import HitResult, can_place, fell_tree, hit_tile, log_of
+from sch5n.game.plants import Garden
 from sch5n.game.player import Player
 from sch5n.log.logger import LOGGER
 from sch5n.math.rect import Rect
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterable, Mapping
 
-    from sch5n.game.content import BlockDef, Content
+    from sch5n.game.content import BlockDef, Content, ItemDef
     from sch5n.world.tilemap import TileMap
 
 SPAWN_SEARCH_DEPTH = 512
 """How many tiles below the spawn point to look for ground."""
+
+VOID_DEPTH = 32
+"""How many tiles below the world's bottom players respawn and items vanish."""
 
 
 @dataclass(slots=True)
@@ -124,9 +128,16 @@ class Game:
         """Inventories of players who left, by name, for when they return."""
         self.floating_items: list[FloatingItem] = []
         self.ambience = Ambience(self.config, self.rng)
+        self.garden = Garden(tilemap, self.rng, self.config.tick_rate)
         bounds = tilemap.bounds()
         self.horizon = (bounds[1] if bounds else 0) * self.config.tile_size
         """World y of the top of the world, where the sky begins."""
+        self.void_y = (
+            (bounds[3] + VOID_DEPTH) * self.config.tile_size
+            if bounds
+            else math.inf
+        )
+        """World y below which things have fallen out of the world."""
         if setup.host_player:
             self.add_player()
 
@@ -191,6 +202,8 @@ class Game:
     ) -> tuple[float, float]:
         """Find the player's top left corner, standing on the ground.
 
+        The nearest column with ground is used if the preferred one has none.
+
         Returns:
             tuple[float, float]: Position in pixels, `preferred` if there
             is no ground.
@@ -201,11 +214,31 @@ class Game:
         x, y = preferred
         column = int(x // size)
         bounds = self.tilemap.bounds()
-        top = min(int(y // size), bounds[1] if bounds else 0) - 1
-        ground = self.tilemap.surface_y(column, top, top + SPAWN_SEARCH_DEPTH)
-        if ground is None:
+        if bounds is None:
             return (x, y)
-        return (column * size + (size - width) / 2, ground * size - height)
+        top = min(int(y // size), bounds[1]) - 1
+        for near in sorted(
+            {column, *range(bounds[0], bounds[2])},
+            key=lambda c: abs(c - column),
+        ):
+            ground = self.tilemap.surface_y(
+                near, top, top + SPAWN_SEARCH_DEPTH
+            )
+            if ground is not None:
+                return (
+                    near * size + (size - width) / 2,
+                    ground * size - height,
+                )
+        return (x, y)
+
+    def _respawn(self, player: Player) -> None:
+        """Put a player back at spawn, at rest. The inventory is kept."""
+        body = player.body
+        body.x, body.y = self._spawn_point(self.setup.spawn)
+        body.vx = body.vy = 0.0
+        player.jump_hold = 0
+        player.jumps = player.max_jumps
+        player.air_time = 0
 
     @property
     def player(self) -> Player:
@@ -246,31 +279,71 @@ class Game:
         return floating
 
     def return_cursor_stack(self, player: Player) -> None:
-        """Put the stack held by the cursor back, dropping what won't fit.
+        """Put the cursor's and the crafting grid's stacks back.
 
-        Done when the inventory closes, so nothing stays on the cursor.
+        What won't fit is dropped. Done when the inventory closes, so
+        nothing stays on the cursor or in the grid.
         """
         inventory = player.inventory
-        if inventory.cursor is None:
-            return
-        leftover = inventory.add(inventory.cursor)
+        loose = [inventory.cursor, *inventory.crafting]
         inventory.cursor = None
-        if leftover is not None:
-            body = player.body
-            size = self.config.tile_size
-            self.drop(
-                leftover,
-                (int(body.center[0] // size), int(body.y // size)),
-            )
+        inventory.crafting = [None] * len(inventory.crafting)
+        self._stow(player, (stack for stack in loose if stack is not None))
+
+    def _stow(self, player: Player, stacks: Iterable[ItemStack]) -> None:
+        """Put stacks into a player's inventory, dropping what won't fit."""
+        size = self.config.tile_size
+        for stack in stacks:
+            leftover = player.inventory.add(stack)
+            if leftover is not None:
+                body = player.body
+                self.drop(
+                    leftover,
+                    (int(body.center[0] // size), int(body.y // size)),
+                )
+
+    def _crafting_side(self, player: Player) -> int:
+        """Find the side of the grid a player has.
+
+        Returns:
+            int: Larger than usual near a crafting station.
+
+        """
+        size = self.config.tile_size
+        cx, cy = (int(v // size) for v in player.body.center)
+        around = math.ceil(player.tuning.reach) + 1
+        near = self.tilemap.region(
+            cx - around, cy - around, cx + around + 1, cy + around + 1
+        )
+        side = CRAFTING_SIDE
+        for block in self.content.blocks:
+            grid = block.spec.crafting_side
+            if grid is None or grid <= side:
+                continue
+            ys, xs = np.nonzero(near == block.id)
+            if any(
+                player.can_reach((cx - around + x, cy - around + y))
+                for x, y in zip(xs.tolist(), ys.tolist(), strict=True)
+            ):
+                side = grid
+        return side
+
+    def _fit_crafting_grid(self, player: Player) -> None:
+        """Grow or shrink a player's grid with the stations in reach."""
+        side = self._crafting_side(player)
+        if side != player.inventory.crafting_side:
+            self._stow(player, player.inventory.resize_crafting(side))
 
     def _use_held_item(self, player: Player, inp: TickInput) -> None:
         held = player.inventory.held
-        if inp.target is None or held is None:
+        if held is None:
+            self._pick_by_hand(player, inp)
+            return
+        if inp.target is None:
             return
         if player.use_cooldown < held.item.spec.use_time:
             return
         x, y = inp.target
-        target_x = (x + 0.5) * self.config.tile_size
         if not player.can_reach(inp.target):
             return
 
@@ -284,21 +357,53 @@ class Game:
                 self._drop_extras(hit.block, (x, y))
 
         elif inp.place and held.item.spec.places is not None:
-            size = self.config.tile_size
-            tile = Rect(x * size, y * size, size, size)
-            if any(
-                other.body.rect.collides(tile)
-                for other in self.players.values()
-            ) or not can_place(self.tilemap, x, y):
-                return
-            block = self.content.blocks.id_of(held.item.spec.places)
-            self.tilemap.set(x, y, block)
-            player.start_swing(held.item, target_x)
-            player.inventory.consume_held()
-            player.use_cooldown = 0
+            self._place_held(player, held.item, inp.target)
+
+    def _place_held(
+        self, player: Player, item: ItemDef, target: tuple[int, int]
+    ) -> None:
+        """Build the held item's block at a tile, if it can go there.
+
+        A block with several textures gets one of them at random.
+        """
+        if item.spec.places is None:
+            return
+        x, y = target
+        size = self.config.tile_size
+        tile = Rect(x * size, y * size, size, size)
+        block = self.content.blocks.by_name(item.spec.places)
+        if any(
+            other.body.rect.collides(tile) for other in self.players.values()
+        ) or not can_place(self.tilemap, x, y, block):
+            return
+        variants = len(block.spec.textures)
+        variant = int(self.rng.integers(variants)) if variants > 1 else 0
+        self.tilemap.set(x, y, block.id, variant)
+        self.garden.plant(x, y)
+        player.start_swing(item, (x + 0.5) * size)
+        player.inventory.consume_held()
+        player.use_cooldown = 0
+
+    def _pick_by_hand(self, player: Player, inp: TickInput) -> None:
+        """Take a block that an empty hand picks up whole, like a sapling."""
+        if not inp.use or inp.target is None:
+            return
+        block = self.content.blocks.get(self.tilemap.get(*inp.target))
+        if (
+            block is None
+            or not block.spec.hand_pickup
+            or block.spec.drop is None
+            or not player.can_reach(inp.target)
+        ):
+            return
+        self.tilemap.set(*inp.target, AIR)
+        stack = ItemStack(self.content.items[block.spec.drop])
+        leftover = player.inventory.add(stack)
+        if leftover is not None:
+            self.drop(leftover, inp.target)
 
     def _drop_extras(self, block: BlockDef, tile: tuple[int, int]) -> None:
-        """Roll the block's chance drops, like branches from leaves."""
+        """Roll the block's chance drops, like sticks from leaves."""
         for extra in block.spec.extra_drops:
             if self.rng.random() >= extra.chance:
                 continue
@@ -311,6 +416,7 @@ class Game:
         """Drop what a broken block leaves, and fell a tree above it.
 
         Every felled log drops where it was, so the whole tree comes down.
+        Felled leaves and leafy logs roll their chance drops there too.
         """
         if block.spec.drop is not None:
             self.drop(ItemStack(self.content.items[block.spec.drop]), tile)
@@ -324,6 +430,7 @@ class Game:
             drop = log_of(self.tilemap.blocks, felled)
             if drop is not None:
                 self.drop(ItemStack(self.content.items[drop]), where)
+            self._drop_extras(felled, where)
 
     def _nearest_player(self, pos: tuple[float, float]) -> Player | None:
         return min(
@@ -342,7 +449,7 @@ class Game:
                 self.config.floating_item,
                 None if nearest is None else nearest.body.center,
             )
-            if self._pick_up(floating):
+            if floating.body.y > self.void_y or self._pick_up(floating):
                 continue
             remaining.append(floating)
         self.floating_items = remaining
@@ -374,9 +481,14 @@ class Game:
             player.jump()
         self._use_held_item(player, inp)
         player.tick(self.tilemap, inp.move_x, jump_held=inp.jump_held)
+        if player.body.y > self.void_y:
+            self._respawn(player)
 
     def tick_world(self, view: Rect | None = None) -> None:
         """Advance everything but the players by one tick."""
+        self.garden.tick(self._broken)
+        for player in self.players.values():
+            self._fit_crafting_grid(player)
         self.ambience.tick(self.tilemap, view, self.config.tile_size)
         self._tick_floating_items()
         self.ticks += 1

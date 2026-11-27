@@ -60,6 +60,20 @@ CARET_BLINK_TICKS = 30
 FAVORITE_WIDTH = 50
 DELETE_WIDTH = 64
 SMALL_GAP = 6
+HEART_ROWS = (
+    ".##.##.",
+    "#oo####",
+    "#o#####",
+    ".#####.",
+    "..###..",
+    "...#...",
+)
+"""Pixels of the heart marking a favorite world: `#` is the body and
+`o` the light reflected on its upper left."""
+HEART_PIXEL = 2
+HEART_COLORS = {"#": (255, 82, 122), "o": (255, 214, 224)}
+HEART_GAP = 8
+"""Space between the heart and the world name."""
 
 
 def last_played(modified: float, now: float) -> str:
@@ -180,12 +194,10 @@ class WorldsScene(Scene):
         self.side_buttons = []
         for index, world in enumerate(self.worlds[:MAX_LISTED_WORLDS]):
             row_y = self.list_top + index * (ROW_HEIGHT + ROW_GAP)
-            star = "* " if world.favorite else ""
             self.world_buttons.append(
                 Button(
                     f"world:{index}",
-                    f"{star}{world.name}  "
-                    f"({last_played(world.modified, now)})",
+                    f"{world.name}  ({last_played(world.modified, now)})",
                     Rect(left, row_y, row_width, ROW_HEIGHT),
                 )
             )
@@ -240,12 +252,18 @@ class WorldsScene(Scene):
         self._refresh()
 
     def delete(self, index: int) -> None:
-        """Delete a world, after a second click on its button."""
+        """Delete a world, after a second click on its button.
+
+        A favorite is kept: it must be unfavorited first.
+        """
+        world = self.worlds[index]
+        if world.favorite:
+            self.message = f"Unfavorite {world.name} before deleting it"
+            return
         if self.confirming != index:
             self.confirming = index
             self.layout()
             return
-        world = self.worlds[index]
         try:
             delete_world(world.path)
         except OSError as error:
@@ -352,6 +370,34 @@ class WorldsScene(Scene):
     ) -> None:
         self.app.text.draw(self.app.batch, text, pos, style)
 
+    def _heart(self, button: Button) -> None:
+        """Draw a pixel heart just left of a world button's label."""
+        app = self.app
+        label_width, _ = app.text.measure(
+            button.label, app.ui.button.font_size
+        )
+        width = len(HEART_ROWS[0]) * HEART_PIXEL
+        center_x, center_y = button.rect.center
+        left = round(
+            max(
+                button.rect.x + HEART_GAP,
+                center_x - label_width / 2 - HEART_GAP - width,
+            )
+        )
+        top = round(center_y - len(HEART_ROWS) * HEART_PIXEL / 2)
+        for row, pixels in enumerate(HEART_ROWS):
+            for column, pixel in enumerate(pixels):
+                if pixel in HEART_COLORS:
+                    app.batch.shape(
+                        (
+                            left + column * HEART_PIXEL,
+                            top + row * HEART_PIXEL,
+                            HEART_PIXEL,
+                            HEART_PIXEL,
+                        ),
+                        rgba(HEART_COLORS[pixel]),
+                    )
+
     def render(self) -> None:
         """Draw the screen."""
         app = self.app
@@ -388,6 +434,11 @@ class WorldsScene(Scene):
             )
         for button in self.world_buttons + self.side_buttons:
             button.draw(app.batch, app.text, style, mouse)
+        for button, world in zip(
+            self.world_buttons, self.worlds, strict=False
+        ):
+            if world.favorite:
+                self._heart(button)
         if self.message:
             self._text(
                 self.message,

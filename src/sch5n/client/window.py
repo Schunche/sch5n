@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any
 
 import glfw
 
+from sch5n.about import NAME
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -44,6 +46,13 @@ class MouseButtonEvent:
 
 
 @dataclass(frozen=True, slots=True)
+class MouseMoveEvent:
+    """The mouse moved to `pos` (window coordinates)."""
+
+    pos: tuple[float, float]
+
+
+@dataclass(frozen=True, slots=True)
 class ScrollEvent:
     """Mouse wheel moved. Positive `dy` is away from the user."""
 
@@ -76,7 +85,12 @@ _MODIFIERS = (
 )
 
 type Event = (
-    KeyEvent | MouseButtonEvent | ScrollEvent | ResizeEvent | CharEvent
+    KeyEvent
+    | MouseButtonEvent
+    | MouseMoveEvent
+    | ScrollEvent
+    | ResizeEvent
+    | CharEvent
 )
 
 
@@ -167,6 +181,12 @@ class Window:
         glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, glfw.TRUE)
         glfw.window_hint(glfw.VISIBLE, glfw.TRUE if visible else glfw.FALSE)
         glfw.window_hint(glfw.RESIZABLE, glfw.TRUE)
+        # Desktops match the window to `<NAME>.desktop` by these, which
+        # gives it its taskbar icon.
+        glfw.window_hint_string(glfw.X11_CLASS_NAME, NAME)
+        glfw.window_hint_string(glfw.X11_INSTANCE_NAME, NAME)
+        if glfw.get_version() >= (3, 4):
+            glfw.window_hint_string(glfw.WAYLAND_APP_ID, NAME)
 
         self.handle = glfw.create_window(size[0], size[1], title, None, None)
         if not self.handle:
@@ -181,6 +201,7 @@ class Window:
         self.cursor = Cursor(self)
         glfw.set_key_callback(self.handle, self._on_key)
         glfw.set_mouse_button_callback(self.handle, self._on_mouse_button)
+        glfw.set_cursor_pos_callback(self.handle, self._on_mouse_move)
         glfw.set_scroll_callback(self.handle, self._on_scroll)
         glfw.set_window_size_callback(self.handle, self._on_resize)
         glfw.set_char_callback(self.handle, self._on_char)
@@ -196,6 +217,9 @@ class Window:
         self._events.append(
             MouseButtonEvent(button, action, mods, self.mouse_pos)
         )
+
+    def _on_mouse_move(self, _w: object, x: float, y: float) -> None:
+        self._events.append(MouseMoveEvent((x, y)))
 
     def _on_scroll(self, _w: object, dx: float, dy: float) -> None:
         self._events.append(ScrollEvent(dx, dy, self.held_mods()))
@@ -281,7 +305,16 @@ class Window:
         glfw.set_window_title(self.handle, title)
 
     def set_icon(self, pixels: np.ndarray) -> None:
-        """Set the window icon from an RGBA array `(height, width, 4)`."""
+        """Set the window icon from an RGBA array `(height, width, 4)`.
+
+        Does nothing on Wayland, where windows cannot set their icon; it
+        comes from the desktop entry instead (`install-desktop.sh`).
+        """
+        if (
+            glfw.get_version() >= (3, 4)
+            and glfw.get_platform() == glfw.PLATFORM_WAYLAND
+        ):
+            return
         height, width = pixels.shape[:2]
         _set_window_icon(self.handle, 1, [(width, height, pixels)])
 
@@ -325,9 +358,11 @@ class Window:
         """Wait for the display refresh when presenting frames."""
         glfw.swap_interval(1 if vsync else 0)
 
-    def close(self) -> None:
-        """Request the window to close."""
-        glfw.set_window_should_close(self.handle, glfw.TRUE)
+    def close(self, *, requested: bool = True) -> None:
+        """Request the window to close, or withdraw the request."""
+        glfw.set_window_should_close(
+            self.handle, glfw.TRUE if requested else glfw.FALSE
+        )
 
     def swap(self) -> None:
         """Present the frame."""

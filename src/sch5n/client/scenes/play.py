@@ -14,23 +14,31 @@ import glfw
 
 from sch5n.client.camera import Camera
 from sch5n.client.hud import Hud, item_tooltip
+from sch5n.client.inventory_mouse import BUTTONS, InventoryMouse
 from sch5n.client.keybinds import Action, Context
 from sch5n.client.render.batch import rgba
 from sch5n.client.render.text import TextStyle
 from sch5n.client.scenes.base import Scene
 from sch5n.client.scenes.settings import SettingsScene
-from sch5n.client.ui import Align, InventoryLayout, button_at, hit_button
+from sch5n.client.ui import (
+    Align,
+    CraftingLayout,
+    InventoryLayout,
+    button_at,
+    hit_button,
+)
 from sch5n.client.window import (
     KeyEvent,
     MouseButtonEvent,
+    MouseMoveEvent,
 )
 from sch5n.client.world_view import WorldRenderer, load_start_map
-from sch5n.game.inventory import HOTBAR_SIZE
+from sch5n.game.crafting import crafted
 from sch5n.game.session import GameSetup, TickInput
 from sch5n.log.logger import LOGGER
 from sch5n.net.client import ClientSession, SessionState
 from sch5n.net.discovery import lan_addresses
-from sch5n.net.protocol import DEFAULT_PORT, InventoryAction
+from sch5n.net.protocol import InventoryAction
 from sch5n.server.server import Server
 from sch5n.world.save import World, save_world, unique_name, world_path
 lazy from sch5n.client.scenes.menu import MainMenu
@@ -74,11 +82,15 @@ class PlayScene(Scene):
             raise ValueError(msg)
         self.session = session
         self.server = server
+        self.player_name = app.settings.player_name
+        """Name joined with. Saves use it, even if the setting changes
+        during the game."""
         self.world: ClientWorld = session.world
         self.tile_size = app.content.game.tile_size
         self.camera = Camera()
         self.renderer = WorldRenderer(app)
         self.inventory_open = False
+        self.mouse = InventoryMouse(session)
         self.debug = False
         self.notice = ""
         self.notice_ticks = 0
@@ -171,12 +183,15 @@ class PlayScene(Scene):
         if self.server is None:
             return None
         if self.server.port is None:
+            settings = self.app.settings
+            port, announce = settings.multiplayer_port, settings.lan_announce
+            self.server.max_players = settings.max_players
             try:
-                self.server.listen("", DEFAULT_PORT)
+                self.server.listen("", port, announce=announce)
             except OSError:
-                LOGGER.info("Port %s is taken, using another", DEFAULT_PORT)
+                LOGGER.info("Cannot use port %s, using another", port)
                 try:
-                    self.server.listen("", 0)
+                    self.server.listen("", 0, announce=announce)
                 except OSError as error:
                     self.show_notice(f"Could not open to LAN: {error}")
                     return None
@@ -214,7 +229,7 @@ class PlayScene(Scene):
         """
         if self.server is None or self.save_path is None:
             return None
-        self.server.save(self.save_path, owner=self.app.settings.player_name)
+        self.server.save(self.save_path, owner=self.player_name)
         return self.save_path
 
     def save_copy(self) -> str:
@@ -222,8 +237,8 @@ class PlayScene(Scene):
 
         Guests keep a full copy of the server's world, so they can save it
         without asking. Their own inventory is saved with it, under their
-        own name from the settings (the server may have changed it), as
-        that is who plays the copy in single player.
+        own name from the settings as it was when joining (the server may
+        have changed it), as that is who plays the copy in single player.
 
         Returns:
             str: The new world's name.
@@ -235,7 +250,7 @@ class PlayScene(Scene):
             world_path(directory, name),
             name,
             self.world.tilemap,
-            {self.app.settings.player_name: self.world.inventory},
+            {self.player_name: self.world.inventory},
         )
         return name
 
@@ -246,6 +261,13 @@ class PlayScene(Scene):
         self.hud = Hud(app.assets, app.text, app.ui, app.settings.gui_size)
         self.inventory_layout = InventoryLayout.create(
             inventory.columns, inventory.size, app.settings.gui_size, app.ui
+        )
+        self._lay_out_crafting()
+
+    def _lay_out_crafting(self) -> None:
+        """Place the grid, whatever size the server says it has."""
+        self.crafting_layout = CraftingLayout(
+            self.inventory_layout, self.world.inventory.crafting_side
         )
 
     def on_enter(self) -> None:
@@ -272,13 +294,15 @@ class PlayScene(Scene):
             hotbar_only=not self.inventory_open
         ).contains_point(*pos):
             return True
-        return (
-            self.inventory_open and hit_button(self.buttons, pos) is not None
+        return self.inventory_open and (
+            self.crafting_layout.bounds().contains_point(*pos)
+            or hit_button(self.buttons, pos) is not None
         )
 
     def _toggle_inventory(self) -> None:
         self.inventory_open = not self.inventory_open
         if not self.inventory_open:
+            self.mouse.cancel()
             self.session.inventory(InventoryAction.CLOSE)
 
     def _on_action(self, action: Action) -> None:
@@ -306,26 +330,43 @@ class PlayScene(Scene):
             bool: Whether the click hit the GUI.
 
         """
-        inventory = self.session.inventory
-        slot = self.inventory_layout.slot_at(
-            event.pos, hotbar_only=not self.inventory_open
-        )
-        if slot is None:
-            if (
-                self.inventory_open
-                and hit_button(self.buttons, event.pos) == "settings"
-            ):
-                self._open_settings()
-                return True
-            return False
         if not self.inventory_open:
-            if event.button == glfw.MOUSE_BUTTON_LEFT and slot < HOTBAR_SIZE:
-                inventory(InventoryAction.SELECT, slot)
-        elif event.button == glfw.MOUSE_BUTTON_LEFT:
-            inventory(InventoryAction.LEFT_CLICK, slot)
-        elif event.button == glfw.MOUSE_BUTTON_RIGHT:
-            inventory(InventoryAction.RIGHT_CLICK, slot)
+            slot = self.inventory_layout.slot_at(event.pos, hotbar_only=True)
+            if slot is None:
+                return False
+            if event.button == glfw.MOUSE_BUTTON_LEFT:
+                self.session.inventory(InventoryAction.SELECT, slot)
+            return True
+        slot = self._slot_under(event.pos)
+        if slot is not None:
+            self.mouse.press(event, slot, self.world.inventory)
+        elif self.crafting_layout.on_result(event.pos):
+            if event.button in BUTTONS:
+                shift = event.mods & glfw.MOD_SHIFT
+                self.session.inventory(
+                    InventoryAction.CRAFT_ALL
+                    if shift
+                    else InventoryAction.CRAFT
+                )
+        elif hit_button(self.buttons, event.pos) == "settings":
+            self.mouse.cancel()
+            self._open_settings()
+        else:
+            return False
         return True
+
+    def _slot_under(self, pos: tuple[float, float]) -> int | None:
+        """Find the slot of the open inventory at `pos`.
+
+        Returns:
+            int | None: Its number as in `Inventory.locate`, if any.
+
+        """
+        slot = self.inventory_layout.slot_at(pos, hotbar_only=False)
+        if slot is not None:
+            return slot
+        slot = self.crafting_layout.slot_at(pos)
+        return None if slot is None else len(self.world.inventory) + slot
 
     def _open_settings(self) -> None:
         self.app.switch(SettingsScene(self.app, back=self, in_game=True))
@@ -343,6 +384,10 @@ class PlayScene(Scene):
                 event
             ):
                 return
+            case MouseButtonEvent() if not event.pressed:
+                self.mouse.release(event.button, self.world.inventory)
+            case MouseMoveEvent() if self.inventory_open:
+                self.mouse.move(self._slot_under(event.pos))
             case _:
                 pass
         action = self.app.keybinds[Context.GAME].pressed(event)
@@ -381,6 +426,7 @@ class PlayScene(Scene):
         if self.server is not None:
             self.server.step()
         self.session.poll()
+        self._lay_out_crafting()
         if self.session.state is SessionState.CLOSED:
             reason = self.session.error or "Disconnected"
             self.leave()
@@ -423,7 +469,7 @@ class PlayScene(Scene):
         """Draw the world and the HUD."""
         app = self.app
         batch = app.batch
-        inventory = self.world.inventory
+        inventory = self.mouse.preview(self.world.inventory)
         self.draw_backdrop()
         batch.begin(app.screen)
         mouse = app.window.mouse_pos
@@ -437,6 +483,14 @@ class PlayScene(Scene):
         if self.inventory_open:
             for button in self.buttons:
                 button.draw(batch, app.text, app.ui, mouse)
+            self.hud.draw_crafting(
+                batch,
+                self.crafting_layout,
+                inventory,
+                crafted(inventory, app.content),
+                mouse,
+            )
+            self._draw_station()
             self.hud.draw_cursor_stack(batch, inventory, mouse)
             self._draw_tooltip(mouse)
         if self.notice_ticks:
@@ -444,6 +498,20 @@ class PlayScene(Scene):
         if self.debug:
             self._draw_debug()
         app.draw_cursor()
+
+    def _draw_station(self) -> None:
+        """Name the crafting station in reach, if the grid is enlarged."""
+        side = self.world.inventory.crafting_side
+        content = self.app.content
+        for item in content.items:
+            places = item.spec.places
+            if places is None:
+                continue
+            if content.blocks.by_name(places).spec.crafting_side == side:
+                self.hud.draw_station(
+                    self.app.batch, self.crafting_layout, item
+                )
+                return
 
     def hovered_stack(self, mouse: tuple[float, float]) -> ItemStack | None:
         """Find the stack under the mouse in the open inventory.
@@ -457,7 +525,14 @@ class PlayScene(Scene):
         if not self.inventory_open or inventory.cursor is not None:
             return None
         slot = self.inventory_layout.slot_at(mouse, hotbar_only=False)
-        return None if slot is None else inventory[slot]
+        if slot is not None:
+            return inventory[slot]
+        slot = self.crafting_layout.slot_at(mouse)
+        if slot is not None:
+            return inventory.crafting[slot]
+        if self.crafting_layout.on_result(mouse):
+            return crafted(inventory, self.app.content)
+        return None
 
     def _draw_tooltip(self, mouse: tuple[float, float]) -> None:
         stack = self.hovered_stack(mouse)
@@ -471,8 +546,10 @@ class PlayScene(Scene):
 
     def _draw_notice(self) -> None:
         app = self.app
-        layout = self.inventory_layout.bounds(
-            hotbar_only=not self.inventory_open
+        layout = (
+            self.crafting_layout.bounds()
+            if self.inventory_open
+            else self.inventory_layout.bounds(hotbar_only=True)
         )
         fade = min(1.0, self.notice_ticks / app.tick_rate)
         app.text.draw(

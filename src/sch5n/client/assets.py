@@ -14,15 +14,19 @@ from sch5n.game.config import Rig, load_model
 from sch5n.log.logger import LOGGER
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
 
     import moderngl
 
     from sch5n.game.config import AnimationClip, AnimationsConfig
-    from sch5n.game.content import Content
+    from sch5n.game.content import Content, ItemDef
 
 type Key = str
 """Texture path relative to the textures directory, without extension."""
+
+ARROW: Key = "gui/arrow"
+"""White arrow pointing right, tinted when drawn."""
 
 
 def frame_files(directory: Path) -> list[Path]:
@@ -36,28 +40,166 @@ def frame_files(directory: Path) -> list[Path]:
     return sorted(frames, key=lambda p: int(p.stem))
 
 
-def add_item_icon(
-    builder: AtlasBuilder[Key],
-    textures_dir: Path,
-    icon: Key,
-    size: int,
-    colorkey: tuple[int, int, int],
-) -> Key:
-    """Pack an item icon, scaled up by whole pixels to fit `size`.
+def whole_factor(size: int, length: int) -> int:
+    """How many whole times `length` fits in `size`, at least once.
 
-    Swinging items are drawn from the smooth atlas. Scaled up there, small
-    images blur; scaled up here first, they are drawn 1:1 and stay sharp.
+    Enlarging by whole factors keeps pixel art sharp and its pixels square.
 
     Returns:
-        Key: The key of the packed image.
+        int: The factor.
 
     """
-    pixels = load_rgba(textures_dir / f"{icon}.png", colorkey)
-    factor = max(size // max(pixels.shape[:2]), 1)
-    key = icon if factor == 1 else f"{icon}@x{factor}"
-    if key not in builder.images:
-        builder.add(key, pixels.repeat(factor, axis=0).repeat(factor, axis=1))
-    return key
+    return max(size // max(length, 1), 1)
+
+
+def fit_to_tile(pixels: np.ndarray, size: int) -> np.ndarray:
+    """Make a texture of any size cover one tile, without blurring it.
+
+    A smaller texture is enlarged by the least whole factor that covers the
+    tile, so a 16 pixel one is doubled on a 32 pixel tile. Whatever sticks
+    out is cropped evenly, and so is a texture larger than the tile.
+
+    Returns:
+        np.ndarray: `size` by `size` pixels.
+
+    """
+    factor = -(-size // min(pixels.shape[:2]))
+    if factor > 1:
+        pixels = pixels.repeat(factor, axis=0).repeat(factor, axis=1)
+    height, width = pixels.shape[:2]
+    top, left = (height - size) // 2, (width - size) // 2
+    return pixels[top : top + size, left : left + size]
+
+
+def fit_images(
+    builder: AtlasBuilder[Key], keys: list[Key], size: int
+) -> list[Key]:
+    """Make packed images cover a tile, like the cracks of a damaged one.
+
+    Returns:
+        list[Key]: The same keys.
+
+    """
+    for key in keys:
+        builder.add(key, fit_to_tile(builder.images[key], size))
+    return keys
+
+
+def layer_tiles(layers: list[np.ndarray]) -> np.ndarray:
+    """Draw tiles of one size over each other, the first one at the bottom.
+
+    Returns:
+        np.ndarray: New pixels, opaque where any layer is opaque.
+
+    """
+    below = layers[0].astype(np.float32) / 255
+    for layer in layers[1:]:
+        above = layer.astype(np.float32) / 255
+        cover = above[..., 3:]
+        under = below[..., 3:] * (1 - cover)
+        alpha = cover + under
+        color = above[..., :3] * cover + below[..., :3] * under
+        color /= np.where(alpha > 0, alpha, 1)
+        below = np.concatenate((color, alpha), axis=-1)
+    return np.rint(below * 255).astype(np.uint8)
+
+
+def tile_name(texture: str | tuple[str, ...]) -> Key:
+    """Name of a block texture, or of layers composed into one.
+
+    Returns:
+        Key: The texture itself, or its layers joined with `+`.
+
+    """
+    return texture if isinstance(texture, str) else "+".join(texture)
+
+
+def add_block_textures(
+    builder: AtlasBuilder[Key],
+    textures_dir: Path,
+    content: Content,
+    colorkey: tuple[int, int, int],
+) -> dict[Key, Key]:
+    """Pack every block texture, made to cover a tile.
+
+    Layered textures are composed here, each layer fitted to the tile first,
+    so their sizes may differ.
+
+    Returns:
+        dict[Key, Key]: Where each tile was packed. A enlarged or cropped
+        texture gets its own key, apart from items using the original.
+
+    """
+    keys: dict[Key, Key] = {}
+    for block in content.blocks:
+        for texture in block.spec.textures:
+            name = tile_name(texture)
+            layers = (texture,) if isinstance(texture, str) else texture
+            sources = [
+                load_rgba(textures_dir / f"{layer}.png", colorkey)
+                for layer in layers
+            ]
+            tiles = [fit_to_tile(s, content.game.tile_size) for s in sources]
+            tile = layer_tiles(tiles) if len(tiles) > 1 else tiles[0]
+            changed = len(tiles) == 1 and tile.shape != sources[0].shape
+            keys[name] = f"{name}@tile" if changed else name
+            builder.add(keys[name], tile)
+    return keys
+
+
+def tile_regions(
+    content: Content,
+    regions: Mapping[Key, Region],
+    tile_keys: Mapping[Key, Key],
+) -> tuple[dict[Key, Region], dict[int, tuple[Region, ...]]]:
+    """Find the packed block textures.
+
+    Returns:
+        tuple[dict[Key, Region], dict[int, tuple[Region, ...]]]: Tiles by
+        texture, and the variants of every block by id.
+
+    """
+    tiles = {texture: regions[key] for texture, key in tile_keys.items()}
+    blocks = {
+        block.id: tuple(tiles[tile_name(t)] for t in block.spec.textures)
+        for block in content.blocks
+    }
+    return tiles, blocks
+
+
+def item_images(
+    content: Content,
+    regions: Mapping[Key, Region],
+    tiles: Mapping[Key, Region],
+    item_keys: Mapping[str, Key],
+) -> tuple[dict[str, Region], dict[str, Region]]:
+    """Images of items, as packed and as drawn on the ground and in hand.
+
+    A block item is drawn as its tile, `drop_size` across. Other images
+    smaller than `drop_size` are enlarged by a whole factor; larger ones
+    keep their size.
+
+    Returns:
+        tuple[dict[str, Region], dict[str, Region]]: Packed images and
+        drawn images, by item name.
+
+    """
+    icons: dict[str, Region] = {}
+    drawn: dict[str, Region] = {}
+    for item in content.items:
+        size = item.spec.drop_size
+        tile = tiles.get(item.spec.icon)
+        if tile is not None:
+            icons[item.name] = tile
+            drawn[item.name] = tile.drawn_at(size, size)
+            continue
+        image = regions[item_keys[item.name]]
+        factor = whole_factor(size, max(image.size))
+        icons[item.name] = image
+        drawn[item.name] = image.drawn_at(
+            image.width * factor, image.height * factor
+        )
+    return icons, drawn
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,6 +233,29 @@ class Animation:
         return len(self.frames) * max(self.clip.frame_ticks, 1)
 
 
+def body_copies(
+    animations: AnimationsConfig,
+) -> dict[tuple[str, str, str], AnimationClip]:
+    """Mob clips read from their armless and bare directories.
+
+    Returns:
+        dict[tuple[str, str, str], AnimationClip]: Copies by directory kind
+        (`armless` or `bare`), mob and action.
+
+    """
+    return {
+        (part, mob, action): clip.model_copy(
+            update={"path": f"{directory}/{action}"}
+        )
+        for mob, tool_use in animations.tool_use.items()
+        for part, directory in (
+            ("armless", tool_use.armless),
+            ("bare", tool_use.bare),
+        )
+        for action, clip in animations.mobs[mob].items()
+    }
+
+
 class ClientAssets:
     """The texture atlas and lookups into it."""
 
@@ -120,33 +285,19 @@ class ClientAssets:
                 raise FileNotFoundError(msg)
             return [add(f"{clip.path}/{f.stem}") for f in files]
 
-        block_keys = {
-            block.id: [add(texture) for texture in block.spec.textures]
-            for block in content.blocks
-        }
-        item_keys = {
-            item.name: add_item_icon(
-                builder,
-                textures_dir,
-                item.spec.icon,
-                item.spec.drop_size,
-                self.colorkey,
-            )
-            for item in content.items
-        }
+        tile_keys = add_block_textures(
+            builder, textures_dir, content, self.colorkey
+        )
+        item_keys = {item.name: add(item.spec.icon) for item in content.items}
         mob_keys = {
             (mob, action): (clip, add_clip(clip))
             for mob, actions in animations.mobs.items()
             for action, clip in actions.items()
         }
-        armless_keys: dict[tuple[str, str], tuple[AnimationClip, list[Key]]]
-        armless_keys = {}
-        for mob, tool_use in animations.tool_use.items():
-            for action, clip in animations.mobs[mob].items():
-                armless = clip.model_copy(
-                    update={"path": f"{tool_use.armless}/{action}"}
-                )
-                armless_keys[mob, action] = (armless, add_clip(armless))
+        body_keys = {
+            key: (clip, add_clip(clip))
+            for key, clip in body_copies(animations).items()
+        }
         arm_keys = {
             mob: [
                 add(f"{tool_use.arm}/{f.stem}")
@@ -154,22 +305,28 @@ class ClientAssets:
             ]
             for mob, tool_use in animations.tool_use.items()
         }
+        scissor_keys = {
+            item: (add(tool.front), add(tool.back))
+            for tool_use in animations.tool_use.values()
+            for item, tool in tool_use.scissors.items()
+        }
         particle_keys = {
             name: (clip, add_clip(clip))
             for name, clip in animations.particles.items()
         }
-        breakage_keys = add_clip(animations.tile_breakage)
+        breakage_keys = fit_images(
+            builder,
+            add_clip(animations.tile_breakage),
+            content.game.tile_size,
+        )
         cloud_keys = [
             add(f"{animations.clouds}/{f.stem}")
             for f in frame_files(textures_dir / animations.clouds)
         ]
-        cursor_key = add(animations.cursor)
+        gui_keys = (add(animations.cursor), add(ARROW))
 
         pixels, regions = builder.build()
         self.atlas = create_texture(ctx, pixels)
-        self.atlas_smooth = create_texture(ctx, pixels, smooth=True)
-        """The same atlas with linear filtering, for rotated sprites:
-        rotating pixel art with nearest filtering breaks thin lines."""
         LOGGER.debug(
             "Packed %s images into a %sx%s atlas",
             len(regions),
@@ -177,25 +334,35 @@ class ClientAssets:
             pixels.shape[0],
         )
 
-        self.blocks: dict[int, tuple[Region, ...]] = {
-            block: tuple(regions[k] for k in keys)
-            for block, keys in block_keys.items()
-        }
-        self.items = {name: regions[k] for name, k in item_keys.items()}
+        self.tiles, self.blocks = tile_regions(content, regions, tile_keys)
+        self.icons, self.items = item_images(
+            content, regions, self.tiles, item_keys
+        )
         self.mobs = {
             key: Animation(clip, tuple(regions[k] for k in keys))
             for key, (clip, keys) in mob_keys.items()
         }
-        self.armless = {
-            key: Animation(clip, tuple(regions[k] for k in keys))
-            for key, (clip, keys) in armless_keys.items()
-        }
-        """Copies of mob clips without the front arm, for swinging items."""
+        self.armless, self.bare = (
+            {
+                (mob, action): Animation(clip, tuple(regions[k] for k in keys))
+                for (of, mob, action), (clip, keys) in body_keys.items()
+                if of == part
+            }
+            for part in ("armless", "bare")
+        )
+        """Copies of mob clips for swinging items: without the front arm,
+        and without either arm for two-handed swings."""
         self.arms = {
             mob: tuple(regions[k] for k in keys)
             for mob, keys in arm_keys.items()
         }
         """Front arm poses per mob, matching `rigs[mob].arm`."""
+        self.scissors = {
+            item: (regions[front], regions[back])
+            for item, (front, back) in scissor_keys.items()
+        }
+        """Front and back halves of items drawn as two halves in use, by
+        item name, see `ScissorTool`."""
         self.rigs = {
             mob: load_model(Rig, textures_dir / tool_use.rig)
             for mob, tool_use in animations.tool_use.items()
@@ -213,7 +380,7 @@ class ClientAssets:
             )
         )
         """Cloud images, smallest first."""
-        self.cursor = regions[cursor_key]
+        self.cursor, self.arrow = (regions[k] for k in gui_keys)
 
         variants = max((len(v) for v in self.blocks.values()), default=1)
         self.block_uvs = np.zeros(
@@ -258,12 +425,27 @@ class ClientAssets:
         """
         for kind, keys in self.animations.tool_use[mob].styles.items():
             for key in keys:
-                if key.arm not in rig.arm.names:
-                    msg = f"{mob} {kind} swing: unknown arm pose {key.arm!r}"
-                    raise ValueError(msg)
+                for arm in (key.arm, key.off_arm):
+                    if arm is not None and arm not in rig.arm.names:
+                        msg = f"{mob} {kind} swing: unknown arm pose {arm!r}"
+                        raise ValueError(msg)
                 if key.body is not None and (mob, key.body) not in self.mobs:
                     msg = f"{mob} {kind} swing: unknown body pose {key.body!r}"
                     raise ValueError(msg)
+
+    def slot_icon(self, item: ItemDef, slot_size: int) -> Region:
+        """Image of an item as drawn in an inventory slot.
+
+        Small images are enlarged by the largest whole factor that fits the
+        slot. Ones larger than the slot show their middle.
+
+        Returns:
+            Region: The image, with the size to draw it at.
+
+        """
+        image = self.icons[item.name].crop(slot_size, slot_size)
+        factor = whole_factor(slot_size, max(image.size))
+        return image.drawn_at(image.width * factor, image.height * factor)
 
     def load_image(
         self, path: str, size: tuple[int, int] | None = None
@@ -281,4 +463,3 @@ class ClientAssets:
     def release(self) -> None:
         """Free the atlas textures."""
         self.atlas.release()
-        self.atlas_smooth.release()

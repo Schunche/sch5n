@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from sch5n.client.render.atlas import Region
     from sch5n.client.render.batch import RGBA, SpriteBatch
     from sch5n.game.ambient import Ambience, Cloud
-    from sch5n.game.config import Rig, SwingKey, ToolUseConfig
+    from sch5n.game.config import Rig, ScissorTool, SwingKey, ToolUseConfig
     from sch5n.game.content import ItemDef
     from sch5n.game.floating_item import FloatingItem
     from sch5n.game.player import Player, Swing
@@ -135,6 +135,22 @@ class TileRenderer:
             )
 
 
+type Placed = tuple[tuple[float, float, float, float], Transform]
+"""Rect and transform of a sprite."""
+
+
+@dataclass(frozen=True, slots=True)
+class ScissorPose:
+    """The two halves of a scissor tool, like the lopper, on their hinge."""
+
+    front: Placed
+    """Half held by the front hand."""
+    back: Placed
+    """Half held by the other hand, behind the body."""
+    hinge: tuple[float, float]
+    """Where the halves cross, relative to the body sprite's top left."""
+
+
 @dataclass(frozen=True, slots=True)
 class HeldItemPose:
     """Where the swinging arm and item go, relative to the sprite's corner."""
@@ -147,13 +163,10 @@ class HeldItemPose:
     item_transform: Transform
     behind: bool = False
     """Draw the arm and item behind the body."""
-    second_item: tuple[tuple[float, float, float, float], Transform] | None = (
-        None
-    )
-    """Rect and transform of the other half of an opened two-part tool,
-    like the lopper's second blade. Drawn along with the item."""
     off_arm: int | None = None
     """Index of the arm pose of the other hand, drawn behind the body."""
+    scissors: ScissorPose | None = None
+    """Halves drawn instead of the item, for scissor tools."""
 
 
 def _eased(progress: float) -> float:
@@ -214,7 +227,6 @@ class SwingFrame:
     scale: float
     behind: bool
     body: str | None
-    spread: float = 0.0
     off_arm: str | None = None
 
 
@@ -243,7 +255,6 @@ def swing_frame(keys: Sequence[SwingKey], progress: float) -> SwingFrame:
         scale=start.scale + (end.scale - start.scale) * f,
         behind=near.behind,
         body=near.body,
-        spread=start.spread + (end.spread - start.spread) * f,
         off_arm=near.off_arm,
     )
 
@@ -314,22 +325,71 @@ def keyframe_pose(
 
     """
     arm = rig.arm.names.index(frame.arm)
-    # An opened two-part tool fans out around the hand: one half turns
-    # each way, both held by it.
-    half = frame.spread / 2
-    hold = Hold(arm, frame.item + half, frame.scale, mirrored=mirrored)
+    hold = Hold(arm, frame.item, frame.scale, mirrored=mirrored)
     pose = place_item(rig, tool_use, moment, hold)
-    second = None
-    if frame.spread > 0:
-        other = place_item(
-            rig, tool_use, moment, replace(hold, direction=frame.item - half)
-        )
-        second = (other.item_rect, other.item_transform)
     off_arm = None
     if frame.off_arm is not None:
         off_arm = rig.arm.names.index(frame.off_arm)
-    return replace(
-        pose, behind=frame.behind, second_item=second, off_arm=off_arm
+    return replace(pose, behind=frame.behind, off_arm=off_arm)
+
+
+def scissor_pose(
+    rig: Rig,
+    moment: SwingMoment,
+    frame: SwingFrame,
+    tool: ScissorTool,
+    image_size: tuple[float, float],
+) -> ScissorPose:
+    """Place the two halves of a scissor tool, one handle in each hand.
+
+    The hinge sits `tool.reach` ahead of the point between the hands, in
+    the frame's item direction. Each half's handle points from the hinge
+    to its hand and its blade the other way, so the blades open as the
+    hands part and close as they meet. Without a second hand, both hands
+    are the front one and the tool stays shut.
+
+    Returns:
+        ScissorPose: Positions relative to the body sprite's top left.
+
+    """
+    dx = moment.shoulder[0] - rig.arm.shoulder[0]
+    dy = moment.shoulder[1] - rig.arm.shoulder[1]
+    front_hand, back_hand = (
+        (x + dx, y + dy)
+        for x, y in (
+            rig.arm.hands[rig.arm.names.index(name)]
+            for name in (frame.arm, frame.off_arm or frame.arm)
+        )
+    )
+    # Worked out facing right, then mirrored.
+    direction = math.radians(frame.item)
+    hinge = (
+        (front_hand[0] + back_hand[0]) / 2 + tool.reach * math.cos(direction),
+        (front_hand[1] + back_hand[1]) / 2 + tool.reach * math.sin(direction),
+    )
+    width, height = image_size
+    hinge_x, hinge_y = tool.hinge
+    drawn = hinge
+    if moment.facing_left:
+        drawn = (moment.frame_width - hinge[0], hinge[1])
+        hinge_x = width - hinge_x
+
+    def half(hand: tuple[float, float]) -> Placed:
+        # The blade points away from the hand, through the hinge.
+        blade = math.atan2(hinge[1] - hand[1], hinge[0] - hand[0])
+        if moment.facing_left:
+            blade = -blade
+        return (
+            (drawn[0] - hinge_x, drawn[1] - hinge_y, width, height),
+            Transform(
+                flip_x=moment.facing_left,
+                rotation=blade,
+                pivot=(hinge_x / width, hinge_y / height),
+            ),
+        )
+
+    return ScissorPose(
+        front=half(front_hand), back=half(back_hand), hinge=drawn
     )
 
 
@@ -454,28 +514,38 @@ class PlayerRenderer:
             # Standing still, the whole body joins in, like stepping on a
             # shovel; on the move the legs keep running.
             clip, index = frame.body, 0
-        armless = self.assets.armless["player", clip]
+        # Both arms are drawn on their own when the tool takes two hands.
+        one_handed = frame is None or frame.off_arm is None
+        animation = (self.assets.armless if one_handed else self.assets.bare)[
+            "player", clip
+        ]
         if index is None:
-            index = armless.frame_index(animator.age)
-        body = armless.frames[index]
+            index = animation.frame_index(animator.age)
+        body = animation.frames[index]
         moment = SwingMoment(
             progress=swing.progress,
             shoulder=rig.shoulders[clip][index],
             frame_width=body.width,
-            item_size=self.assets.items[swing.item.name].fit(
-                swing.item.spec.drop_size
-            ),
+            item_size=self.assets.items[swing.item.name].size,
             facing_left=player.facing_left,
         )
         if frame is None:
             return body, held_item_pose(rig, self.tool_use, moment)
-        return body, keyframe_pose(
+        pose = keyframe_pose(
             rig,
             self.tool_use,
             moment,
             frame,
             mirrored=kind in self.tool_use.mirrored,
         )
+        tool = self.tool_use.scissors.get(swing.item.name)
+        halves = self.assets.scissors.get(swing.item.name)
+        if tool is not None and halves is not None:
+            size = (halves[0].width, halves[0].height)
+            pose = replace(
+                pose, scissors=scissor_pose(rig, moment, frame, tool, size)
+            )
+        return body, pose
 
     def _draw_swinging(
         self,
@@ -484,7 +554,7 @@ class PlayerRenderer:
         animator: Animator,
         corner: tuple[int, int],
     ) -> None:
-        """Body without its front arm, then the item, then the arm.
+        """Body without the drawn arms, then the item, then the front arm.
 
         When they are behind the body, the item and arm come first.
         """
@@ -492,44 +562,68 @@ class PlayerRenderer:
         if swing is None:
             return
         body, pose = self._swing_pose(player, animator, swing)
-        atlas = self.assets.atlas
         x, y = corner
         mirror = Transform(flip_x=player.facing_left)
-        ax, ay = pose.arm_offset
+        halves = self.assets.scissors.get(swing.item.name)
+        front: Placed = (pose.item_rect, pose.item_transform)
+        image = self.assets.items[swing.item.name]
         if pose.off_arm is not None:
             # The other hand, on the far side of the body.
-            off = self.assets.arms["player"][pose.off_arm]
-            batch.sprite(
-                atlas,
-                (x + ax, y + ay, off.width, off.height),
-                off,
-                transform=mirror,
-            )
+            self._draw_arm(batch, pose, pose.off_arm, corner, mirror)
+        if pose.scissors is not None and halves is not None:
+            # The half in the other hand, behind the body like that hand.
+            self._draw_tool(batch, halves[1], pose.scissors.back, corner)
+            front, image = pose.scissors.front, halves[0]
         if not pose.behind:
             batch.sprite(
-                atlas, (x, y, body.width, body.height), body, transform=mirror
+                self.assets.atlas,
+                (x, y, body.width, body.height),
+                body,
+                transform=mirror,
             )
-        halves = [(pose.item_rect, pose.item_transform)]
-        if pose.second_item is not None:
-            halves.append(pose.second_item)
-        for (ix, iy, iw, ih), transform in halves:
+        self._draw_tool(batch, image, front, corner)
+        self._draw_arm(batch, pose, pose.arm, corner, mirror)
+        if pose.behind:
             batch.sprite(
-                self.assets.atlas_smooth,
-                (x + ix, y + iy, iw, ih),
-                self.assets.items[swing.item.name],
-                transform=transform,
+                self.assets.atlas,
+                (x, y, body.width, body.height),
+                body,
+                transform=mirror,
             )
-        arm = self.assets.arms["player"][pose.arm]
+
+    def _draw_arm(
+        self,
+        batch: SpriteBatch,
+        pose: HeldItemPose,
+        index: int,
+        corner: tuple[int, int],
+        mirror: Transform,
+    ) -> None:
+        """Draw an arm in the arm pose `index`, at the shoulder."""
+        arm = self.assets.arms["player"][index]
+        (x, y), (ax, ay) = corner, pose.arm_offset
         batch.sprite(
-            atlas,
+            self.assets.atlas,
             (x + ax, y + ay, arm.width, arm.height),
             arm,
             transform=mirror,
         )
-        if pose.behind:
-            batch.sprite(
-                atlas, (x, y, body.width, body.height), body, transform=mirror
-            )
+
+    def _draw_tool(
+        self,
+        batch: SpriteBatch,
+        image: Region,
+        placed: Placed,
+        corner: tuple[int, int],
+    ) -> None:
+        """Draw the held item, or one half of it."""
+        (x, y, w, h), transform = placed
+        batch.sprite(
+            self.assets.atlas,
+            (corner[0] + x, corner[1] + y, w, h),
+            image,
+            transform=transform,
+        )
 
 
 def draw_floating_items(
@@ -539,8 +633,8 @@ def draw_floating_items(
     for floating in items:
         r = floating.sprite_rect
         region = assets.items[floating.stack.item.name]
-        w, h = region.fit(r.w)
-        # Images that are not square sit on the bottom, centered.
+        w, h = region.width, region.height
+        # At their own size, images sit on the bottom, centered.
         batch.sprite(
             assets.atlas,
             (r.x + (r.w - w) / 2, r.y + r.h - h, w, h),

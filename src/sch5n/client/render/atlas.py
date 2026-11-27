@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -30,15 +30,35 @@ class Region:
         """`(u0, v0, u1, v1)`."""
         return (self.u0, self.v0, self.u1, self.v1)
 
-    def fit(self, size: float) -> tuple[float, float]:
-        """Scale the region so its longer side is `size`, keeping its shape.
+    @property
+    def size(self) -> tuple[int, int]:
+        """Width and height in pixels."""
+        return (self.width, self.height)
+
+    def crop(self, width: int, height: int) -> Region:
+        """Keep the middle of the region, at most `width` by `height`.
 
         Returns:
-            tuple[float, float]: Width and height.
+            Region: The part, or all of a region that is small enough.
 
         """
-        longest = max(self.width, self.height, 1)
-        return self.width * size / longest, self.height * size / longest
+        w, h = min(width, self.width), min(height, self.height)
+        if (w, h) == (self.width, self.height):
+            return self
+        u = (self.u1 - self.u0) / self.width
+        v = (self.v1 - self.v0) / self.height
+        u0 = self.u0 + (self.width - w) // 2 * u
+        v0 = self.v0 + (self.height - h) // 2 * v
+        return Region(u0, v0, u0 + w * u, v0 + h * v, w, h)
+
+    def drawn_at(self, width: int, height: int) -> Region:
+        """Give the same pixels another size to be drawn at.
+
+        Returns:
+            Region: The resized region.
+
+        """
+        return replace(self, width=width, height=height)
 
 
 FULL = Region(0.0, 0.0, 1.0, 1.0, 1, 1)
@@ -150,7 +170,7 @@ class AtlasBuilder[K: Hashable]:
 
 
 def create_texture(
-    ctx: moderngl.Context, pixels: np.ndarray, *, smooth: bool = False
+    ctx: moderngl.Context, pixels: np.ndarray
 ) -> moderngl.Texture:
     """Upload an RGBA array as a texture, top row at v = 0.
 
@@ -162,7 +182,6 @@ def create_texture(
     texture = ctx.texture(
         (width, height), 4, np.ascontiguousarray(pixels).tobytes()
     )
-    flt = moderngl.LINEAR if smooth else moderngl.NEAREST
-    texture.filter = (flt, flt)
+    texture.filter = (moderngl.NEAREST, moderngl.NEAREST)
     texture.repeat_x = texture.repeat_y = False
     return texture

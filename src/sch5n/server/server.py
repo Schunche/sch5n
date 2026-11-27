@@ -14,6 +14,9 @@ from dataclasses import dataclass, field, replace
 from itertools import starmap
 from typing import TYPE_CHECKING
 
+from sch5n.game.config import MAX_PLAYERS
+from sch5n.game.crafting import craft, craft_all
+from sch5n.game.inventory import MAX_CRAFTING_SIDE
 from sch5n.game.session import Game, GameSetup, TickInput
 from sch5n.log.logger import LOGGER
 from sch5n.net.connection import Listener, SocketConnection, local_pair
@@ -54,7 +57,6 @@ if TYPE_CHECKING:
     type ServerSide = Connection[ServerMessage, ClientMessage]
     type ClientSide = Connection[ClientMessage, ServerMessage]
 
-MAX_PLAYERS = 16
 HELLO_TIMEOUT_TICKS = 600
 """Clients that do not say hello within this many ticks are dropped."""
 MAX_MESSAGES_PER_TICK = 64
@@ -106,6 +108,38 @@ def _stack_state(slot: Slot) -> StackState | None:
     return StackState(item=slot.item.name, amount=slot.amount)
 
 
+def _click_grid(inventory: Inventory, message: InventoryMessage) -> None:
+    """Click a slot of the crafting grid.
+
+    A click beyond the grid is ignored: the grid shrank while the click was
+    on its way.
+    """
+    if message.index >= len(inventory.crafting):
+        return
+    if message.action is InventoryAction.CRAFTING_LEFT_CLICK:
+        inventory.left_click(message.index, crafting=True)
+    else:
+        inventory.right_click(message.index, crafting=True)
+
+
+def _arrange(
+    inventory: Inventory, message: InventoryMessage, content: Content
+) -> None:
+    """Move many items at once. Slots that no longer exist are ignored."""
+    match message.action:
+        case InventoryAction.CRAFT:
+            craft(inventory, content)
+        case InventoryAction.CRAFT_ALL:
+            craft_all(inventory, content)
+        case InventoryAction.STOW_CRAFTING:
+            inventory.stow_crafting(message.index)
+        case InventoryAction.GATHER:
+            inventory.gather(message.index)
+        case _:
+            single = message.action is InventoryAction.SPREAD_SINGLE
+            inventory.spread(message.slots, single=single)
+
+
 def inventory_state(inventory: Inventory) -> InventoryState:
     """Describe an inventory for its owner.
 
@@ -117,6 +151,7 @@ def inventory_state(inventory: Inventory) -> InventoryState:
         slots=[_stack_state(slot) for slot in inventory],
         cursor=_stack_state(inventory.cursor),
         selected=inventory.selected,
+        crafting=[_stack_state(slot) for slot in inventory.crafting],
     )
 
 
@@ -172,6 +207,8 @@ class Server:
         """
         self.content = content
         self.name = name
+        self.max_players = MAX_PLAYERS
+        """Players admitted; later ones are told the server is full."""
         tilemap.changes = []
         self.game = Game(
             content,
@@ -263,7 +300,7 @@ class Server:
                 client, "The server has different blocks or items than you."
             )
             return
-        if self.player_count >= MAX_PLAYERS:
+        if self.player_count >= self.max_players:
             _reject(client, "The server is full.")
             return
         client.name = self._unique_name(hello.name)
@@ -294,6 +331,20 @@ class Server:
                 inventory.left_click(index)
             case InventoryAction.RIGHT_CLICK if 0 <= index < len(inventory):
                 inventory.right_click(index)
+            case (
+                InventoryAction.CRAFTING_LEFT_CLICK
+                | InventoryAction.CRAFTING_RIGHT_CLICK
+            ) if 0 <= index < MAX_CRAFTING_SIDE**2:
+                _click_grid(inventory, message)
+            case (
+                InventoryAction.CRAFT
+                | InventoryAction.CRAFT_ALL
+                | InventoryAction.STOW_CRAFTING
+                | InventoryAction.GATHER
+                | InventoryAction.SPREAD
+                | InventoryAction.SPREAD_SINGLE
+            ):
+                _arrange(inventory, message, self.game.content)
             case InventoryAction.CLOSE:
                 self.game.return_cursor_stack(player)
             case _:

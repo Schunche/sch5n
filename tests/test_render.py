@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import errno
 import json
 import math
+import socket
 import time
 from typing import TYPE_CHECKING
 
@@ -16,6 +18,7 @@ import pytest
 from sch5n.client.app import App, Options
 from sch5n.client.keybinds import Action, Binding, Context, Mod
 from sch5n.client.render.batch import Transform
+from sch5n.client.scenes import map_tools
 from sch5n.client.scenes.map_tools import MapScene
 from sch5n.client.scenes.menu import MainMenu
 from sch5n.client.scenes.multiplayer import MultiplayerScene
@@ -32,14 +35,21 @@ from sch5n.client.window import (
     CharEvent,
     KeyEvent,
     MouseButtonEvent,
+    MouseMoveEvent,
     ScrollEvent,
     WindowError,
 )
 from sch5n.client.world_view import load_start_map
-from sch5n.game.config import CursorStyle, Settings
-from sch5n.game.inventory import ItemStack
+from sch5n.game.config import (
+    DEFAULT_PORT,
+    MIN_PLAYERS,
+    CursorStyle,
+    Settings,
+)
+from sch5n.game.inventory import MAX_CRAFTING_SIDE, ItemStack
 from sch5n.net.client import ClientSession
 from sch5n.server.server import Server
+from sch5n.world.io import DEFAULT_MAP, BackupError, map_file
 from sch5n.world.save import list_worlds, load_world
 
 if TYPE_CHECKING:
@@ -60,6 +70,8 @@ MIN_GRADIENT = 20
 WARMUP_TICKS = 30
 JOIN_TIMEOUT = 10.0
 """Seconds a join over the network may take."""
+
+SLOT = 36
 
 
 @pytest.fixture(scope="module")
@@ -223,6 +235,29 @@ def test_sky_is_a_gradient_that_darkens_underground(app: App) -> None:
     deep, _ = mean_rows(center[1] + 3000)
     assert deep < zenith
     play.leave()
+
+
+def test_item_images_grow_by_whole_factors(app: App) -> None:
+    """Small images are enlarged evenly, so pixel art stays sharp."""
+    tile = app.content.game.tile_size
+    for block in app.content.blocks:
+        for region in app.assets.blocks[block.id]:
+            assert region.size == (tile, tile)
+    for item in app.content.items:
+        source = app.assets.icons[item.name]
+        slot = app.assets.slot_icon(item, SLOT)
+        assert max(slot.size) <= SLOT
+        assert slot.width % min(source.width, SLOT) == 0
+        if item.spec.icon not in app.assets.tiles:
+            assert app.assets.items[item.name].width % source.width == 0
+    assert app.assets.items["iron_axe"].size == (32, 32)
+    assert app.assets.items["leaf"].size == (16, 16)
+    assert app.assets.items["cobblestone"].size == (16, 16)
+    assert app.assets.slot_icon(app.content.items["leaf"], SLOT).size == (
+        32,
+        32,
+    )
+    assert app.assets.atlas.filter == (moderngl.NEAREST, moderngl.NEAREST)
 
 
 def test_text_cache_reuses_textures(app: App) -> None:
@@ -395,7 +430,7 @@ def test_viewer_controls_when_editing(
     editor.on_event(ScrollEvent(0, 1))
     assert editor.camera.zoom > 1
     assert editor.selected == 0
-    editor.on_event(ScrollEvent(0, -1, glfw.MOD_SHIFT))
+    editor.on_event(press(glfw.KEY_E))
     assert editor.selected == 1
     editor.on_event(press(glfw.KEY_Q))
     assert editor.selected == 0
@@ -410,6 +445,218 @@ def test_viewer_controls_when_editing(
 
     viewer.on_event(press(glfw.KEY_F1))
     assert isinstance(app.pending_scene, SettingsScene)
+
+
+def test_editor_asks_before_dropping_changes(
+    app: App, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Unsaved changes need an answer before the editor quits."""
+    target = tmp_path_factory.mktemp("maps") / "m.json"
+
+    def closes(editor: MapScene) -> bool:
+        """Try to close the window, leaving it open either way.
+
+        Returns:
+            bool: Whether closing was allowed.
+
+        """
+        app.window.close()
+        closing = app.close_confirmed()
+        app.window.close(requested=False)
+        assert app.close_guard == editor.may_close
+        return closing
+
+    def answer(editor: MapScene, button_id: str) -> None:
+        """Click a button of the question."""
+        editor.update_layout()
+        button = next(b for b in editor.buttons if b.id == button_id)
+        editor.on_event(click(button.rect.center))
+
+    editor = MapScene(app, target, editing=True)
+    assert closes(editor)
+    editor.tilemap.set(1, 2, 1)
+    assert not closes(editor)
+    assert editor.prompting
+    assert app.pending_scene is editor
+    editor.update_layout()
+    assert draw(app, editor).any()
+
+    # Escape and "Keep Editing" both go back.
+    editor.on_event(press(glfw.KEY_ESCAPE))
+    assert not editor.prompting
+    editor.on_event(press(glfw.KEY_ESCAPE))
+    assert editor.prompting
+    answer(editor, "cancel")
+    assert not editor.prompting
+    assert not app.window.should_close
+
+    editor.on_event(press(glfw.KEY_ESCAPE))
+    answer(editor, "discard")
+    assert app.close_confirmed()
+    assert not target.exists()
+    app.window.close(requested=False)
+
+    editor = MapScene(app, target, editing=True)
+    editor.tilemap.set(1, 2, 1)
+    editor.on_event(press(glfw.KEY_ESCAPE))
+    answer(editor, "save")
+    assert app.close_confirmed()
+    assert target.exists()
+    app.window.close(requested=False)
+    app.close_guard = None
+
+
+def point_at(
+    monkeypatch: pytest.MonkeyPatch, app: App, pos: tuple[float, float]
+) -> None:
+    """Pretend the mouse is at a screen position."""
+    monkeypatch.setattr(type(app.window), "mouse_pos", property(lambda _: pos))
+
+
+def test_editor_says_how_saving_went(
+    app: App,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Saving, a refusal and a failed backup each show a passing message."""
+    target = tmp_path_factory.mktemp("maps") / "m.json"
+    editor = MapScene(app, target, editing=True)
+    editor.update_layout()
+    plain = draw(app, editor)
+    editor.on_event(press(glfw.KEY_S, glfw.MOD_CONTROL))
+    assert editor.toast is not None
+    assert editor.toast.text == "Saved m.json"
+    assert not editor.toast.error
+    assert (draw(app, editor) != plain).any()
+    for _ in range(editor.toast.ticks):
+        editor.tick()
+    assert editor.toast is None
+
+    for error, text in (
+        (
+            PermissionError(errno.EACCES, "the default map is read-only"),
+            "Not saved, the default map is read-only",
+        ),
+        (
+            BackupError(errno.ENOSPC, "No space left on device"),
+            "Not saved, backup failed: No space left on device",
+        ),
+        (OSError("disk gone"), "Not saved, disk gone"),
+    ):
+
+        def fail(*_: object, error: OSError = error) -> None:
+            raise error
+
+        monkeypatch.setattr(map_tools, "save_tilemap", fail)
+        assert not editor.save()
+        assert editor.toast is not None
+        assert editor.toast.text == text
+        assert editor.toast.error
+
+    # A failed "Save & Quit" stays open and says why.
+    editor.tilemap.set(1, 2, 1)
+    editor.on_event(press(glfw.KEY_ESCAPE))
+    editor.update_layout()
+    button = next(b for b in editor.buttons if b.id == "save")
+    editor.on_event(click(button.rect.center))
+    assert not editor.prompting
+    assert not app.window.should_close
+    assert editor.toast is not None
+    assert editor.toast.error
+    app.close_guard = None
+
+
+def test_editor_palette(
+    app: App,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Clicking picks a block, without editing the map under the palette."""
+    target = tmp_path_factory.mktemp("maps") / "m.json"
+    editor = MapScene(app, target, editing=True)
+    editor.update_layout()
+    grid = editor.palette_grid()
+    picked = grid.columns + 1
+    cell = grid.cell_rect(picked, 0).center
+    point_at(monkeypatch, app, cell)
+    monkeypatch.setattr(
+        app.window,
+        "is_mouse_down",
+        lambda button: button == glfw.MOUSE_BUTTON_LEFT,
+    )
+    editor.on_event(click(cell))
+    assert editor.selected == picked
+    editor.tick()
+    editor.tick()
+    assert not len(editor.tilemap)
+    assert draw(app, editor).any()
+
+    # A drag that leaves the palette does not paint either.
+    outside = (app.screen[0] / 4, app.screen[1] / 2)
+    point_at(monkeypatch, app, outside)
+    editor.tick()
+    assert not len(editor.tilemap)
+    monkeypatch.setattr(app.window, "is_mouse_down", lambda _: False)
+    editor.tick()
+    monkeypatch.setattr(
+        app.window,
+        "is_mouse_down",
+        lambda button: button == glfw.MOUSE_BUTTON_LEFT,
+    )
+    editor.tick()
+    assert len(editor.tilemap) == 1
+    block, variant = editor.palette[picked]
+    assert [tile[2:] for tile in editor.tilemap.iter_tiles()] == [
+        (block, variant)
+    ]
+    app.close_guard = None
+
+
+def test_editor_palette_scrolls(
+    app: App,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """In a low window the wheel and Q/E move through the whole palette."""
+    monkeypatch.setattr(app, "screen", (640, 220))
+    target = tmp_path_factory.mktemp("maps") / "m.json"
+    editor = MapScene(app, target, editing=True)
+    editor.update_layout()
+    grid = editor.palette_grid()
+    assert grid.max_scroll > 0
+    point_at(monkeypatch, app, grid.area.center)
+    zoom = editor.camera.zoom
+    for mods in (0, glfw.MOD_SHIFT):
+        editor.on_event(ScrollEvent(0, -1, mods))
+    assert editor.palette_scroll == min(2, grid.max_scroll)
+    editor.on_event(ScrollEvent(0, 100))
+    assert editor.palette_scroll == 0
+    assert editor.camera.zoom == zoom
+    assert editor.selected == 0
+
+    editor.on_event(press(glfw.KEY_Q))
+    assert editor.selected == len(editor.palette) - 1
+    assert editor.palette_scroll == grid.max_scroll
+    editor.on_event(press(glfw.KEY_E))
+    assert editor.palette_scroll == 0
+
+    # Away from the palette the wheel zooms, and viewing has no palette.
+    point_at(monkeypatch, app, (10, 110))
+    editor.on_event(ScrollEvent(0, 1))
+    assert editor.camera.zoom > zoom
+    viewer = MapScene(app, target)
+    assert not viewer.over_palette(grid.area.center)
+    app.close_guard = None
+
+
+def test_editor_protects_the_default_map(app: App) -> None:
+    """Editing the default map must be asked for; viewing it is free."""
+    default = map_file(DEFAULT_MAP)
+    with pytest.raises(ValueError, match="protected"):
+        MapScene(app, default, editing=True)
+    assert not MapScene(app, default).editing
+    assert MapScene(app, default, editing=True, edit_default=True).editing
+    app.close_guard = None
 
 
 def click_value(
@@ -463,6 +710,151 @@ def test_volume_sliders(app: App) -> None:
     reset = next(b for b in settings.buttons if b.id == "reset")
     settings.on_event(click(reset.rect.center))
     assert app.settings.music_volume == Settings().music_volume
+
+
+def move(pos: tuple[float, float]) -> MouseMoveEvent:
+    """Create a mouse movement event.
+
+    Returns:
+        MouseMoveEvent: The event.
+
+    """
+    return MouseMoveEvent(pos)
+
+
+def release(pos: tuple[float, float]) -> MouseButtonEvent:
+    """Create a left button release event.
+
+    Returns:
+        MouseButtonEvent: The event.
+
+    """
+    return MouseButtonEvent(glfw.MOUSE_BUTTON_LEFT, glfw.RELEASE, 0, pos)
+
+
+def test_volume_sliders_drag(app: App) -> None:
+    """A held slider follows the mouse, wherever it goes, until let go."""
+    settings = SettingsScene(app, back=MainMenu(app), page=Page.AUDIO)
+    index = show_row(settings, OptionRow(Option.MUSIC_VOLUME))
+    track = settings.slider_rect(index)
+    y = track.center[1]
+
+    settings.on_event(click((track.x + track.w * 0.5, y)))
+    half, full = 50, 100
+    assert app.settings.music_volume == half
+    settings.on_event(move((track.right + 500, y + 300)))
+    assert app.settings.music_volume == full
+    settings.on_event(move((track.x - 500, y - 300)))
+    assert app.settings.music_volume == 0
+    saved = json.loads(app.settings_file.read_text(encoding="utf-8"))
+    assert saved["music_volume"] == 0
+
+    settings.on_event(release((track.x, y)))
+    settings.on_event(move((track.right, y)))
+    assert app.settings.music_volume == 0
+
+    # The knob reaches past the end of the track and can be grabbed there.
+    settings.on_event(click((track.x - 4, y)))
+    settings.on_event(move((track.x + track.w * 0.25, y)))
+    quarter = 25
+    assert app.settings.music_volume == quarter
+    settings.on_event(release((track.x, y)))
+
+    # Moving without having pressed on a slider changes nothing.
+    settings.on_event(click((settings.table.area.x + 5, y)))
+    settings.on_event(move((track.right, y)))
+    assert app.settings.music_volume == quarter
+    reset = next(b for b in settings.buttons if b.id == "reset")
+    settings.on_event(click(reset.rect.center))
+
+
+def test_multiplayer_settings(app: App) -> None:
+    """Name and port are typed in; everything is saved and can be reset."""
+    settings = SettingsScene(app, back=MainMenu(app), page=Page.MULTIPLAYER)
+
+    def retype(option: Option, text: str) -> None:
+        click_value(settings, option)
+        assert settings.editing is option
+        for _ in range(len(settings.field.text)):
+            settings.on_event(press(glfw.KEY_BACKSPACE))
+        for char in text:
+            settings.on_event(CharEvent(char))
+
+    retype(Option.PLAYER_NAME, "  Ann   Lee ")
+    assert draw(app, settings).any()
+    settings.on_event(press(glfw.KEY_ENTER))
+    assert app.settings.player_name == "Ann Lee"
+
+    # Only digits are typed into the port, and it must be in range.
+    retype(Option.PORT, "7x0000")
+    assert settings.field.text == "70000"
+    settings.on_event(press(glfw.KEY_ENTER))
+    assert settings.editing is Option.PORT
+    assert "from 1 to 65535" in settings.message
+    settings.on_event(press(glfw.KEY_ESCAPE))
+    assert settings.editing is None
+    assert app.settings.multiplayer_port == DEFAULT_PORT
+    assert app.pending_scene is not settings.back
+
+    # Clicking elsewhere saves too, and still does what was clicked.
+    retype(Option.PORT, "5000")
+    click_value(settings, Option.LAN_ANNOUNCE)
+    port = 5000
+    assert app.settings.multiplayer_port == port
+    assert not app.settings.lan_announce
+    click_value(settings, Option.MAX_PLAYERS)
+    assert app.settings.max_players == MIN_PLAYERS
+
+    saved = json.loads(app.settings_file.read_text(encoding="utf-8"))
+    assert saved["player_name"] == "Ann Lee"
+    assert saved["multiplayer_port"] == port
+    assert saved["lan_announce"] is False
+    assert saved["max_players"] == MIN_PLAYERS
+
+    reset = next(b for b in settings.buttons if b.id == "reset")
+    settings.on_event(click(reset.rect.center))
+    defaults = Settings()
+    assert app.settings.player_name == defaults.player_name
+    assert app.settings.multiplayer_port == defaults.multiplayer_port
+    assert app.settings.lan_announce
+    assert app.settings.max_players == defaults.max_players
+
+
+def test_hosting_uses_the_multiplayer_settings(
+    app: App, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Open to LAN listens as set; saves keep the name joined with."""
+    with socket.socket() as probe:
+        probe.bind(("", 0))
+        port = probe.getsockname()[1]
+    announced: list[int] = []
+    monkeypatch.setattr(
+        "sch5n.server.server.Announcer",
+        lambda _name, number: announced.append(number),
+    )
+    limit = 3
+    app.update_settings(
+        multiplayer_port=port, lan_announce=False, max_players=limit
+    )
+    play = PlayScene.singleplayer(app)
+    try:
+        assert play.open_to_lan() is not None
+        assert play.server is not None
+        assert play.server.port == port
+        assert play.server.max_players == limit
+        assert not announced
+        joined = play.player_name
+        app.update_settings(player_name="Renamed")
+        assert play.player_name == joined
+    finally:
+        play.leave()
+        defaults = Settings()
+        app.update_settings(
+            player_name=defaults.player_name,
+            multiplayer_port=defaults.multiplayer_port,
+            lan_announce=defaults.lan_announce,
+            max_players=defaults.max_players,
+        )
 
 
 def test_background_shader_animates(app: App) -> None:
@@ -805,6 +1197,129 @@ def test_hovered_items_show_a_tooltip(app: App) -> None:
     assert play.hovered_stack(empty) is None
     play.inventory_open = False
     assert play.hovered_stack(slot) is None
+    play.leave()
+
+
+def test_crafting_in_the_open_inventory(app: App) -> None:
+    """Clicking a log into the grid and taking the result gives planks."""
+    play = PlayScene.singleplayer(app)
+    play.inventory_open = True
+    server = play.server
+    assert server is not None
+    inventory = server.game.players[play.world.local_id].inventory
+    inventory.cursor = ItemStack(app.content.items["oak_log"], 1)
+    layout = play.crafting_layout
+    for rect in (layout.slot_rect(3), layout.result_rect):
+        for action in (glfw.PRESS, glfw.RELEASE):
+            play.on_event(
+                MouseButtonEvent(
+                    glfw.MOUSE_BUTTON_LEFT, action, 0, rect.center
+                )
+            )
+        play.tick()
+        play.render()
+    cursor = play.world.inventory.cursor
+    assert cursor is not None
+    assert (cursor.item.name, cursor.amount) == ("oak_planks", 4)
+    play.leave()
+
+
+@pytest.mark.parametrize(
+    ("button", "placed", "kept"),
+    [(glfw.MOUSE_BUTTON_LEFT, 3, 1), (glfw.MOUSE_BUTTON_RIGHT, 1, 7)],
+)
+def test_dragging_spreads_the_cursor_stack(
+    app: App, button: int, placed: int, kept: int
+) -> None:
+    """Dragging shares a stack evenly, or places one each with the right."""
+    play = PlayScene.singleplayer(app)
+    play.inventory_open = True
+    server = play.server
+    assert server is not None
+    inventory = server.game.players[play.world.local_id].inventory
+    inventory.cursor = ItemStack(app.content.items["dirt_block"], 10)
+    play.tick()
+    layout = play.inventory_layout
+    spots = [
+        layout.slot_rect(20).center,
+        play.crafting_layout.slot_rect(0).center,
+        layout.slot_rect(21).center,
+    ]
+    play.on_event(MouseButtonEvent(button, glfw.PRESS, 0, spots[0]))
+    for spot in spots[1:]:
+        play.on_event(MouseMoveEvent(spot))
+    play.render()  # Previews the result before it happens.
+    assert inventory[20] is None
+    play.on_event(MouseButtonEvent(button, glfw.RELEASE, 0, spots[-1]))
+    play.tick()
+    world = play.world.inventory
+    filled = [world[20], world.crafting[0], world[21]]
+    assert [s and s.amount for s in filled] == [placed] * 3
+    assert world.cursor is not None
+    assert world.cursor.amount == kept
+    play.leave()
+
+
+def test_double_click_gathers_and_shift_click_stows(app: App) -> None:
+    """Two quick clicks collect an item; shift empties grid and result."""
+    play = PlayScene.singleplayer(app)
+    play.inventory_open = True
+    server = play.server
+    assert server is not None
+    inventory = server.game.players[play.world.local_id].inventory
+    log = app.content.items["oak_log"]
+    for slot, amount in ((20, 2), (30, 3)):
+        inventory.slots[slot] = ItemStack(log, amount)
+    inventory.crafting[1] = ItemStack(app.content.items["stick"], 2)
+    play.tick()
+
+    def click(pos: tuple[float, float], mods: int = 0) -> None:
+        for action in (glfw.PRESS, glfw.RELEASE):
+            play.on_event(
+                MouseButtonEvent(glfw.MOUSE_BUTTON_LEFT, action, mods, pos)
+            )
+        play.tick()
+
+    spot = play.inventory_layout.slot_rect(20).center
+    click(spot)
+    click(spot)
+    world = play.world.inventory
+    assert world.cursor is None
+    assert [s and s.amount for s in (world[20], world[30])] == [5, None]
+
+    click(play.crafting_layout.slot_rect(1).center, glfw.MOD_SHIFT)
+    assert play.world.inventory.crafting[1] is None
+    inventory.crafting[0] = ItemStack(log, 3)
+    play.tick()
+    click(play.crafting_layout.result_rect.center, glfw.MOD_SHIFT)
+    world = play.world.inventory
+    assert world.crafting[0] is None
+    assert world.cursor is None
+    planks = [s.amount for s in world if s and s.item.name == "oak_planks"]
+    assert planks == [12]
+    play.leave()
+
+
+def test_the_grid_grows_beside_a_bench(app: App) -> None:
+    """Near a bench the open inventory shows a 3x3 grid and names it."""
+    play = PlayScene.singleplayer(app)
+    play.inventory_open = True
+    play.tick()
+    play.render()
+    small = read_pixels(app)
+    server = play.server
+    assert server is not None
+    body = server.game.players[play.world.local_id].body
+    size = app.content.game.tile_size
+    tile = (int(body.center[0] // size) + 1, int(body.center[1] // size))
+    bench = app.content.blocks.id_of("crafting_bench")
+    server.game.tilemap.set(*tile, bench)
+    play.tick()
+    play.render()
+    assert play.world.inventory.crafting_side == MAX_CRAFTING_SIDE
+    layout = play.crafting_layout
+    x, y = (round(v) for v in layout.slot_rect(8).center)
+    assert not np.array_equal(read_pixels(app)[y, x], small[y, x])
     play.leave()
 
 

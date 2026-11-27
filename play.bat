@@ -2,7 +2,7 @@
 rem Starts the game. Double click this file.
 rem On the first run it installs uv, which downloads the right Python and
 rem everything the game needs. Later runs start straight away.
-rem Extra arguments are passed on, e.g. "play.bat view --edit --map map1".
+rem Extra arguments are passed on, e.g. "play.bat view --edit --map mymap".
 setlocal
 cd /d "%~dp0"
 

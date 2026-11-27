@@ -15,7 +15,12 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from sch5n.error.exceptions import ParseError
-from sch5n.game.inventory import Inventory, ItemStack
+from sch5n.game.inventory import (
+    CRAFTING_SIDE,
+    MAX_CRAFTING_SIDE,
+    Inventory,
+    ItemStack,
+)
 from sch5n.log.logger import LOGGER
 from sch5n.utility.path import user_dirs
 from sch5n.world.io import tilemap_from_json, tilemap_to_json
@@ -24,6 +29,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from sch5n.game.content import Content, ItemRegistry
+    from sch5n.game.inventory import Slot
     from sch5n.vendor.json import Json
     from sch5n.world.tilemap import TileMap
 
@@ -122,9 +128,16 @@ def set_favorite(path: Path, *, favorite: bool) -> None:
 
 
 def delete_world(path: Path) -> None:
-    """Delete a world file, and forget it was a favorite."""
+    """Delete a world file. Favorites are protected.
+
+    Raises:
+        PermissionError: The world is a favorite. Unfavorite it first.
+
+    """
+    if path.name in _read_favorites(path.parent):
+        msg = f"{path.name} is a favorite"
+        raise PermissionError(msg)
     path.unlink(missing_ok=True)
-    set_favorite(path, favorite=False)
     LOGGER.info("Deleted world %s", path)
 
 
@@ -158,17 +171,33 @@ def inventory_to_json(inventory: Inventory) -> dict[str, Json]:
     """Encode an inventory.
 
     Returns:
-        dict[str, Json]: Slots as `[item, amount]` or `null`, and the
-        selected hotbar slot.
+        dict[str, Json]: Slots and crafting grid as `[item, amount]` or
+        `null`, and the selected hotbar slot.
 
     """
     return {
         "selected": inventory.selected,
-        "slots": [
-            None if slot is None else [slot.item.name, slot.amount]
-            for slot in inventory
-        ],
+        "slots": [_slot_to_json(slot) for slot in inventory],
+        "crafting": [_slot_to_json(slot) for slot in inventory.crafting],
     }
+
+
+def _slot_to_json(slot: Slot) -> Json:
+    return None if slot is None else [slot.item.name, slot.amount]
+
+
+def _slot_from_json(data: Json, items: ItemRegistry) -> Slot:
+    match data:
+        case None:
+            return None
+        case [str(name), int(amount)] if amount > 0:
+            if name not in items:
+                LOGGER.warning("Dropping unknown item %r", name)
+                return None
+            return ItemStack(items[name], amount)
+        case _:
+            msg = f"Invalid inventory slot {data!r}"
+            raise ParseError(msg)
 
 
 def inventory_from_json(
@@ -187,19 +216,17 @@ def inventory_from_json(
     if not isinstance(data, dict) or not isinstance(slots, list):
         msg = "An inventory needs a list of slots"
         raise ParseError(msg)
+    crafting = data.get("crafting", [])
+    if not isinstance(crafting, list):
+        msg = "The crafting grid must be a list of slots"
+        raise ParseError(msg)
     inventory = Inventory(size)
     for index, slot in enumerate(slots[:size]):
-        match slot:
-            case None:
-                continue
-            case [str(name), int(amount)] if amount > 0:
-                if name not in items:
-                    LOGGER.warning("Dropping unknown item %r", name)
-                    continue
-                inventory.slots[index] = ItemStack(items[name], amount)
-            case _:
-                msg = f"Invalid inventory slot {slot!r}"
-                raise ParseError(msg)
+        inventory.slots[index] = _slot_from_json(slot, items)
+    if len(crafting) > CRAFTING_SIDE**2:
+        inventory.resize_crafting(MAX_CRAFTING_SIDE)
+    for index, slot in enumerate(crafting[: len(inventory.crafting)]):
+        inventory.crafting[index] = _slot_from_json(slot, items)
     selected = data.get("selected", 0)
     inventory.select(selected if isinstance(selected, int) else 0)
     return inventory

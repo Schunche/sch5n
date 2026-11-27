@@ -7,13 +7,16 @@ The format is the one of the original game: a JSON object mapping
 
 from __future__ import annotations
 
+import errno
 import json
 import operator
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from sch5n.error.exceptions import ParseError
-from sch5n.utility.path import MAPS_DIR
+from sch5n.log.logger import LOGGER
+from sch5n.utility.path import MAPS_DIR, is_developing
 from sch5n.world.tilemap import TileMap
 
 if TYPE_CHECKING:
@@ -22,7 +25,20 @@ if TYPE_CHECKING:
 
 
 DEFAULT_MAP = "map1"
-"""Map played when none is chosen."""
+"""Map played when none is chosen.
+
+It also seeds new worlds and servers and is the main menu background, so
+it is protected: it only changes while developing (see `is_developing`),
+tools only overwrite it when asked to, and its previous version is backed
+up first.
+"""
+BACKUP_DIR = "backups"
+"""Folder next to a protected map holding its earlier versions, ignored by
+git."""
+
+
+class BackupError(OSError):
+    """A protected map could not be backed up, so it was not saved."""
 
 
 def map_file(name: str) -> Path:
@@ -36,6 +52,34 @@ def map_file(name: str) -> Path:
     if candidate.suffix == ".json" or candidate.exists():
         return candidate
     return MAPS_DIR / f"{name}.json"
+
+
+def is_protected(path: Path) -> bool:
+    """Whether a file is the default map, however its path is written.
+
+    Returns:
+        bool: True for the default map.
+
+    """
+    default = MAPS_DIR / f"{DEFAULT_MAP}.json"
+    if path.exists() and default.exists():
+        return path.samefile(default)
+    return path.resolve() == default.resolve()
+
+
+def backup_map(path: Path) -> Path:
+    """Copy a map into the backup folder next to it, never replacing one.
+
+    Returns:
+        Path: The new backup.
+
+    """
+    stamp = datetime.now().astimezone().strftime("%Y%m%d-%H%M%S-%f")
+    target = path.parent / BACKUP_DIR / f"{path.stem}-{stamp}.json"
+    target.parent.mkdir(exist_ok=True)
+    with target.open("xb") as file:
+        file.write(path.read_bytes())
+    return target
 
 
 def _parse_key(key: str) -> tuple[int, int]:
@@ -112,9 +156,32 @@ def load_tilemap(path: Path, blocks: BlockRegistry) -> TileMap:
 
 
 def save_tilemap(path: Path, tilemap: TileMap) -> None:
-    """Write a tilemap file, creating parent directories."""
+    """Write a tilemap file, creating parent directories.
+
+    A protected map is backed up before it changes. If that fails, the map
+    is left as it was.
+
+    Raises:
+        PermissionError: The map is protected and this is not development.
+        BackupError: The map is protected and could not be backed up.
+
+    """
+    if is_protected(path) and not is_developing():
+        raise PermissionError(
+            errno.EACCES, "the default map is read-only", str(path)
+        )
+    text = json.dumps(tilemap_to_json(tilemap), separators=(",", ":"))
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(tilemap_to_json(tilemap), separators=(",", ":")),
-        encoding="utf-8",
-    )
+    if (
+        is_protected(path)
+        and path.exists()
+        and path.read_bytes() != text.encode()
+    ):
+        try:
+            backup = backup_map(path)
+        except OSError as error:
+            raise BackupError(
+                error.errno, error.strerror, error.filename
+            ) from error
+        LOGGER.info("Backed up %s to %s", path.name, backup)
+    path.write_text(text, encoding="utf-8")

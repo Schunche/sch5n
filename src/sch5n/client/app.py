@@ -116,6 +116,8 @@ class App:
 
         self.screen: tuple[int, int] = self.window.size
         self.scene: Scene | None = None
+        self.close_guard: Callable[[], bool] | None = None
+        """Asked before the window closes; False keeps it open."""
         self._next_scene: Scene | None = None
         self.frame = 0
         self.fps = 0.0
@@ -182,6 +184,20 @@ class App:
     def quit(self) -> None:
         """Stop the main loop after the current frame."""
         self.window.close()
+
+    def close_confirmed(self) -> bool:
+        """Whether to stop now: closing was asked for and nothing objects.
+
+        Returns:
+            bool: True to leave the main loop.
+
+        """
+        if not self.window.should_close:
+            return False
+        if self.close_guard is None or self.close_guard():
+            return True
+        self.window.close(requested=False)
+        return False
 
     def _update_viewport(self) -> None:
         self.screen = self.window.size
@@ -316,7 +332,7 @@ class App:
         fps_timer, fps_frames = previous, 0
 
         try:
-            while not self.window.should_close:
+            while not self.close_confirmed():
                 now = Window.time()
                 lag += min(now - previous, tick * MAX_TICKS_PER_FRAME)
                 previous = now

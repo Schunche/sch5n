@@ -17,7 +17,8 @@ if TYPE_CHECKING:
     from sch5n.client.render.batch import SpriteBatch
     from sch5n.client.render.text import TextRenderer
     from sch5n.client.style import Style
-    from sch5n.client.ui import InventoryLayout
+    from sch5n.client.ui import CraftingLayout, InventoryLayout
+    from sch5n.game.content import ItemDef
     from sch5n.game.inventory import Inventory, ItemStack
 
 
@@ -95,6 +96,19 @@ def tooltip_rect(
     return Rect(max(0.0, x), max(0.0, y), w, h)
 
 
+@dataclass(frozen=True, slots=True)
+class SlotLook:
+    """How a slot box is drawn."""
+
+    hovered: bool = False
+    selected: bool = False
+    alpha: float = 1.0
+    """Opacity of its fill."""
+
+
+PLAIN_SLOT = SlotLook()
+
+
 class Hud:
     """Draws the inventory GUI."""
 
@@ -117,14 +131,14 @@ class Hud:
         """Draw an item icon with its amount, centered at `center`."""
         size = self.gui_size
         x, y = round(center[0] - size / 2), round(center[1] - size / 2)
-        region = self.assets.items[stack.item.name]
-        w, h = region.fit(size)
+        region = self.assets.slot_icon(stack.item, size * 3 // 2)
+        w, h = region.width, region.height
         batch.sprite(
             self.assets.atlas,
-            (center[0] - w / 2, center[1] - h / 2, w, h),
+            (round(center[0] - w / 2), round(center[1] - h / 2), w, h),
             region,
         )
-        if stack.item.is_stackable:
+        if stack.amount > 1:
             self.text.draw(
                 batch,
                 str(stack.amount),
@@ -151,23 +165,13 @@ class Hud:
         alpha = 1.0 if full else style.slot.alpha / 255
         count = len(inventory) if full else HOTBAR_SIZE
         for index in range(count):
-            inner = layout.slot_rect(index)
-            border = inner.inflated(layout.border)
-            fill = "button_hover" if index == hovered else "button_inner"
-            batch.shape(
-                (inner.x, inner.y, inner.w, inner.h),
-                rgba(style.color(fill), alpha),
+            self.draw_slot(
+                batch,
+                layout.slot_rect(index),
+                inventory[index],
+                layout.border,
+                SlotLook(index == hovered, index == inventory.selected, alpha),
             )
-            edge = "accent" if index == inventory.selected else "button_border"
-            batch.shape(
-                (border.x, border.y, border.w, border.h),
-                rgba(style.color(edge)),
-                radius=style.button.border_radius,
-                border=style.button.border_width,
-            )
-            stack = inventory[index]
-            if stack is not None:
-                self.draw_stack(batch, stack, inner.center)
 
         if not full:
             held = inventory[inventory.selected]
@@ -182,6 +186,95 @@ class Hud:
                         color=rgba(style.color("text")),
                     ),
                 )
+
+    def draw_slot(
+        self,
+        batch: SpriteBatch,
+        inner: Rect,
+        stack: ItemStack | None,
+        border_width: float,
+        look: SlotLook = PLAIN_SLOT,
+    ) -> None:
+        """Draw one slot box and what is in it."""
+        style = self.style
+        border = inner.inflated(border_width)
+        fill = "button_hover" if look.hovered else "button_inner"
+        batch.shape(
+            (inner.x, inner.y, inner.w, inner.h),
+            rgba(style.color(fill), look.alpha),
+        )
+        edge = "accent" if look.selected else "button_border"
+        batch.shape(
+            (border.x, border.y, border.w, border.h),
+            rgba(style.color(edge)),
+            radius=style.button.border_radius,
+            border=style.button.border_width,
+        )
+        if stack is not None:
+            self.draw_stack(batch, stack, inner.center)
+
+    def draw_crafting(
+        self,
+        batch: SpriteBatch,
+        layout: CraftingLayout,
+        inventory: Inventory,
+        result: ItemStack | None,
+        mouse: tuple[float, float],
+    ) -> None:
+        """Draw the crafting grid, an arrow and the result."""
+        hovered = layout.slot_at(mouse)
+        border = layout.inventory.border
+        for index, stack in enumerate(inventory.crafting):
+            self.draw_slot(
+                batch,
+                layout.slot_rect(index),
+                stack,
+                border,
+                SlotLook(hovered=index == hovered),
+            )
+        arrow = self.assets.arrow
+        x, y = layout.arrow_center
+        batch.sprite(
+            self.assets.atlas,
+            (
+                round(x - arrow.width / 2),
+                round(y - arrow.height / 2),
+                arrow.width,
+                arrow.height,
+            ),
+            arrow,
+            rgba(self.style.color("text")),
+        )
+        self.draw_slot(
+            batch,
+            layout.result_rect,
+            result,
+            border,
+            SlotLook(hovered=layout.on_result(mouse)),
+        )
+
+    def draw_station(
+        self, batch: SpriteBatch, layout: CraftingLayout, station: ItemDef
+    ) -> None:
+        """Show which station enlarges the grid: its icon and name."""
+        x, y = layout.station_pos
+        size = layout.inventory.slot_size
+        icon = self.assets.slot_icon(station, round(size))
+        batch.sprite(
+            self.assets.atlas,
+            (round(x), round(y - icon.height / 2), icon.width, icon.height),
+            icon,
+        )
+        self.text.draw(
+            batch,
+            station.spec.name,
+            (x + icon.width + TOOLTIP_PADDING, y),
+            TextStyle(
+                size=self.style.button.font_size,
+                color=rgba(self.style.color("accent")),
+                anchor=Anchor.MIDDLE_LEFT,
+            ),
+        )
 
     def draw_tooltip(
         self,

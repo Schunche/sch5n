@@ -8,6 +8,7 @@ from enum import Enum, auto
 from typing import TYPE_CHECKING
 
 from sch5n.game.content import AIR, TreePart
+from sch5n.game.plants import can_stand
 
 if TYPE_CHECKING:
     from sch5n.game.content import BlockDef, BlockRegistry, ItemDef
@@ -171,11 +172,42 @@ def log_of(blocks: BlockRegistry, block: BlockDef) -> str | None:
     return None
 
 
-def can_place(tilemap: TileMap, x: int, y: int) -> bool:
-    """Whether a block may be placed: the tile must be empty.
+def can_place(
+    tilemap: TileMap, x: int, y: int, block: BlockDef | None = None
+) -> bool:
+    """Whether a block may be placed at a tile.
+
+    The tile must be empty, with a solid block or a log above, below, left
+    or right of it, so nothing is built in thin air. A plant instead needs
+    ground it grows on right below.
 
     Returns:
-        bool: True if empty.
+        bool: True if a block may go there.
 
     """
-    return tilemap.get(x, y) == AIR
+    if tilemap.get(x, y) != AIR:
+        return False
+    if block is not None and block.spec.plant_on:
+        return can_stand(tilemap, x, y, block)
+    return any(
+        _supports(tilemap, x + dx, y + dy)
+        for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0))
+    )
+
+
+def _supports(tilemap: TileMap, x: int, y: int) -> bool:
+    """Whether blocks can be built against a tile.
+
+    Solid blocks, logs and crafting stations can.
+
+    Returns:
+        bool: True for support.
+
+    """
+    if tilemap.is_solid(x, y):
+        return True
+    block = tilemap.blocks.get(tilemap.get(x, y))
+    return block is not None and (
+        block.spec.tree is TreePart.TRUNK
+        or block.spec.crafting_side is not None
+    )

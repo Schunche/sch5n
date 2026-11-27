@@ -196,7 +196,9 @@ class MultiplayerScene(Scene):
             self.focused = self.name
             return
         try:
-            host, port = parse_address(self.address.text)
+            host, port = parse_address(
+                self.address.text, self.app.settings.multiplayer_port
+            )
         except ValueError as error:
             self.message = str(error)
             self.focused = self.address

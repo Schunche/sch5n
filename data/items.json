@@ -1,5 +1,7 @@
 {
     "items": {
+        "wooden_pickaxe": {"name": "Wooden Pickaxe", "description": "Breaks stone and ore, slowly.", "icon": "tool/wooden_pickaxe", "max_stack": 1, "use_time": 30, "tool_power": {"pickaxe": 15}, "damage": 2, "knockback": 1, "drop_size": 32},
+        "stone_pickaxe": {"name": "Stone Pickaxe", "description": "Breaks stone and ore.", "icon": "tool/stone_pickaxe", "max_stack": 1, "use_time": 28, "tool_power": {"pickaxe": 20}, "damage": 2, "knockback": 2, "drop_size": 32},
         "copper_pickaxe": {"name": "Copper Pickaxe", "description": "Breaks stone and ore. Digs dirt too, slowly.", "icon": "tool/copper_pickaxe", "max_stack": 1, "use_time": 25, "tool_power": {"pickaxe": 25}, "damage": 3, "knockback": 2, "drop_size": 32},
         "copper_axe": {"name": "Copper Axe", "description": "Chops down trees. Cuts leaves too, slowly.", "icon": "tool/copper_axe", "max_stack": 1, "use_time": 40, "tool_power": {"axe": 30}, "damage": 4, "knockback": 3, "drop_size": 32},
         "copper_shovel": {"name": "Copper Shovel", "description": "Made for digging dirt.", "icon": "tool/copper_shovel", "max_stack": 1, "use_time": 36, "tool_power": {"shovel": 25}, "damage": 3, "knockback": 2, "drop_size": 32},
@@ -11,8 +13,13 @@
         "dirt_block": {"name": "Dirt Block", "description": "Place it to build.", "icon": "tile/dirt/0", "max_stack": 1024, "places": "dirt", "drop_size": 16},
         "stone_block": {"name": "Stone Block", "description": "Place it to build.", "icon": "tile/stone/0", "max_stack": 1024, "places": "stone", "drop_size": 16},
         "oak_log": {"name": "Oak Log", "description": "Place it to build.", "icon": "tile/oakLog/0", "max_stack": 1024, "places": "oak_log", "drop_size": 16},
-        "branch": {"name": "Branch", "description": "A twig from a tree.", "icon": "item/branch", "drop_size": 16},
+        "cobblestone": {"name": "Cobblestone", "description": "Place it to build.", "icon": "tile/cobblestone/0", "max_stack": 1024, "places": "cobblestone", "drop_size": 16},
+        "oak_planks": {"name": "Oak Planks", "description": "Place it to build.", "icon": "tile/oakPlanks/0", "max_stack": 1024, "places": "oak_planks", "drop_size": 16},
+        "crafting_bench": {"name": "Crafting Bench", "description": "Stand near it to craft on a 3x3 grid.", "icon": "tile/craftingBench/0", "max_stack": 1024, "places": "crafting_bench", "drop_size": 16},
+        "stick": {"name": "Stick", "description": "A twig from a tree.", "icon": "item/stick", "drop_size": 16, "aliases": ["branch"]},
         "leaf": {"name": "Leaf", "description": "A leaf from a tree.", "icon": "item/leaf", "drop_size": 16},
-        "bird_nest": {"name": "Bird's Nest", "description": "Found in the leaves, rarely.", "icon": "item/bird_nest", "drop_size": 16}
+        "bird_nest": {"name": "Bird's Nest", "description": "Found in the leaves, rarely.", "icon": "item/bird_nest", "drop_size": 16},
+        "oak_sapling": {"name": "Oak Sapling", "description": "Plant it on dirt or grass.", "icon": "item/oak_sapling", "places": "oak_sapling", "drop_size": 16},
+        "apple": {"name": "Apple", "description": "Fruit from an oak.", "icon": "item/apple", "drop_size": 16}
     }
 }

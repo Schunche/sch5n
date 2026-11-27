@@ -247,9 +247,7 @@ class TextRenderer:
             return cached
 
         surface = self._render(text, size)
-        texture = create_texture(
-            self.ctx, surface_to_rgba(surface), smooth=not self.pixelated
-        )
+        texture = create_texture(self.ctx, surface_to_rgba(surface))
         w, h = surface.get_size()
         entry = (texture, (w * k, h * k))
         self._cache[key] = entry

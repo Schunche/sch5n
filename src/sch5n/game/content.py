@@ -5,10 +5,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, Self
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from sch5n.game.config import (
     AnimationsConfig,
@@ -17,6 +17,7 @@ from sch5n.game.config import (
     UiConfig,
     load_model,
 )
+from sch5n.game.inventory import CRAFTING_SIDE, MAX_CRAFTING_SIDE
 from sch5n.log.logger import LOGGER
 
 if TYPE_CHECKING:
@@ -25,6 +26,10 @@ if TYPE_CHECKING:
 
 AIR = 0
 """Block id of empty space."""
+
+
+type Layers = Annotated[tuple[str, ...], Field(min_length=1)]
+"""Textures drawn over each other into one tile, bottom first."""
 
 
 class _Model(BaseModel):
@@ -63,7 +68,8 @@ class ChanceDrop(_Model):
 class BlockSpec(_Model):
     """A block as written in `blocks.json`."""
 
-    textures: tuple[str, ...]
+    textures: tuple[str | Layers, ...]
+    """Tile variants: each a texture, or a list of textures to layer."""
     solid: bool = False
     durability: int | None = None
     tool: str | None = None
@@ -87,6 +93,16 @@ class BlockSpec(_Model):
     """Part of a tree: breaking a trunk block fells everything above."""
     aliases: tuple[str, ...] = ()
     """Legacy names accepted when loading maps."""
+    plant_on: tuple[str, ...] = ()
+    """For plants: the blocks it can be planted on."""
+    grows_after: tuple[float, float] | None = None
+    """For saplings: the shortest and longest seconds until it is a tree."""
+    crafting_side: int | None = Field(
+        default=None, ge=CRAFTING_SIDE, le=MAX_CRAFTING_SIDE
+    )
+    """For stations: the crafting grid side of players within reach."""
+    hand_pickup: bool = False
+    """An empty hand picks it up at once."""
 
 
 class BlocksFile(_Model):
@@ -113,12 +129,74 @@ class ItemSpec(_Model):
     """Block id placed by this item."""
     drop_size: int = 16
     """Size in pixels of the item when lying in the world."""
+    aliases: tuple[str, ...] = ()
+    """Legacy names accepted when loading saved inventories."""
 
 
 class ItemsFile(_Model):
     """`items.json`."""
 
     items: dict[str, ItemSpec]
+
+
+class RecipeResult(_Model):
+    """What a recipe makes."""
+
+    item: str
+    amount: int = Field(default=1, gt=0)
+
+
+class RecipeSpec(_Model):
+    """A recipe in `recipes.json`, shapeless or shaped.
+
+    A shapeless one lists `ingredients`, each filling one slot anywhere. A
+    shaped one draws its `pattern`, a row per string, with the items named
+    in `key` and spaces for empty slots. It fits anywhere in the grid. A
+    symbol may list several items, any of which fills its slots.
+    """
+
+    ingredients: tuple[str, ...] = Field(
+        default=(), max_length=MAX_CRAFTING_SIDE**2
+    )
+    pattern: tuple[str, ...] = Field(default=(), max_length=MAX_CRAFTING_SIDE)
+    key: dict[str, str | tuple[str, ...]] = Field(default_factory=dict)
+    result: RecipeResult
+
+    def choices(self, symbol: str) -> tuple[str, ...]:
+        """List the items a pattern symbol stands for.
+
+        Returns:
+            tuple[str, ...]: The item names.
+
+        """
+        named = self.key[symbol]
+        return (named,) if isinstance(named, str) else named
+
+    @model_validator(mode="after")
+    def _check_shape(self) -> Self:
+        if bool(self.ingredients) == bool(self.pattern):
+            msg = "A recipe needs ingredients or a pattern, not both"
+            raise ValueError(msg)
+        if not self.pattern:
+            return self
+        widths = {len(row) for row in self.pattern}
+        if len(widths) != 1 or max(widths) > MAX_CRAFTING_SIDE:
+            msg = "Pattern rows must be equally long and fit the grid"
+            raise ValueError(msg)
+        symbols = set("".join(self.pattern)) - {" "}
+        if not symbols or not symbols <= self.key.keys():
+            msg = "Every pattern symbol needs an item in the key"
+            raise ValueError(msg)
+        if not all(self.choices(symbol) for symbol in self.key):
+            msg = "A key symbol needs at least one item"
+            raise ValueError(msg)
+        return self
+
+
+class RecipesFile(_Model):
+    """`recipes.json`."""
+
+    recipes: tuple[RecipeSpec, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -189,6 +267,12 @@ class BlockRegistry:
             if trim is not None and trim.into not in self._by_name:
                 msg = f"{block.name}: unknown trim into {trim.into!r}"
                 raise ValueError(msg)
+
+        for block in self._by_name.values():
+            for ground in block.spec.plant_on:
+                if ground not in self._by_name:
+                    msg = f"{block.name}: unknown plant_on {ground!r}"
+                    raise ValueError(msg)
 
         count = len(self._blocks)
         self.solid = np.zeros(count, dtype=np.bool_)
@@ -267,6 +351,11 @@ class ItemRegistry:
             name: ItemDef(name=name, spec=spec)
             for name, spec in data.items.items()
         }
+        self._aliases = {
+            alias: item.name
+            for item in self._items.values()
+            for alias in item.spec.aliases
+        }
         for item in self._items.values():
             if item.spec.places is not None:
                 blocks.by_name(item.spec.places)
@@ -287,13 +376,13 @@ class ItemRegistry:
                     raise ValueError(msg)
 
     def __contains__(self, name: object) -> bool:
-        """Check whether an item exists.
+        """Check whether an item exists, by name or legacy alias.
 
         Returns:
             bool: True if `name` is a registered item.
 
         """
-        return name in self._items
+        return self._aliases.get(str(name), name) in self._items
 
     def __iter__(self) -> Iterator[ItemDef]:
         """Iterate over items.
@@ -305,13 +394,36 @@ class ItemRegistry:
         return iter(self._items.values())
 
     def __getitem__(self, name: str) -> ItemDef:
-        """Get an item by name.
+        """Get an item by name or legacy alias.
 
         Returns:
             ItemDef: The item.
 
         """
-        return self._items[name]
+        return self._items[self._aliases.get(name, name)]
+
+
+def _check_recipes(
+    recipes: tuple[RecipeSpec, ...], items: ItemRegistry
+) -> None:
+    """Make sure recipes use known items and make stacks that exist.
+
+    Raises:
+        ValueError: A recipe names an unknown item, or makes more than a
+            stack of it holds.
+
+    """
+    for recipe in recipes:
+        result = recipe.result
+        keyed = (n for symbol in recipe.key for n in recipe.choices(symbol))
+        names = (*recipe.ingredients, *keyed, result.item)
+        for name in names:
+            if name not in items:
+                msg = f"Recipe for {result.item}: unknown item {name!r}"
+                raise ValueError(msg)
+        if result.amount > items[result.item].spec.max_stack:
+            msg = f"Recipe for {result.item}: more than a stack"
+            raise ValueError(msg)
 
 
 @dataclass(frozen=True, slots=True)
@@ -321,6 +433,7 @@ class Content:
     game: GameConfig
     blocks: BlockRegistry
     items: ItemRegistry
+    recipes: tuple[RecipeSpec, ...] = ()
 
     @classmethod
     def load(cls, data_dir: Path) -> Content:
@@ -333,12 +446,16 @@ class Content:
         blocks = BlockRegistry(
             load_model(BlocksFile, data_dir / "blocks.json")
         )
+        items = ItemRegistry(
+            load_model(ItemsFile, data_dir / "items.json"), blocks
+        )
+        recipes = load_model(RecipesFile, data_dir / "recipes.json").recipes
+        _check_recipes(recipes, items)
         return cls(
             game=load_model(GameConfig, data_dir / "game.json"),
             blocks=blocks,
-            items=ItemRegistry(
-                load_model(ItemsFile, data_dir / "items.json"), blocks
-            ),
+            items=items,
+            recipes=recipes,
         )
 
 

@@ -4,11 +4,18 @@
 import numpy as np
 import pytest
 
-from sch5n.client.assets import frame_files
+from sch5n.client.assets import (
+    add_block_textures,
+    fit_to_tile,
+    frame_files,
+    layer_tiles,
+    tile_name,
+)
 from sch5n.client.camera import MAX_ZOOM, Camera
 from sch5n.client.hud import LineKind, TooltipLine, item_tooltip, tooltip_rect
 from sch5n.client.render.atlas import (
     AtlasBuilder,
+    Region,
     next_power_of_two,
     pack_shelves,
 )
@@ -17,6 +24,7 @@ from sch5n.client.render.text import Anchor, anchored
 from sch5n.client.style import Style
 from sch5n.client.ui import (
     Align,
+    GridLayout,
     InventoryLayout,
     aligned_rect,
     button_column,
@@ -101,6 +109,60 @@ def test_pack_rejects_too_wide() -> None:
     """An image wider than the atlas is an error."""
     with pytest.raises(ValueError, match="does not fit"):
         pack_shelves({"a": (300, 1)}, 256)
+
+
+@pytest.mark.parametrize(
+    ("height", "width", "factor"),
+    [(16, 16, 2), (12, 20, 3), (32, 32, 1), (48, 40, 1), (8, 64, 4)],
+)
+def test_textures_of_any_size_cover_a_tile(
+    height: int, width: int, factor: int
+) -> None:
+    """Pixels are copied whole, enlarged evenly and cropped around."""
+    source = np.arange(height * width * 4, dtype=np.int32)
+    source = source.reshape(height, width, 4)
+    tile = fit_to_tile(source, 32)
+    assert tile.shape == (32, 32, 4)
+    top = (height * factor - 32) // 2
+    left = (width * factor - 32) // 2
+    for y, x in ((0, 0), (13, 7), (31, 31)):
+        expected = source[(top + y) // factor, (left + x) // factor]
+        np.testing.assert_array_equal(tile[y, x], expected)
+
+
+def test_layers_draw_over_each_other() -> None:
+    """Upper layers hide lower ones only where they are opaque."""
+    clear, red, blue = (0, 0, 0, 0), (255, 0, 0, 255), (0, 0, 255, 255)
+    below = np.array([[red, red, clear, clear]], np.uint8)
+    above = np.array([[blue, clear, blue, clear]], np.uint8)
+    expected = np.array([[blue, red, blue, clear]], np.uint8)
+    np.testing.assert_array_equal(layer_tiles([below, above]), expected)
+
+
+def test_leafy_log_is_composed_of_log_and_leaves(content: Content) -> None:
+    """The leafy log has no art of its own: leaves are drawn on the log."""
+    log, leaf, leafy = (
+        content.blocks.by_name(name).spec.textures[0]
+        for name in ("oak_log", "oak_leaf", "oak_log_leaf")
+    )
+    assert leafy == (log, leaf)
+    key = load_animations(path.DATA_DIR).transparent_color
+    builder: AtlasBuilder[str] = AtlasBuilder()
+    keys = add_block_textures(builder, path.TEXTURES_DIR, content, key)
+    wood, crown, both = (
+        builder.images[keys[tile_name(t)]] for t in (log, leaf, leafy)
+    )
+    leaves = crown[..., 3:] > 0
+    np.testing.assert_array_equal(both, np.where(leaves, crown, wood))
+
+
+def test_cropping_a_region_keeps_its_middle() -> None:
+    """A crop covers fewer pixels, at the same pixel size."""
+    region = Region(0.0, 0.0, 0.5, 0.25, 32, 16)
+    part = region.crop(16, 24)
+    assert (part.width, part.height) == (16, 16)
+    assert part.uv == pytest.approx((0.125, 0.0, 0.375, 0.25))
+    assert region.crop(40, 40) is region
 
 
 def test_atlas_regions_point_at_pixels() -> None:
@@ -245,3 +307,24 @@ def test_tooltip_stays_on_screen() -> None:
     flipped = tooltip_rect((100, 50), (790, 590), screen)
     assert flipped.right <= screen[0]
     assert flipped.bottom <= screen[1]
+
+
+def test_grid_layout_scrolls_by_rows() -> None:
+    """Only whole rows show, and any cell can be scrolled into view."""
+    grid = GridLayout(
+        count=10, columns=4, visible_rows=2, origin=(100, 50), cell=40, gap=4
+    )
+    assert (grid.rows, grid.max_scroll) == (3, 1)
+    assert grid.visible(0) == range(8)
+    assert grid.visible(1) == range(4, 10)
+    assert grid.clamp_scroll(-3) == 0
+    assert grid.clamp_scroll(9) == 1
+    assert grid.scroll_to(9, 0) == 1
+    assert grid.scroll_to(5, 0) == 0
+    assert grid.scroll_to(0, 1) == 0
+    assert grid.cell_at((101, 51), 0) == 0
+    assert grid.cell_at((101, 51), 1) == grid.columns
+    assert grid.cell_at((142, 51), 0) is None  # the gap
+    assert grid.cell_at((101, 139), 0) is None  # a hidden row
+    assert grid.cell_at((101 + 2 * 44, 95), 1) is None  # past the last cell
+    assert (grid.area.w, grid.area.h) == (172, 84)

@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from sch5n.game.config import GameMode
+from sch5n.game.config import DEFAULT_PORT, GameMode
 from sch5n.game.content import AIR
 from sch5n.game.inventory import ItemStack
 from sch5n.game.session import Game, GameSetup, TickInput
@@ -26,7 +26,6 @@ from sch5n.net.client import (
 from sch5n.net.connection import HEADER_SIZE, Connection, local_pair
 from sch5n.net.discovery import Announcer, Browser, lan_addresses
 from sch5n.net.protocol import (
-    DEFAULT_PORT,
     MAX_CLIENT_FRAME,
     PROTOCOL_VERSION,
     Hello,
@@ -230,6 +229,8 @@ def test_parse_address() -> None:
     assert parse_address("example.org") == ("example.org", DEFAULT_PORT)
     assert parse_address(" 10.0.0.2:4000 ") == ("10.0.0.2", 4000)
     assert parse_address("[::1]:5") == ("::1", 5)
+    assert parse_address("example.org", 4000) == ("example.org", 4000)
+    assert parse_address("example.org:5", 4000) == ("example.org", 5)
     for bad in ("", ":4000", "host:port", "host:0", "host:70000"):
         with pytest.raises(ValueError, match=r"."):
             parse_address(bad)
@@ -303,6 +304,52 @@ def test_inventory_actions_go_through_the_server(
     step(server, [session])
     assert world.inventory.cursor is None
     assert world.inventory[0] is not None
+
+
+def test_crafting_is_done_by_the_server(
+    server: Server, content: Content
+) -> None:
+    """Grid clicks and crafting go to the server and come back."""
+    session = join(server, content)
+    world = session.world
+    assert world is not None
+    inventory = server.game.players[world.local_id].inventory
+    inventory.slots[KEPT_SLOT] = ItemStack(content.items["oak_log"], 1)
+    session.inventory(InventoryAction.LEFT_CLICK, KEPT_SLOT)
+    session.inventory(InventoryAction.CRAFTING_LEFT_CLICK, 1)
+    step(server, [session])
+    assert world.inventory.crafting[1] is not None
+    session.inventory(InventoryAction.CRAFT)
+    step(server, [session])
+    assert world.inventory.crafting[1] is None
+    assert world.inventory.cursor is not None
+    assert world.inventory.cursor.item.name == "oak_planks"
+    session.inventory(InventoryAction.CLOSE)
+    step(server, [session])
+    assert world.inventory.cursor is None
+
+
+def test_late_clicks_on_a_shrunk_grid_are_ignored(
+    server: Server, content: Content
+) -> None:
+    """A click on a 3x3 slot after leaving the bench does not kick."""
+    session = join(server, content)
+    session.inventory(InventoryAction.CRAFTING_LEFT_CLICK, 8)
+    step(server, [session])
+    step(server, [session])
+    assert server.player_count == 1
+
+
+def test_clients_see_the_same_texture_variant(
+    server: Server, content: Content
+) -> None:
+    """A tile's variant reaches every client."""
+    session = join(server, content)
+    bench = content.blocks.id_of("crafting_bench")
+    server.game.tilemap.set(2, -20, bench, 1)
+    step(server, [session])
+    assert session.world is not None
+    assert session.world.tilemap.get_variant(2, -20) == 1
 
 
 def test_names_are_made_unique(server: Server, content: Content) -> None:
@@ -388,6 +435,20 @@ def test_server_has_room_for_a_limited_number(
     server.step()
     late.poll()
     assert late.state is SessionState.CLOSED
+    assert late.error == "The server is full."
+
+
+def test_hosts_may_admit_fewer_players(
+    server: Server, content: Content
+) -> None:
+    """A lower player limit is kept."""
+    server.max_players = 1
+    join(server, content, "first")
+    late = ClientSession(
+        server.connect_local(), content, "late", GameMode.SURVIVAL
+    )
+    server.step()
+    late.poll()
     assert late.error == "The server is full."
 
 

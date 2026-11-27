@@ -14,6 +14,15 @@ from pydantic import (
     model_validator,
 )
 
+DEFAULT_PORT = 47315
+"""TCP port multiplayer games use unless another is chosen."""
+MAX_PORT = 65535
+MAX_NAME_LENGTH = 24
+"""Longest player name."""
+MIN_PLAYERS = 2
+MAX_PLAYERS = 16
+"""Most players one server takes, the host included."""
+
 type Color = tuple[int, int, int]
 type Rgba = tuple[int, int, int] | tuple[int, int, int, int]
 
@@ -233,8 +242,19 @@ class Settings(_Model):
     master_volume: int = Field(default=100, ge=0, le=100)
     music_volume: int = Field(default=70, ge=0, le=100)
     effects_volume: int = Field(default=80, ge=0, le=100)
-    player_name: str = Field(default="Player", min_length=1, max_length=24)
+    player_name: str = Field(
+        default="Player", min_length=1, max_length=MAX_NAME_LENGTH
+    )
     """Shown to other players in multiplayer."""
+    multiplayer_port: int = Field(default=DEFAULT_PORT, ge=1, le=MAX_PORT)
+    """TCP port games opened to the network listen on, and the one joined
+    when an address names none."""
+    lan_announce: bool = True
+    """Whether a hosted game shows up in others' lists of network games."""
+    max_players: int = Field(
+        default=MAX_PLAYERS, ge=MIN_PLAYERS, le=MAX_PLAYERS
+    )
+    """Most players in a hosted game, the host included."""
     last_server: str = ""
     """Address typed last on the multiplayer screen."""
     keybinds: dict[str, dict[str, tuple[str, ...]]] = Field(
@@ -458,12 +478,31 @@ class SwingKey(_Model):
     body: str | None = None
     """Body pose (a clip of the mob) shown while standing, like stepping
     onto a shovel. `None` keeps the current animation."""
-    spread: float = Field(default=0.0, ge=0)
-    """Degrees between the two halves of a two-part tool, like the
-    lopper's blades. Zero keeps the tool closed."""
     off_arm: str | None = None
     """Arm pose of the other hand, behind the body, for two-handed tools.
-    `None` holds the tool with one hand."""
+    `None` holds the tool with one hand. Spreading the hands opens a
+    scissor tool, see `ScissorTool`."""
+
+
+class ScissorTool(_Model):
+    """An item drawn in use as two halves on a hinge, like the lopper.
+
+    Each hand holds one handle, so the blades open as the hands part and
+    snap shut as they meet.
+
+    Both images point their blade forward (right) from the handle, with
+    the hinge at the same pixel.
+    """
+
+    front: str
+    """Texture of the half held by the front hand, drawn over the body."""
+    back: str
+    """Texture of the half held by the other hand, drawn behind the body."""
+    hinge: tuple[float, float]
+    """Hinge position in both images, in pixels from their top left."""
+    reach: float = Field(gt=0)
+    """Pixels from between the hands to the hinge, along the item
+    direction of the swing keyframes."""
 
 
 class ToolUseConfig(_Model):
@@ -475,6 +514,9 @@ class ToolUseConfig(_Model):
 
     armless: str
     """Texture directory with an armless copy of every clip."""
+    bare: str
+    """Texture directory with a copy of every clip without either arm, for
+    swings holding the tool in both hands."""
     arm: str
     """Texture directory with the front arm poses."""
     rig: str
@@ -502,6 +544,9 @@ class ToolUseConfig(_Model):
     """Tool kinds whose item is mirrored across its handle, for images with
     the blade on the wrong side for a swing that turns counterclockwise
     facing right."""
+    scissors: dict[str, ScissorTool] = Field(default_factory=dict)
+    """Items, by name, drawn in use as two halves instead of their icon.
+    Their swing style needs an `off_arm` for the second hand."""
 
     @field_validator("styles")
     @classmethod

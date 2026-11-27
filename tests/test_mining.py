@@ -6,6 +6,7 @@ import pytest
 from sch5n.game.content import AIR, Content, ItemDef, ItemRegistry
 from sch5n.game.mining import (
     HitResult,
+    can_place,
     durability_fraction,
     hit_tile,
     tool_power,
@@ -42,6 +43,41 @@ def test_breaks_after_enough_hits(
     assert hit.block.name == "stone"
     assert tilemap.get(0, 0) == AIR
     assert not tilemap.damage
+
+
+@pytest.mark.parametrize(
+    ("neighbour", "allowed"),
+    [
+        ((0, -1), True),
+        ((0, 1), True),
+        ((-1, 0), True),
+        ((1, 0), True),
+        ((1, 1), False),
+        ((-1, -1), False),
+        ((0, 2), False),
+    ],
+)
+def test_placing_needs_a_solid_neighbour(
+    tilemap: TileMap, neighbour: tuple[int, int], *, allowed: bool
+) -> None:
+    """Blocks go only beside a solid block, never in thin air."""
+    assert not can_place(tilemap, 0, 0)
+    tilemap.set(*neighbour, tilemap.blocks.id_of("stone"))
+    assert can_place(tilemap, 0, 0) is allowed
+    assert not can_place(tilemap, *neighbour)  # Taken.
+
+
+@pytest.mark.parametrize(
+    ("block", "allowed"),
+    [("oak_log", True), ("oak_log_leaf", True), ("oak_leaf", False)],
+)
+def test_logs_give_support_but_leaves_do_not(
+    content: Content, block: str, *, allowed: bool
+) -> None:
+    """Logs, leafy ones too, can be built on although they are not solid."""
+    tilemap = TileMap(content.blocks)
+    tilemap.set(0, 1, content.blocks.id_of(block))
+    assert can_place(tilemap, 0, 0) is allowed
 
 
 def test_transforming_block(tilemap: TileMap, items: ItemRegistry) -> None:

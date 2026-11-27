@@ -359,8 +359,8 @@ DEFAULTS: dict[Context, dict[Action, tuple[str, ...]]] = {
         # Only while editing.
         Action.PLACE_TILE: ("mouse:LEFT",),
         Action.ERASE_TILE: ("mouse:RIGHT",),
-        Action.NEXT_TILE: ("shift+wheel:DOWN", "key:E"),
-        Action.PREVIOUS_TILE: ("shift+wheel:UP", "key:Q"),
+        Action.NEXT_TILE: ("key:E",),
+        Action.PREVIOUS_TILE: ("key:Q",),
         Action.SAVE: ("ctrl+key:S",),
     },
 }

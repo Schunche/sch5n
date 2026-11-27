@@ -9,6 +9,9 @@ GAME=$(cd "$(dirname "$0")" && pwd)
 CONFIG="${XDG_CONFIG_HOME:-${HOME:?}/.config}/sch5n"
 DATA="${XDG_DATA_HOME:-$HOME/.local/share}/sch5n"
 LOGS="${XDG_STATE_HOME:-$HOME/.local/state}/sch5n"
+SHARE="${XDG_DATA_HOME:-$HOME/.local/share}"
+ENTRY="$SHARE/applications/sch5n.desktop"
+ICON="$SHARE/icons/hicolor/512x512/apps/sch5n.png"
 YES=0
 if [ "${1:-}" = "--yes" ]; then
     YES=1
@@ -43,6 +46,7 @@ if ! ask "Uninstall the game?"; then
 fi
 
 rm -rf "$CONFIG" "$LOGS"
+rm -f "$ENTRY" "$ICON"
 echo "Removed your settings and logs."
 
 if [ -d "$DATA/worlds" ]; then

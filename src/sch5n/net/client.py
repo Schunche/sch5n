@@ -25,13 +25,18 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from sch5n.game.ambient import Ambience
+from sch5n.game.config import DEFAULT_PORT, MAX_PORT
 from sch5n.game.floating_item import FloatingItem
-from sch5n.game.inventory import Inventory, ItemStack
+from sch5n.game.inventory import (
+    CRAFTING_SIDE,
+    MAX_CRAFTING_SIDE,
+    Inventory,
+    ItemStack,
+)
 from sch5n.game.player import Action, Player, Swing
 from sch5n.game.session import swing_tool
 from sch5n.net.connection import SocketConnection
 from sch5n.net.protocol import (
-    DEFAULT_PORT,
     MAX_SERVER_FRAME,
     PROTOCOL_VERSION,
     Goodbye,
@@ -68,13 +73,16 @@ if TYPE_CHECKING:
 
 CONNECT_TIMEOUT = 5.0
 """Seconds to wait for a server to accept the connection."""
-MAX_PORT = 65535
 MAX_VARIANT = 255
 """Variants are stored as uint8."""
 
 
-def parse_address(text: str) -> tuple[str, int]:
+def parse_address(
+    text: str, default_port: int = DEFAULT_PORT
+) -> tuple[str, int]:
     """Split `host:port`. The port is optional; IPv6 hosts use brackets.
+
+    An address without a port gets `default_port`.
 
     Returns:
         tuple[str, int]: Host and port.
@@ -95,7 +103,7 @@ def parse_address(text: str) -> tuple[str, int]:
         msg = "Type the address of a server"
         raise ValueError(msg)
     if not port_text:
-        return host, DEFAULT_PORT
+        return host, default_port
     if not port_text.isdigit() or not 0 < int(port_text) <= MAX_PORT:
         msg = f"{port_text!r} is not a port"
         raise ValueError(msg)
@@ -325,14 +333,17 @@ class ClientWorld:
         try:
             slots = [_stack(self.content, slot) for slot in state.slots]
             cursor = _stack(self.content, state.cursor)
+            crafting = [_stack(self.content, slot) for slot in state.crafting]
         except KeyError as error:
             msg = f"Unknown item {error}"
             raise ProtocolError(msg) from error
-        if len(slots) != len(inventory):
+        grids = {CRAFTING_SIDE**2, MAX_CRAFTING_SIDE**2}
+        if len(slots) != len(inventory) or len(crafting) not in grids:
             msg = "The inventory has the wrong size"
             raise ProtocolError(msg)
         inventory.slots = slots
         inventory.cursor = cursor
+        inventory.crafting = crafting
         inventory.select(state.selected)
 
     def tick_ambience(self, view: Rect | None) -> None:
@@ -444,10 +455,17 @@ class ClientSession:
         )
         self.connection.flush()
 
-    def inventory(self, action: InventoryAction, index: int = 0) -> None:
+    def inventory(
+        self,
+        action: InventoryAction,
+        index: int = 0,
+        slots: tuple[int, ...] = (),
+    ) -> None:
         """Do something in the inventory."""
         if self.state is SessionState.PLAYING:
-            self.connection.send(InventoryMessage(action=action, index=index))
+            self.connection.send(
+                InventoryMessage(action=action, index=index, slots=slots)
+            )
 
     def close(self) -> None:
         """Leave the game."""

@@ -18,12 +18,17 @@
     "tool_use": {
         "player": {
             "armless": "mob/player/armless",
+            "bare": "mob/player/bare",
             "arm": "mob/player/use_arm",
             "rig": "mob/player/rig.json",
             "swing": [-100, 55],
             "wrist": [-90, -15],
             "grip": [0.15, 0.85],
             "mirrored": [],
+            "scissors": {
+                "copper_lopper": {"front": "tool/copper_lopper_front", "back": "tool/copper_lopper_back", "hinge": [19, 7], "reach": 14},
+                "iron_lopper": {"front": "tool/iron_lopper_front", "back": "tool/iron_lopper_back", "hinge": [19, 7], "reach": 14}
+            },
             "styles": {
                 "axe": [
                     {"at": 0.0, "arm": "back", "item": 200, "behind": true},
@@ -35,12 +40,13 @@
                     {"at": 1.0, "arm": "forward", "item": 15}
                 ],
                 "lopper": [
-                    {"at": 0.0, "arm": "forward", "item": -35, "off_arm": "down_forward"},
-                    {"at": 0.15, "arm": "forward", "item": -35, "spread": 0, "off_arm": "down_forward"},
-                    {"at": 0.45, "arm": "forward", "item": -30, "spread": 60, "off_arm": "down_forward"},
-                    {"at": 0.58, "arm": "forward", "item": -30, "spread": 60, "off_arm": "down_forward"},
-                    {"at": 0.74, "arm": "forward", "item": -20, "spread": 0, "off_arm": "down_forward"},
-                    {"at": 1.0, "arm": "forward", "item": -30, "spread": 0, "off_arm": "down_forward"}
+                    {"at": 0.0, "arm": "forward", "item": -15, "off_arm": "front_short"},
+                    {"at": 0.2, "arm": "forward", "item": -15, "off_arm": "front_short"},
+                    {"at": 0.3, "arm": "forward", "item": -15, "off_arm": "down_forward"},
+                    {"at": 0.45, "arm": "up", "item": -20, "off_arm": "down_forward"},
+                    {"at": 0.62, "arm": "up", "item": -20, "off_arm": "down_forward"},
+                    {"at": 0.68, "arm": "forward", "item": -10, "off_arm": "front_short"},
+                    {"at": 1.0, "arm": "forward", "item": -15, "off_arm": "front_short"}
                 ],
                 "shovel": [
                     {"at": 0.0, "arm": "down_forward", "item": 75, "body": "dig_hold"},

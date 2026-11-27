@@ -20,18 +20,19 @@ from typing import TYPE_CHECKING, Annotated, Literal
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
+from sch5n.game.config import MAX_NAME_LENGTH
 from sch5n.world.tilemap import CHUNK_SIZE, Chunk
 
 if TYPE_CHECKING:
     from sch5n.game.content import Content
     from sch5n.world.tilemap import TileMap
 
-PROTOCOL_VERSION = 2
+PROTOCOL_VERSION = 4
 """Raised whenever messages change incompatibly."""
-DEFAULT_PORT = 47315
-MAX_NAME_LENGTH = 24
 MAX_CLIENT_FRAME = 4096
 """Largest message a client may send, in bytes."""
+MAX_SPREAD = 128
+"""Most slots one inventory message may name."""
 MAX_SERVER_FRAME = 256 * 1024 * 1024
 """Largest message a server may send, in bytes. Welcome carries the
 world."""
@@ -83,7 +84,23 @@ class InventoryAction(StrEnum):
     LEFT_CLICK = "left_click"
     RIGHT_CLICK = "right_click"
     CLOSE = "close"
-    """The inventory was closed: the cursor stack goes back."""
+    """The inventory was closed: the cursor and crafting stacks go back."""
+    CRAFTING_LEFT_CLICK = "crafting_left_click"
+    """Like `LEFT_CLICK`, on slot `index` of the crafting grid."""
+    CRAFTING_RIGHT_CLICK = "crafting_right_click"
+    CRAFT = "craft"
+    """Take the crafting result onto the cursor."""
+    CRAFT_ALL = "craft_all"
+    """Craft as much as possible into the inventory."""
+    STOW_CRAFTING = "stow_crafting"
+    """Move slot `index` of the crafting grid into the inventory."""
+    SPREAD = "spread"
+    """Share the cursor stack evenly among `slots`. See
+    `Inventory.spread`."""
+    SPREAD_SINGLE = "spread_single"
+    """Put one item of the cursor stack into each of `slots`."""
+    GATHER = "gather"
+    """Collect matching items into slot `index`, numbered like `slots`."""
 
 
 class InventoryMessage(_Message):
@@ -92,6 +109,8 @@ class InventoryMessage(_Message):
     type: Literal["inventory"] = "inventory"
     action: InventoryAction
     index: int = 0
+    slots: tuple[int, ...] = Field(default=(), max_length=MAX_SPREAD)
+    """Slots numbered through the inventory, then the crafting grid."""
 
 
 class Goodbye(_Message):
@@ -200,6 +219,7 @@ class InventoryState(_Message):
     slots: list[StackState | None]
     cursor: StackState | None
     selected: int
+    crafting: list[StackState | None]
 
 
 type ClientMessage = Annotated[
@@ -269,7 +289,8 @@ def content_fingerprint(content: Content) -> str:
     """
     blocks = sorted((block.id, block.name) for block in content.blocks)
     items = sorted(item.name for item in content.items)
-    data = json.dumps([blocks, items]).encode()
+    recipes = [recipe.model_dump() for recipe in content.recipes]
+    data = json.dumps([blocks, items, recipes]).encode()
     return hashlib.sha256(data).hexdigest()[:16]
 
 

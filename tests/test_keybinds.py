@@ -193,10 +193,10 @@ def test_contexts_bind_independently() -> None:
 
 
 def test_viewer_and_editor_share_controls() -> None:
-    """Viewing and editing use one set: the wheel zooms, Shift picks."""
+    """Viewing and editing use one set: the wheel zooms, Q and E pick."""
     binds = ContextBinds(Context.VIEWER)
     assert binds.action_for(Binding.wheel(1)) is Action.ZOOM_IN
-    assert binds.action_for(Binding.wheel(-1, Mod.SHIFT)) is Action.NEXT_TILE
+    assert binds.action_for(Binding.wheel(-1, Mod.SHIFT)) is Action.ZOOM_OUT
     assert binds.action_for(Binding.key(glfw.KEY_E)) is Action.NEXT_TILE
     assert binds.action_for(Binding.key(glfw.KEY_Q)) is Action.PREVIOUS_TILE
     # No input means two things.
@@ -225,7 +225,6 @@ def test_most_specific_modifier_wins_on_press() -> None:
         Action.PAN_DOWN
     )
     assert binds.action_for(Binding.wheel(1, Mod.CTRL)) is Action.ZOOM_IN
-    assert binds.action_for(Binding.wheel(-1, Mod.SHIFT)) is Action.NEXT_TILE
 
 
 def test_held_respects_modifiers_and_shadowing() -> None:

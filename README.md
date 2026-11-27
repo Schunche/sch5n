@@ -8,10 +8,14 @@ double click `play.bat` (Windows) or run `./play.sh` (Linux), and play.
 ## Run
 
 The launchers `play.bat` and `play.sh` install [uv](https://docs.astral.sh/uv/)
-if needed and start the game; arguments are passed on (`./play.sh view --edit --map map1`).
+if needed and start the game; arguments are passed on (`./play.sh view --edit --map mymap`).
 `uninstall.bat` and `uninstall.sh` remove the user's settings, logs and,
 when confirmed, worlds, uv and the game folder; `--yes` confirms all but
 removing uv.
+
+On Linux the taskbar icon comes from a desktop entry. `play.sh` installs it;
+if you start the game another way, run `./install-desktop.sh` once, and again
+after moving the game folder.
 
 ### Python 3.15
 
@@ -30,7 +34,7 @@ For development, install [uv](https://docs.astral.sh/uv/), then:
     sch5n client --connect 192.168.1.20  # join a server right away
     sch5n server                # dedicated server, no window (see below)
     sch5n view --map procedural # fly over a map (default: map1)
-    sch5n view --edit --map map1  # edit a map, Esc saves and quits
+    sch5n view --edit --map mymap  # edit a map
     sch5n generate mymap --seed 42 --width 300 --height 160
 
 Prefix with `uv run` when the virtual environment is not activated.
@@ -109,9 +113,28 @@ Default game controls:
 | F3 | Debug info |
 
 The map viewer pans with WASD and zooms with the wheel. With `--edit`,
-left/right mouse place/erase, Shift+wheel or Q/E pick the tile and Ctrl+S
-saves. Viewing and editing share one set of controls. F1 opens the
-settings.
+left/right mouse place/erase and Ctrl+S saves; a message says whether it
+worked. Click a block in the palette on the right to pick it (the wheel
+scrolls the palette while the mouse is over it), or step through the blocks
+with Q/E. Viewing and editing share one set of controls. F1 opens the
+settings. Esc quits; with unsaved changes it, like closing the window, first
+asks to **Save & Quit**, **Quit Without Saving** or **Keep Editing**.
+
+#### The default map (developers only)
+
+`data/maps/map1.json` seeds new worlds and servers and is the main menu
+background, so it is protected. `--edit` refuses it. Only while developing
+(a git checkout, or `SCH5N_DEV=1`; see below) can it be changed:
+
+    ./play.sh view --edit-default
+
+Everywhere else `--edit-default` and `--overwrite-default` don't exist and
+the map is never written.
+
+Each save that changes it first copies the previous version to
+`data/maps/backups/` (ignored by git). To restore one, copy it back over
+`data/maps/map1.json`. `sch5n generate map1` likewise needs
+`--overwrite-default`.
 
 ### Settings
 
@@ -119,8 +142,8 @@ The settings screen (main menu, Esc in game, F1 in the map tools) has a page
 per topic:
 
 - **Video**: windowed or fullscreen, window size, VSync, frame rate limit.
-- **Audio**: master, music and effects volume. There is no sound yet; the
-  values are stored for later.
+- **Audio**: master, music and effects volume, on sliders you click or
+  drag. There is no sound yet; the values are stored for later.
 - **Interface**: theme, menu background, GUI size, font and cursor. The
   menu background is either the game world (a live world behind the main
   menu, the paused game behind the in-game settings) or the theme's
@@ -131,6 +154,12 @@ per topic:
   pygame's built in font. Add one by putting it, with its license, in
   `assets/fonts` and listing it there.
   The cursor is the game's or the system's normal pointer.
+- **Multiplayer**: your display name; the port (47315 by default) that
+  **Open to LAN** listens on and that addresses without a port join;
+  whether your hosted game is listed on the network; and the most players,
+  you included, it admits. Click the name or port, type, then press Enter.
+  Changes count from the next game you host or join. `sch5n server` takes
+  its port from `--port` instead.
 - **Controls**: the bindings of what you are in. The game and the map
   viewer (also when editing) each have their own, and each can only be
   changed from inside it. Click a slot,

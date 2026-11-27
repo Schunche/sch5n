@@ -15,6 +15,8 @@ from sch5n.game.session import Game, GameSetup
 from sch5n.world.save import (
     SUFFIX,
     delete_world,
+    inventory_from_json,
+    inventory_to_json,
     list_worlds,
     load_world,
     save_world,
@@ -156,11 +158,26 @@ def test_favorites_come_first_and_survive_saving(
 
 
 def test_delete_world(tmp_path: Path, content: Content) -> None:
-    """A deleted world is gone from the list, favorite or not."""
+    """A deleted world is gone from the list. A favorite is refused."""
     path = world_path(tmp_path, "doomed")
     save_world(path, "doomed", flat_world(content), {})
     set_favorite(path, favorite=True)
+    with pytest.raises(PermissionError):
+        delete_world(path)
+    assert path.exists()
+    set_favorite(path, favorite=False)
     delete_world(path)
     assert not path.exists()
     assert list_worlds(tmp_path) == []
     delete_world(path)
+
+
+def test_saved_branches_load_as_sticks(content: Content) -> None:
+    """Inventories saved before the rename keep their items."""
+    inventory = inventory_from_json(
+        {"selected": 0, "slots": [["branch", 7]]}, content.items, 10
+    )
+    stack = inventory[0]
+    assert stack is not None
+    assert (stack.item.name, stack.amount) == ("stick", 7)
+    assert inventory_to_json(inventory)["slots"][0] == ["stick", 7]

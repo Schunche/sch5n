@@ -31,6 +31,8 @@ PANEL_RADIUS = 10
 FIELD_PADDING = 10
 FIELD_LABEL_SIZE = 14
 PANEL_BORDER = 2
+CRAFTING_GAP = 16
+"""Pixels between the inventory slots and the crafting grid."""
 
 
 class Align(StrEnum):
@@ -342,6 +344,199 @@ class InventoryLayout:
             right.right - first.x + 2 * self.border,
             last.bottom - first.y + 2 * self.border,
         )
+
+
+@dataclass(frozen=True, slots=True)
+class CraftingLayout:
+    """Where the crafting grid and its result are drawn.
+
+    They sit under the slots, the grid left of an arrow and the result.
+    """
+
+    inventory: InventoryLayout
+    side: int
+    """Slots along one side of the grid."""
+
+    @property
+    def _step(self) -> float:
+        return self.inventory.slot_size + self.inventory.padding
+
+    @property
+    def _top(self) -> float:
+        slots = self.inventory.bounds(hotbar_only=False)
+        return slots.bottom + CRAFTING_GAP + self.inventory.border
+
+    def slot_rect(self, index: int) -> Rect:
+        """Inner rectangle of a grid slot.
+
+        Returns:
+            Rect: Screen rectangle.
+
+        """
+        row, column = divmod(index, self.side)
+        size = self.inventory.slot_size
+        return Rect(
+            self.inventory.origin[0] + column * self._step,
+            self._top + row * self._step,
+            size,
+            size,
+        )
+
+    @property
+    def result_rect(self) -> Rect:
+        """Inner rectangle of the result slot."""
+        size = self.inventory.slot_size
+        return Rect(
+            self.inventory.origin[0] + (self.side + 1) * self._step,
+            self._top + (self.side - 1) * self._step / 2,
+            size,
+            size,
+        )
+
+    @property
+    def station_pos(self) -> tuple[float, float]:
+        """Left middle of the note naming the station that enlarges it."""
+        result = self.result_rect
+        return (result.right + CRAFTING_GAP, result.center[1])
+
+    @property
+    def arrow_center(self) -> tuple[float, float]:
+        """Middle of the space between the grid and the result."""
+        left = self.slot_rect(self.side - 1).right
+        return ((left + self.result_rect.x) / 2, self.result_rect.center[1])
+
+    def slot_at(self, pos: tuple[float, float]) -> int | None:
+        """Grid slot whose border box contains `pos`.
+
+        Returns:
+            int | None: Slot index, if any.
+
+        """
+        border = self.inventory.border
+        for index in range(self.side**2):
+            if self.slot_rect(index).inflated(border).contains_point(*pos):
+                return index
+        return None
+
+    def on_result(self, pos: tuple[float, float]) -> bool:
+        """Whether `pos` is on the result slot.
+
+        Returns:
+            bool: True over its border box.
+
+        """
+        box = self.result_rect.inflated(self.inventory.border)
+        return box.contains_point(*pos)
+
+    def bounds(self) -> Rect:
+        """Area covered by the grid and the result, borders included.
+
+        Returns:
+            Rect: Screen rectangle.
+
+        """
+        border = self.inventory.border
+        first = self.slot_rect(0)
+        last = self.slot_rect(self.side**2 - 1)
+        return Rect(
+            first.x - border,
+            first.y - border,
+            self.result_rect.right - first.x + 2 * border,
+            last.bottom - first.y + 2 * border,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class GridLayout:
+    """A grid of square cells, scrolled vertically by whole rows."""
+
+    count: int
+    columns: int
+    visible_rows: int
+    origin: tuple[float, float]
+    """Top left of the first visible cell."""
+    cell: float
+    gap: float
+
+    @property
+    def rows(self) -> int:
+        """Rows needed for every cell."""
+        return -(-self.count // self.columns)
+
+    @property
+    def max_scroll(self) -> int:
+        """Largest useful number of rows scrolled past."""
+        return max(0, self.rows - self.visible_rows)
+
+    @property
+    def area(self) -> Rect:
+        """Screen rectangle of the visible cells."""
+        step = self.cell + self.gap
+        shown = min(self.rows, self.visible_rows)
+        return Rect(
+            *self.origin,
+            self.columns * step - self.gap,
+            max(shown * step - self.gap, 0),
+        )
+
+    def clamp_scroll(self, scroll: int) -> int:
+        """Limit a scroll offset to the content.
+
+        Returns:
+            int: Rows in [0, max_scroll].
+
+        """
+        return min(max(scroll, 0), self.max_scroll)
+
+    def scroll_to(self, index: int, scroll: int) -> int:
+        """Scroll as little as needed to show a cell.
+
+        Returns:
+            int: The new scroll offset.
+
+        """
+        row = index // self.columns
+        lowest = row - self.visible_rows + 1
+        return self.clamp_scroll(min(max(scroll, lowest), row))
+
+    def visible(self, scroll: int) -> range:
+        """Cells shown at a scroll offset.
+
+        Returns:
+            range: Their indices.
+
+        """
+        first = scroll * self.columns
+        last = (scroll + self.visible_rows) * self.columns
+        return range(first, min(last, self.count))
+
+    def cell_rect(self, index: int, scroll: int) -> Rect:
+        """Screen rectangle of a cell.
+
+        Returns:
+            Rect: The cell, which may be outside the visible area.
+
+        """
+        row, column = divmod(index, self.columns)
+        step = self.cell + self.gap
+        return Rect(
+            self.origin[0] + column * step,
+            self.origin[1] + (row - scroll) * step,
+            self.cell,
+            self.cell,
+        )
+
+    def cell_at(self, pos: tuple[float, float], scroll: int) -> int | None:
+        """Visible cell under a screen position.
+
+        Returns:
+            int | None: Its index, if any.
+
+        """
+        for index in self.visible(scroll):
+            if self.cell_rect(index, scroll).contains_point(*pos):
+                return index
+        return None
 
 
 @dataclass(frozen=True, slots=True)

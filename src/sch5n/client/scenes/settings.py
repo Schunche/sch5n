@@ -17,17 +17,28 @@ from sch5n.client.ui import (
     TABLE_WIDTH,
     Button,
     TableLayout,
+    TextField,
     aligned_rect,
     draw_panel,
     hit_button,
 )
 from sch5n.client.video import FPS_LIMITS, WINDOW_SIZES, cycle, fps_label
 from sch5n.client.window import (
+    CharEvent,
     KeyEvent,
     MouseButtonEvent,
+    MouseMoveEvent,
     ScrollEvent,
 )
-from sch5n.game.config import CursorStyle, MenuBackground, Settings
+from sch5n.game.config import (
+    MAX_NAME_LENGTH,
+    MAX_PLAYERS,
+    MAX_PORT,
+    MIN_PLAYERS,
+    CursorStyle,
+    MenuBackground,
+    Settings,
+)
 from sch5n.math.rect import Rect
 lazy from sch5n.client.scenes.menu import MainMenu, draw_menu_background
 lazy from sch5n.client.scenes.play import PlayScene
@@ -49,6 +60,8 @@ MENU_BACKGROUND_LABELS = {
 }
 VOLUME_STEP = 5
 MAX_VOLUME = 100
+PLAYER_LIMITS = tuple(range(MIN_PLAYERS, MAX_PLAYERS + 1))
+CARET_BLINK_TICKS = 30
 
 SIDEBAR_WIDTH = 200
 SIDEBAR_BUTTON_HEIGHT = 34
@@ -66,6 +79,7 @@ BACKDROP_DIM = 0.55
 SLIDER_HEIGHT = 8
 SLIDER_LABEL_WIDTH = 56
 """Room right of a slider for its value."""
+SLIDER_KNOB = SLIDER_HEIGHT * 2
 
 
 class Page(StrEnum):
@@ -74,6 +88,7 @@ class Page(StrEnum):
     VIDEO = "Video"
     AUDIO = "Audio"
     INTERFACE = "Interface"
+    MULTIPLAYER = "Multiplayer"
     CONTROLS = "Controls"
     """Bindings of the program the settings were opened from."""
 
@@ -93,6 +108,10 @@ class Option(StrEnum):
     GUI_SIZE = "GUI size"
     FONT = "Font"
     CURSOR = "Cursor"
+    PLAYER_NAME = "Display name"
+    PORT = "Port"
+    LAN_ANNOUNCE = "Show on network"
+    MAX_PLAYERS = "Max players"
 
 
 PAGE_OPTIONS: dict[Page, tuple[Option, ...]] = {
@@ -114,6 +133,12 @@ PAGE_OPTIONS: dict[Page, tuple[Option, ...]] = {
         Option.FONT,
         Option.CURSOR,
     ),
+    Page.MULTIPLAYER: (
+        Option.PLAYER_NAME,
+        Option.PORT,
+        Option.LAN_ANNOUNCE,
+        Option.MAX_PLAYERS,
+    ),
 }
 
 OPTION_FIELDS: dict[Option, tuple[str, ...]] = {
@@ -129,6 +154,10 @@ OPTION_FIELDS: dict[Option, tuple[str, ...]] = {
     Option.GUI_SIZE: ("gui_size",),
     Option.FONT: ("font",),
     Option.CURSOR: ("cursor",),
+    Option.PLAYER_NAME: ("player_name",),
+    Option.PORT: ("multiplayer_port",),
+    Option.LAN_ANNOUNCE: ("lan_announce",),
+    Option.MAX_PLAYERS: ("max_players",),
 }
 """Settings fields behind each option."""
 
@@ -138,9 +167,16 @@ VOLUMES = {
     Option.EFFECTS_VOLUME: "effects_volume",
 }
 
+TEXT_OPTIONS = {
+    Option.PLAYER_NAME: MAX_NAME_LENGTH,
+    Option.PORT: len(str(MAX_PORT)),
+}
+"""Options typed in, with the longest text each takes."""
+
 PAGE_NOTES: dict[Page, str] = {
     Page.AUDIO: "There is no sound yet; volumes are saved for later.",
     Page.INTERFACE: "Click for the next value, right click for the previous.",
+    Page.MULTIPLAYER: "Used the next time you host or join a game.",
 }
 CONTROLS_NOTE = "Click a slot and press a key. Right click clears a slot."
 
@@ -202,6 +238,12 @@ _VALUE_TEXT: dict[Option, Callable[[App], str]] = {
         app.ui.config.fonts[app.ui.font_name(app.settings.font)].label
     ),
     Option.CURSOR: lambda app: CURSOR_LABELS[app.settings.cursor],
+    Option.PLAYER_NAME: lambda app: app.settings.player_name,
+    Option.PORT: lambda app: str(app.settings.multiplayer_port),
+    Option.LAN_ANNOUNCE: lambda app: (
+        "On" if app.settings.lan_announce else "Off"
+    ),
+    Option.MAX_PLAYERS: lambda app: str(app.settings.max_players),
 } | {
     option: lambda app, field=field: f"{getattr(app.settings, field)} %"
     for option, field in VOLUMES.items()
@@ -218,19 +260,30 @@ def option_value(app: App, option: Option) -> str:
     return _VALUE_TEXT[option](app)
 
 
+def _change_number(app: App, option: Option, step: int) -> None:
+    """Move the player limit or a volume."""
+    s = app.settings
+    if option is Option.MAX_PLAYERS:
+        limit = cycle(PLAYER_LIMITS, s.max_players, step)
+        app.update_settings(max_players=limit)
+        return
+    field = VOLUMES[option]
+    value = getattr(s, field) + step * VOLUME_STEP
+    app.update_settings(**{field: min(max(value, 0), MAX_VOLUME)})
+
+
 def change_option(app: App, option: Option, step: int) -> None:
     """Move an option `step` values forward (or back), apply and save."""
     s = app.settings
     match option:
-        case Option.DISPLAY_MODE:
-            app.update_settings(fullscreen=not s.fullscreen)
+        case Option.DISPLAY_MODE | Option.VSYNC | Option.LAN_ANNOUNCE:
+            (field,) = OPTION_FIELDS[option]
+            app.update_settings(**{field: not getattr(s, field)})
         case Option.WINDOW_SIZE:
             width, height = cycle(
                 WINDOW_SIZES, (s.window_width, s.window_height), step
             )
             app.update_settings(window_width=width, window_height=height)
-        case Option.VSYNC:
-            app.update_settings(vsync=not s.vsync)
         case Option.FPS_LIMIT:
             app.update_settings(fps_limit=cycle(FPS_LIMITS, s.fps_limit, step))
         case Option.THEME:
@@ -251,15 +304,41 @@ def change_option(app: App, option: Option, step: int) -> None:
                 cursor=cycle(list(CursorStyle), s.cursor, step)
             )
         case _:
-            field = VOLUMES[option]
-            value = getattr(s, field) + step * VOLUME_STEP
-            app.update_settings(**{field: min(max(value, 0), MAX_VOLUME)})
+            _change_number(app, option, step)
 
 
 def set_volume(app: App, option: Option, fraction: float) -> None:
-    """Set a volume from a click position on its slider."""
+    """Set a volume from a mouse position along its slider.
+
+    Settings are only saved when the volume changes, as dragging calls this
+    for every mouse movement.
+    """
     steps = round(min(max(fraction, 0.0), 1.0) * MAX_VOLUME / VOLUME_STEP)
-    app.update_settings(**{VOLUMES[option]: steps * VOLUME_STEP})
+    value = steps * VOLUME_STEP
+    field = VOLUMES[option]
+    if value != getattr(app.settings, field):
+        app.update_settings(**{field: value})
+
+
+def set_text_option(app: App, option: Option, text: str) -> None:
+    """Check a typed value, apply and save it.
+
+    Raises:
+        ValueError: The text is not a valid value; it says why.
+
+    """
+    if option is Option.PLAYER_NAME:
+        name = " ".join(text.split())
+        if not name:
+            msg = "The name cannot be empty"
+            raise ValueError(msg)
+        app.update_settings(player_name=name[:MAX_NAME_LENGTH])
+        return
+    digits = text.strip()
+    if not digits.isdecimal() or not 0 < int(digits) <= MAX_PORT:
+        msg = f"The port must be a number from 1 to {MAX_PORT}"
+        raise ValueError(msg)
+    app.update_settings(multiplayer_port=int(digits))
 
 
 def reset_page(app: App, page: Page, controls: Context) -> None:
@@ -283,10 +362,11 @@ class SettingsScene(Scene):
     """Every setting, on pages picked in a sidebar.
 
     Values: left click for the next value, right click for the previous.
-    Volumes are sliders. Bindings: click a slot, then press a key, mouse
-    button or wheel direction, with modifiers if wanted. Escape cancels,
-    Backspace, Delete or a right click clears. Everything is applied and
-    saved immediately.
+    Volumes are sliders: click or drag. Names and ports are typed: click,
+    type, then press Enter or click elsewhere; Escape cancels. Bindings:
+    click a slot, then press a key, mouse button or wheel direction, with
+    modifiers if wanted. Escape cancels, Backspace, Delete or a right click
+    clears. Everything is applied and saved immediately.
     """
 
     def __init__(
@@ -311,6 +391,12 @@ class SettingsScene(Scene):
         self._pending_modifier: int | None = None
         """Modifier key pressed while capturing, bound if released alone."""
         self.message = ""
+        self.dragging: Option | None = None
+        """Volume whose slider is being dragged."""
+        self.editing: Option | None = None
+        """Option being typed into `field`."""
+        self.field = TextField("setting", "", Rect(0, 0, 0, 0))
+        self.ticks = 0
         self.panel = Rect(0, 0, 0, 0)
         self.table = TableLayout.placed(0, 0, 0, 0)
         self.sidebar: list[Button] = []
@@ -325,6 +411,8 @@ class SettingsScene(Scene):
         self.rows = page_rows(self.app, page, self.controls)
         self.scroll = 0.0
         self.capturing = None
+        self.dragging = None
+        self.editing = None
         self.message = PAGE_NOTES.get(
             page, CONTROLS_NOTE if page is Page.CONTROLS else ""
         )
@@ -486,18 +574,94 @@ class SettingsScene(Scene):
                 if binding is not None:
                     self._assign(binding)
 
+    def _drag_to(self, x: float) -> None:
+        """Move the dragged slider to screen position `x`."""
+        option = self.dragging
+        if option is None:
+            return
+        track = self.slider_rect(self.row_index(OptionRow(option)))
+        set_volume(self.app, option, (x - track.x) / track.w)
+        self.message = f"{option}: {option_value(self.app, option)}"
+
+    def _grab_slider(
+        self, index: int, option: Option, event: MouseButtonEvent
+    ) -> None:
+        """Start dragging a slider pressed on its track or knob."""
+        if event.button != glfw.MOUSE_BUTTON_LEFT:
+            return
+        track = self.slider_rect(index)
+        # The knob reaches past the ends of the track.
+        reach = SLIDER_KNOB / 2
+        if track.x - reach <= event.pos[0] <= track.right + reach:
+            self.dragging = option
+            self._drag_to(event.pos[0])
+
+    def _start_editing(self, option: Option) -> None:
+        self.editing = option
+        self.field = TextField(
+            "setting",
+            "",
+            Rect(0, 0, 0, 0),
+            option_value(self.app, option),
+            TEXT_OPTIONS[option],
+        )
+        self.message = "Type, then press Enter. Esc cancels"
+
+    def _finish_editing(self) -> bool:
+        """Save what was typed.
+
+        Returns:
+            bool: False if it is not a valid value; `message` says why.
+
+        """
+        option = self.editing
+        if option is None:
+            return True
+        try:
+            set_text_option(self.app, option, self.field.text)
+        except ValueError as error:
+            self.message = str(error)
+            return False
+        self.editing = None
+        self.message = f"{option}: {option_value(self.app, option)}"
+        return True
+
+    def _on_typing(self, event: KeyEvent) -> None:
+        if event.action not in {glfw.PRESS, glfw.REPEAT}:
+            return
+        match event.key:
+            case glfw.KEY_ESCAPE:
+                self.editing = None
+                self.message = "Cancelled"
+            case glfw.KEY_BACKSPACE:
+                self.field.backspace()
+            case glfw.KEY_ENTER | glfw.KEY_KP_ENTER:
+                self._finish_editing()
+            case glfw.KEY_V if event.mods & glfw.MOD_CONTROL:
+                self._type(self.app.window.clipboard)
+            case _:
+                pass
+
+    def _type(self, chars: str) -> None:
+        if self.editing is Option.PORT:
+            chars = "".join(c for c in chars if c.isdecimal())
+        self.field.type(chars)
+
     def _click_option(
         self, index: int, option: Option, event: MouseButtonEvent
     ) -> None:
+        if option in VOLUMES:
+            self._grab_slider(index, option, event)
+            return
         span = self.table.span_rect(index, self.scroll)
         if not span.contains_point(*event.pos):
             return
-        if option in VOLUMES:
-            track = self.slider_rect(index)
-            set_volume(self.app, option, (event.pos[0] - track.x) / track.w)
-        else:
-            step = 1 if event.button == glfw.MOUSE_BUTTON_LEFT else -1
-            change_option(self.app, option, step)
+        if option in TEXT_OPTIONS:
+            if event.button == glfw.MOUSE_BUTTON_LEFT:
+                self._start_editing(option)
+            return
+        step = 1 if event.button == glfw.MOUSE_BUTTON_LEFT else -1
+        change_option(self.app, option, step)
         self.message = f"{option}: {option_value(self.app, option)}"
         if option in {Option.WINDOW_SIZE, Option.FONT}:
             # New sizes: the window's, or the text's on the buttons.
@@ -547,6 +711,17 @@ class SettingsScene(Scene):
             glfw.MOUSE_BUTTON_RIGHT,
         }:
             return
+        if self.editing is not None:
+            row = self.row_index(OptionRow(self.editing))
+            if self.table.is_visible(row, self.scroll) and (
+                self.table.span_rect(row, self.scroll).contains_point(
+                    *event.pos
+                )
+            ):
+                return
+            if not self._finish_editing():
+                # Clicking elsewhere drops a value that cannot be saved.
+                self.editing = None
         index = self.table.row_at(event.pos, self.scroll)
         if index is not None:
             match self.rows[index]:
@@ -564,10 +739,18 @@ class SettingsScene(Scene):
             self._on_capture(event)
             return
         match event:
+            case KeyEvent() if self.editing is not None:
+                self._on_typing(event)
+            case CharEvent(char=char) if self.editing is not None:
+                self._type(char)
             case KeyEvent(key=glfw.KEY_ESCAPE) if event.pressed:
                 self._leave()
             case MouseButtonEvent() if event.pressed:
                 self._on_click(event)
+            case MouseButtonEvent(button=glfw.MOUSE_BUTTON_LEFT):
+                self.dragging = None
+            case MouseMoveEvent(pos=(x, _)):
+                self._drag_to(x)
             case ScrollEvent(dy=dy) if dy:
                 self.scroll = self.table.clamp_scroll(
                     self.scroll - dy * ROW_HEIGHT
@@ -577,6 +760,7 @@ class SettingsScene(Scene):
 
     def tick(self) -> None:
         """Let the scene behind the settings keep moving, if it wants to."""
+        self.ticks += 1
         self.back.tick_backdrop()
 
     # Drawing
@@ -618,7 +802,7 @@ class SettingsScene(Scene):
                 rgba(app.ui.color("accent")),
                 radius=radius,
             )
-        knob = SLIDER_HEIGHT * 2
+        knob = SLIDER_KNOB
         app.batch.shape(
             (track.x + fill - knob / 2, rect.center[1] - knob / 2, knob, knob),
             rgba(app.ui.color("text")),
@@ -648,6 +832,15 @@ class SettingsScene(Scene):
                         option_value(app, option),
                         (rect.right + SLIDER_HEIGHT * 2, rect.center[1]),
                         value,
+                    )
+                elif option is self.editing:
+                    self.field.rect = rect
+                    self.field.draw(
+                        app.batch,
+                        app.text,
+                        app.ui,
+                        focused=True,
+                        caret=(self.ticks // CARET_BLINK_TICKS) % 2 == 0,
                     )
                 else:
                     Button(option, option_value(app, option), rect).draw(
