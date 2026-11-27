@@ -83,3 +83,19 @@ def test_shovel_is_made_for_dirt(content: Content) -> None:
     )
     # A shovel is no pickaxe.
     assert tool_power(shovel, content.blocks.by_name("stone")) == 0
+
+
+def test_lopper_is_made_for_leaves(content: Content) -> None:
+    """A lopper cuts leaves in one snip; an axe still can, more slowly."""
+    leaf = content.blocks.by_name("oak_leaf")
+    lopper = content.items["copper_lopper"]
+    axe = content.items["copper_axe"]
+    tilemap = TileMap(content.blocks)
+    tilemap.set(0, 0, leaf.id)
+    assert hits_to_break(tilemap, lopper) == 1
+    tilemap.set(0, 0, leaf.id)
+    by_axe = hits_to_break(tilemap, axe)
+    assert by_axe > 1
+    assert lopper.spec.use_time < by_axe * axe.spec.use_time
+    # Loppers are no axes.
+    assert tool_power(lopper, content.blocks.by_name("oak_log")) == 0

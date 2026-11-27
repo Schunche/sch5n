@@ -12,7 +12,7 @@
         "gold": {"textures": ["tile/gold/0"], "solid": true},
         "platinum": {"textures": ["tile/platinum/0"], "solid": true},
         "oak_log": {"textures": ["tile/oakLog/0"], "durability": 300, "tool": "axe", "drop": "oak_log", "tree": "trunk", "aliases": ["oakLog"]},
-        "oak_leaf": {"textures": ["tile/oakLeaf/0"], "durability": 50, "tool": "axe", "tree": "crown", "particle": "leaf", "aliases": ["oakLeaf"]},
+        "oak_leaf": {"textures": ["tile/oakLeaf/0"], "durability": 50, "tool": "lopper", "slower_tools": ["axe"], "tree": "crown", "particle": "leaf", "aliases": ["oakLeaf"]},
         "oak_log_leaf": {"textures": ["tile/oakLogLeaf/0"], "durability": 300, "tool": "axe", "tree": "trunk", "drop": "oak_log", "particle": "leaf", "aliases": ["oakLogLeaf"]}
     }
 }

@@ -57,6 +57,7 @@ def test_starting_items(game: Game) -> None:
         "copper_pickaxe",
         "copper_axe",
         "iron_shovel",
+        "copper_lopper",
     ]
 
 

@@ -47,7 +47,8 @@
         "starting_items": [
             {"item": "copper_pickaxe", "amount": 1},
             {"item": "copper_axe", "amount": 1},
-            {"item": "iron_shovel", "amount": 1}
+            {"item": "iron_shovel", "amount": 1},
+            {"item": "copper_lopper", "amount": 1}
         ]
     },
     "particles": {

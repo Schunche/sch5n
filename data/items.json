@@ -1,7 +1,8 @@
 {
     "items": {
         "copper_pickaxe": {"name": "Copper Pickaxe", "description": "Breaks stone and ore. Digs dirt too, slowly.", "icon": "tool/copperPickaxe", "max_stack": 1, "use_time": 25, "tool_power": {"pickaxe": 25}, "damage": 3, "knockback": 2, "drop_size": 32},
-        "copper_axe": {"name": "Copper Axe", "description": "Chops down trees.", "icon": "tool/copperAxe", "max_stack": 1, "use_time": 40, "tool_power": {"axe": 30}, "damage": 4, "knockback": 3, "drop_size": 32},
+        "copper_axe": {"name": "Copper Axe", "description": "Chops down trees. Cuts leaves too, slowly.", "icon": "tool/copperAxe", "max_stack": 1, "use_time": 40, "tool_power": {"axe": 30}, "damage": 4, "knockback": 3, "drop_size": 32},
+        "copper_lopper": {"name": "Copper Lopper", "description": "Cuts leaves in one snip.", "icon": "tool/copperLopper", "max_stack": 1, "use_time": 15, "tool_power": {"lopper": 50}, "damage": 2, "knockback": 1, "drop_size": 32},
         "iron_shovel": {"name": "Iron Shovel", "description": "Made for digging dirt.", "icon": "tool/ironShovel", "max_stack": 1, "use_time": 32, "tool_power": {"shovel": 50}, "damage": 4, "knockback": 2, "drop_size": 32},
         "dirt_block": {"name": "Dirt Block", "description": "Place it to build.", "icon": "tile/dirt/0", "max_stack": 1024, "places": "dirt", "drop_size": 16},
         "stone_block": {"name": "Stone Block", "description": "Place it to build.", "icon": "tile/stone/0", "max_stack": 1024, "places": "stone", "drop_size": 16},
