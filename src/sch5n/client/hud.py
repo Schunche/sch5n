@@ -13,8 +13,8 @@ if TYPE_CHECKING:
     from sch5n.client.assets import ClientAssets
     from sch5n.client.render.batch import SpriteBatch
     from sch5n.client.render.text import TextRenderer
+    from sch5n.client.style import Style
     from sch5n.client.ui import InventoryLayout
-    from sch5n.game.config import UiConfig
     from sch5n.game.inventory import Inventory, ItemStack
 
 
@@ -25,7 +25,7 @@ class Hud:
         self,
         assets: ClientAssets,
         text: TextRenderer,
-        style: UiConfig,
+        style: Style,
         gui_size: int,
     ) -> None:
         """Create the HUD renderer."""
@@ -79,11 +79,7 @@ class Hud:
                 (inner.x, inner.y, inner.w, inner.h),
                 rgba(style.color(fill), alpha),
             )
-            edge = (
-                "hotbar_selected_border"
-                if index == inventory.selected
-                else "button_border"
-            )
+            edge = "accent" if index == inventory.selected else "button_border"
             batch.shape(
                 (border.x, border.y, border.w, border.h),
                 rgba(style.color(edge)),

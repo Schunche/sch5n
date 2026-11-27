@@ -13,10 +13,12 @@ import moderngl
 from sch5n.client.assets import ClientAssets
 from sch5n.client.keybinds import Keybinds
 from sch5n.client.render.atlas import create_texture
+from sch5n.client.render.background import BackgroundRenderer
 from sch5n.client.render.batch import SpriteBatch, rgba
 from sch5n.client.render.text import TextRenderer
+from sch5n.client.style import Style
 from sch5n.client.window import ResizeEvent, Window
-from sch5n.game.config import GameMode, Settings
+from sch5n.game.config import BackgroundKind, GameMode, Rgba, Settings
 from sch5n.game.content import (
     Content,
     load_animations,
@@ -66,7 +68,7 @@ class App:
         )
         self.settings = load_settings(path.DATA_DIR, self.settings_file)
         self.keybinds = Keybinds(self.settings.keybinds)
-        self.ui = load_ui(path.DATA_DIR)
+        self.ui = Style(load_ui(path.DATA_DIR), self.settings.theme)
         self.animations = load_animations(path.DATA_DIR)
 
         self.window = Window(
@@ -81,6 +83,7 @@ class App:
         LOGGER.info("OpenGL renderer: %s", self.ctx.info["GL_RENDERER"])
 
         self.batch = SpriteBatch(self.ctx, path.SHADER_DIR)
+        self.background = BackgroundRenderer(self.ctx, path.SHADER_DIR)
         self.text = TextRenderer(self.ctx)
         self.assets = ClientAssets(
             self.ctx, path.TEXTURES_DIR, self.content, self.animations
@@ -136,6 +139,7 @@ class App:
             "keybinds": self.keybinds.to_config(),
         })
         self._apply_video(previous)
+        self.ui.set_theme(self.settings.theme)
         save_settings(self.settings, self.settings_file)
         LOGGER.info("Saved settings to %s", self.settings_file)
 
@@ -196,7 +200,25 @@ class App:
             region,
         )
 
-    def clear(self, color: tuple[int, int, int]) -> None:
+    def draw_background(self) -> None:
+        """Fill the screen with the theme's menu background.
+
+        Call before `batch.begin`; it starts a screen space batch itself.
+        """
+        theme = self.ui.theme
+        self.clear(theme.colors.background)
+        self.batch.begin(self.screen)
+        match theme.background.kind:
+            case BackgroundKind.SHADER:
+                self.batch.flush()
+                self.background.draw(theme.background, Window.time())
+            case BackgroundKind.IMAGE if theme.background.image:
+                texture = self.texture(theme.background.image)
+                self.batch.sprite(texture, (0, 0, *self.screen))
+            case _:
+                pass
+
+    def clear(self, color: Rgba) -> None:
         """Clear the screen."""
         r, g, b, _ = rgba(color)
         self.ctx.clear(r, g, b)
@@ -261,5 +283,6 @@ class App:
         self.text.release()
         self.assets.release()
         self.batch.release()
+        self.background.release()
         self.window.destroy()
         LOGGER.info("Closed after %s frames", self.frame)

@@ -14,26 +14,28 @@ import pytest
 from sch5n.client.app import App, Options
 from sch5n.client.keybinds import Action, Binding, Context, Mod
 from sch5n.client.scenes.map_tools import EditorScene, ViewerScene
-from sch5n.client.scenes.menu import (
-    BindRow,
-    MainMenu,
-    OptionRow,
-    SettingsScene,
-    VideoOption,
-)
+from sch5n.client.scenes.menu import MainMenu
 from sch5n.client.scenes.play import PlayScene
+from sch5n.client.scenes.settings import (
+    BindRow,
+    Option,
+    OptionRow,
+    Page,
+    SettingsScene,
+)
 from sch5n.client.window import (
     KeyEvent,
     MouseButtonEvent,
     ScrollEvent,
     WindowError,
 )
+from sch5n.game.config import Settings
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from sch5n.client.scenes.base import Scene
-    from sch5n.client.scenes.menu import Row
+    from sch5n.client.scenes.settings import Row
 
 pytestmark = pytest.mark.skipif(
     not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"),
@@ -123,7 +125,7 @@ def show_row(settings: SettingsScene, row: Row) -> int:
     """
     index = settings.row_index(row)
     settings.scroll = settings.table.clamp_scroll(
-        index * settings.ROW_HEIGHT - settings.table.area.h / 2
+        index * settings.table.row_height - settings.table.area.h / 2
     )
     assert settings.table.is_visible(index, settings.scroll)
     return index
@@ -196,7 +198,9 @@ def test_play_scene_input(app: App) -> None:
 def test_rebind_in_settings_and_play(app: App) -> None:
     """Rebinding in the settings changes the game's controls and is saved."""
     play = PlayScene(app)
-    settings = SettingsScene(app, back=play, in_game=True)
+    settings = SettingsScene(
+        app, back=play, in_game=True, page=Page.GAME_CONTROLS
+    )
     jump = BindRow(Context.GAME, Action.JUMP)
     index = show_row(settings, jump)
     cell = settings.table.cell_rect(index, 0, settings.scroll).center
@@ -235,7 +239,9 @@ def test_rebind_in_settings_and_play(app: App) -> None:
 
 def test_capture_modifier_combinations(app: App) -> None:
     """Modifier combinations, lone modifiers and the wheel can be bound."""
-    settings = SettingsScene(app, back=MainMenu(app))
+    settings = SettingsScene(
+        app, back=MainMenu(app), page=Page.EDITOR_CONTROLS
+    )
     binds = app.keybinds[Context.EDITOR]
     reset = BindRow(Context.EDITOR, Action.RESET_CAMERA)
     index = show_row(settings, reset)
@@ -274,27 +280,27 @@ def test_video_options_apply_and_save(app: App) -> None:
     """Video options change the window and are saved."""
     settings = SettingsScene(app, back=MainMenu(app))
 
-    def click_option(option: VideoOption, *, right: bool = False) -> None:
+    def click_option(option: Option, *, right: bool = False) -> None:
         """Click the value of a video option."""
         index = show_row(settings, OptionRow(option))
         span = settings.table.span_rect(index, settings.scroll)
         settings.on_event(click(span.center, right=right))
 
     before = (app.settings.window_width, app.settings.window_height)
-    click_option(VideoOption.WINDOW_SIZE)
+    click_option(Option.WINDOW_SIZE)
     after = (app.settings.window_width, app.settings.window_height)
     assert after != before
     app.window.poll()
     assert tuple(app.window.size) == after
 
     vsync = app.settings.vsync
-    click_option(VideoOption.VSYNC)
+    click_option(Option.VSYNC)
     assert app.settings.vsync is not vsync
 
-    click_option(VideoOption.FPS_LIMIT)
+    click_option(Option.FPS_LIMIT)
     limit = app.settings.fps_limit
-    click_option(VideoOption.FPS_LIMIT, right=True)
-    click_option(VideoOption.FPS_LIMIT)
+    click_option(Option.FPS_LIMIT, right=True)
+    click_option(Option.FPS_LIMIT)
     assert app.settings.fps_limit == limit
 
     saved = json.loads(app.settings_file.read_text(encoding="utf-8"))
@@ -302,7 +308,7 @@ def test_video_options_apply_and_save(app: App) -> None:
     assert saved["vsync"] is not vsync
     assert saved["fps_limit"] == limit
 
-    click_option(VideoOption.WINDOW_SIZE, right=True)
+    click_option(Option.WINDOW_SIZE, right=True)
     app.window.poll()
     assert (app.settings.window_width, app.settings.window_height) == before
 
@@ -328,3 +334,82 @@ def test_editor_uses_its_own_binds(
 
     viewer.on_event(press(glfw.KEY_F1))
     assert isinstance(app.pending_scene, SettingsScene)
+
+
+def click_value(
+    settings: SettingsScene, option: Option, fraction: float = 0.5
+) -> None:
+    """Click an option's value, `fraction` of the way along it."""
+    index = show_row(settings, OptionRow(option))
+    span = settings.table.span_rect(index, settings.scroll)
+    settings.on_event(click((span.x + span.w * fraction, span.center[1])))
+
+
+def test_sidebar_switches_pages(app: App) -> None:
+    """Each sidebar button shows its own page."""
+    settings = SettingsScene(app, back=MainMenu(app))
+    for page, button in zip(Page, list(settings.sidebar), strict=True):
+        settings.on_event(click(button.rect.center))
+        assert settings.page is page
+        if page.context is None:
+            assert all(isinstance(row, OptionRow) for row in settings.rows)
+        else:
+            assert all(
+                isinstance(row, BindRow) and row.context is page.context
+                for row in settings.rows
+            )
+        assert draw(app, settings).any()
+
+
+def test_theme_switch_applies_and_saves(app: App) -> None:
+    """Changing the theme recolors the GUI at once and is saved."""
+    settings = SettingsScene(app, back=MainMenu(app), page=Page.INTERFACE)
+    before = app.ui.theme_name
+    accent = app.ui.color("accent")
+    click_value(settings, Option.THEME)
+    assert app.ui.theme_name != before
+    assert app.ui.color("accent") != accent
+    saved = json.loads(app.settings_file.read_text(encoding="utf-8"))
+    assert saved["theme"] == app.ui.theme_name
+    click_value(settings, Option.THEME, fraction=0.5)
+    reset = next(b for b in settings.buttons if b.id == "reset")
+    settings.on_event(click(reset.rect.center))
+    assert app.ui.theme_name == Settings().theme
+
+
+def test_volume_sliders(app: App) -> None:
+    """A click on a slider sets the volume; reset restores defaults."""
+    settings = SettingsScene(app, back=MainMenu(app), page=Page.AUDIO)
+    index = show_row(settings, OptionRow(Option.MUSIC_VOLUME))
+    track = settings.slider_rect(index)
+    settings.on_event(click((track.x + track.w * 0.25, track.center[1])))
+    quarter = 25
+    assert app.settings.music_volume == quarter
+    settings.on_event(click((track.right + 1000, track.center[1])))
+    assert app.settings.music_volume == quarter
+    reset = next(b for b in settings.buttons if b.id == "reset")
+    settings.on_event(click(reset.rect.center))
+    assert app.settings.music_volume == Settings().music_volume
+
+
+def test_background_shader_animates(app: App) -> None:
+    """The menu background moves over time and is not a flat color."""
+    background = app.ui.config.themes["dusk"].background
+    app.background.draw(background, 0.0)
+    first = read_pixels(app)
+    app.background.draw(background, 120.0)
+    later = read_pixels(app)
+    assert first.std() > MIN_BACKGROUND_STD
+    assert (first != later).any()
+
+
+def test_gui_size_applies_when_returning_to_game(app: App) -> None:
+    """The game picks up a new GUI size when the settings close."""
+    play = PlayScene(app)
+    settings = SettingsScene(app, back=play, in_game=True, page=Page.INTERFACE)
+    click_value(settings, Option.GUI_SIZE)
+    settings.on_event(press(glfw.KEY_ESCAPE))
+    assert app.pending_scene is play
+    play.on_enter()
+    assert play.layout.slot_size == pytest.approx(app.settings.gui_size * 1.5)
+    app.update_settings(gui_size=Settings().gui_size)

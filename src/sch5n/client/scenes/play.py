@@ -14,7 +14,7 @@ from sch5n.client.keybinds import Action, Context
 from sch5n.client.render.batch import rgba
 from sch5n.client.render.text import TextStyle
 from sch5n.client.scenes.base import Scene
-from sch5n.client.scenes.menu import SettingsScene
+from sch5n.client.scenes.settings import SettingsScene
 from sch5n.client.ui import Align, InventoryLayout, button_at, hit_button
 from sch5n.client.window import (
     KeyEvent,
@@ -72,13 +72,7 @@ class PlayScene(Scene):
         self.camera = Camera()
         self.camera.center_on(self.game.player.body.center, app.screen)
         self.tiles = TileRenderer(app.assets, self.tile_size)
-        self.hud = Hud(app.assets, app.text, app.ui, app.settings.gui_size)
-        self.layout = InventoryLayout.create(
-            content.game.inventory.columns,
-            content.game.inventory.size,
-            app.settings.gui_size,
-            app.ui,
-        )
+        self._build_hud()
         self.inventory_open = False
         self.debug = False
         self._jump_requested = False
@@ -88,6 +82,20 @@ class PlayScene(Scene):
     def jump_requested(self) -> bool:
         """Whether a jump will happen on the next tick."""
         return self._jump_requested
+
+    def _build_hud(self) -> None:
+        """Size the HUD from the current GUI settings."""
+        app = self.app
+        inventory = app.content.game.inventory
+        self.hud = Hud(app.assets, app.text, app.ui, app.settings.gui_size)
+        self.layout = InventoryLayout.create(
+            inventory.columns, inventory.size, app.settings.gui_size, app.ui
+        )
+
+    def on_enter(self) -> None:
+        """Pick up settings changed while away, like the GUI size."""
+        self._build_hud()
+        self._place_layout()
 
     def _place_layout(self) -> None:
         w, h = self.app.screen

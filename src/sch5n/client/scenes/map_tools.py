@@ -13,7 +13,7 @@ from sch5n.client.keybinds import Action, Context, ContextBinds
 from sch5n.client.render.batch import rgba
 from sch5n.client.render.text import TextStyle
 from sch5n.client.scenes.base import Scene
-from sch5n.client.scenes.menu import SettingsScene
+from sch5n.client.scenes.settings import SettingsScene
 from sch5n.client.window import KeyEvent
 from sch5n.client.world_view import TileRenderer
 from sch5n.game.content import AIR

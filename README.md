@@ -45,19 +45,33 @@ pans with WASD and zooms with the wheel. F1 opens the settings in both.
 
 ### Settings
 
-The settings screen (main menu, Esc in game, F1 in the map tools) changes:
+The settings screen (main menu, Esc in game, F1 in the map tools) has a page
+per topic:
 
-- Video: windowed or fullscreen, window size, VSync and frame rate limit.
-  Click a value for the next option, right click for the previous one.
-- Controls of the game, the map editor and the map viewer, each separately.
-  Click a slot, then press a key, mouse button or wheel direction, with
-  modifiers if you like (Ctrl+S). Esc cancels, Backspace or right click
-  clears. Every action has two slots; Esc itself cannot be rebound.
+- **Video**: windowed or fullscreen, window size, VSync, frame rate limit.
+- **Audio**: master, music and effects volume. There is no sound yet; the
+  values are stored for later.
+- **Interface**: theme and GUI size.
+- **Game / Editor / Viewer Controls**: each program's bindings. Click a slot,
+  then press a key, mouse button or wheel direction, with modifiers if you
+  like (Ctrl+S). Esc cancels, Backspace or right click clears. Esc itself
+  cannot be rebound.
+
+Click a value for the next option, right click for the previous one.
+**Reset Page** restores the defaults of the page you are on.
 
 Every program uses the same settings. They are saved immediately to
 `settings.json` in your user config directory (e.g.
 `~/.config/sch5n/settings.json` on Linux), which overrides
 `assets/base/data/settings.json`.
+
+### Themes
+
+Themes live in `assets/base/data/ui.json`: Dusk (default), Forest, Ocean,
+Ember and Classic (the original look). A theme sets the GUI colors and the
+menu background: an animated, pixelated shader in three colors
+(`assets/shader/background.frag`), an image, or a solid color. Add your
+own by copying an entry.
 
 ## Dependencies
 

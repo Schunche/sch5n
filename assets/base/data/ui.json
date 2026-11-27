@@ -1,11 +1,99 @@
 {
-    "colors": {
-        "main_theme": [7, 7, 7],
-        "button_inner": [15, 15, 15],
-        "button_border": [31, 31, 31],
-        "button_hover": [63, 63, 63],
-        "text": [235, 205, 200],
-        "hotbar_selected_border": [255, 255, 0]
+    "default_theme": "dusk",
+    "themes": {
+        "dusk": {
+            "label": "Dusk",
+            "colors": {
+                "background": [20, 16, 40],
+                "panel": [18, 12, 34, 200],
+                "button_inner": [44, 30, 76, 230],
+                "button_border": [112, 82, 168],
+                "button_hover": [86, 58, 138, 240],
+                "text": [246, 232, 255],
+                "text_dim": [178, 160, 204],
+                "accent": [255, 170, 92]
+            },
+            "background": {
+                "kind": "shader",
+                "colors": [[16, 12, 36], [74, 42, 118], [240, 128, 92]],
+                "speed": 1.0,
+                "pixel_size": 4
+            }
+        },
+        "forest": {
+            "label": "Forest",
+            "colors": {
+                "background": [10, 24, 16],
+                "panel": [8, 22, 14, 205],
+                "button_inner": [22, 52, 32, 230],
+                "button_border": [74, 130, 72],
+                "button_hover": [44, 92, 54, 240],
+                "text": [234, 246, 222],
+                "text_dim": [160, 190, 150],
+                "accent": [236, 214, 96]
+            },
+            "background": {
+                "kind": "shader",
+                "colors": [[8, 20, 14], [32, 84, 48], [196, 210, 104]],
+                "speed": 0.7,
+                "pixel_size": 4
+            }
+        },
+        "ocean": {
+            "label": "Ocean",
+            "colors": {
+                "background": [8, 18, 36],
+                "panel": [6, 16, 34, 205],
+                "button_inner": [18, 44, 80, 230],
+                "button_border": [64, 132, 190],
+                "button_hover": [34, 82, 136, 240],
+                "text": [226, 244, 255],
+                "text_dim": [150, 186, 214],
+                "accent": [96, 230, 220]
+            },
+            "background": {
+                "kind": "shader",
+                "colors": [[6, 14, 34], [24, 78, 140], [110, 226, 230]],
+                "speed": 0.8,
+                "pixel_size": 5
+            }
+        },
+        "ember": {
+            "label": "Ember",
+            "colors": {
+                "background": [30, 10, 8],
+                "panel": [26, 8, 6, 205],
+                "button_inner": [70, 24, 16, 230],
+                "button_border": [178, 82, 46],
+                "button_hover": [120, 44, 26, 240],
+                "text": [255, 236, 222],
+                "text_dim": [212, 162, 140],
+                "accent": [255, 206, 84]
+            },
+            "background": {
+                "kind": "shader",
+                "colors": [[24, 6, 6], [120, 30, 18], [255, 170, 60]],
+                "speed": 1.3,
+                "pixel_size": 3
+            }
+        },
+        "classic": {
+            "label": "Classic",
+            "colors": {
+                "background": [7, 7, 7],
+                "panel": [7, 7, 7, 190],
+                "button_inner": [15, 15, 15],
+                "button_border": [31, 31, 31],
+                "button_hover": [63, 63, 63],
+                "text": [235, 205, 200],
+                "text_dim": [160, 140, 136],
+                "accent": [255, 255, 0]
+            },
+            "background": {
+                "kind": "image",
+                "image": "icon/lolBG"
+            }
+        }
     },
     "outer_padding": 16,
     "button": {
@@ -22,7 +110,6 @@
         "amount_font_size": 12
     },
     "main_menu": {
-        "background": "icon/lolBG",
-        "button_spacing": 64
+        "button_spacing": 56
     }
 }

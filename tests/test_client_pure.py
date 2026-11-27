@@ -12,6 +12,7 @@ from sch5n.client.render.atlas import (
 )
 from sch5n.client.render.image import apply_colorkey
 from sch5n.client.render.text import Anchor, anchored
+from sch5n.client.style import Style
 from sch5n.client.ui import (
     Align,
     InventoryLayout,
@@ -19,7 +20,7 @@ from sch5n.client.ui import (
     button_column,
     hit_button,
 )
-from sch5n.game.config import AnimationClip, UiConfig
+from sch5n.game.config import AnimationClip
 from sch5n.game.content import load_ui
 from sch5n.utility import path
 
@@ -29,14 +30,15 @@ OPAQUE = 255
 
 
 @pytest.fixture(scope="module")
-def ui() -> UiConfig:
+def ui() -> Style:
     """Load the real GUI style.
 
     Returns:
-        UiConfig: The style from `ui.json`.
+        Style: The style from `ui.json` with its default theme.
 
     """
-    return load_ui(path.DATA_DIR)
+    config = load_ui(path.DATA_DIR)
+    return Style(config, config.default_theme)
 
 
 def test_camera_roundtrip_and_zoom() -> None:
@@ -124,7 +126,7 @@ def test_aligned_rect() -> None:
     assert (rect.right, rect.bottom) == (100, 100)
 
 
-def test_buttons(ui: UiConfig) -> None:
+def test_buttons(ui: Style) -> None:
     """Clicks hit the button they land on, and only that one."""
     buttons = button_column([("a", "A"), ("b", "B")], (200, 100), 64, ui)
     assert hit_button(buttons, (200, 100)) == "a"
@@ -132,7 +134,7 @@ def test_buttons(ui: UiConfig) -> None:
     assert hit_button(buttons, (0, 0)) is None
 
 
-def test_inventory_layout(ui: UiConfig) -> None:
+def test_inventory_layout(ui: Style) -> None:
     """Slots are laid out in rows, and hit tests respect the hotbar mode."""
     columns, gui_size = 10, 24
     layout = InventoryLayout.create(columns, 50, gui_size, ui)

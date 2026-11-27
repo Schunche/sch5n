@@ -17,7 +17,18 @@ if TYPE_CHECKING:
 
     from sch5n.client.render.batch import SpriteBatch
     from sch5n.client.render.text import TextRenderer
-    from sch5n.game.config import UiConfig
+    from sch5n.client.style import Style
+
+
+TABLE_LABEL_WIDTH = 200
+TABLE_CELL_WIDTH = 160
+TABLE_GAP = 12
+TABLE_COLUMNS = 2
+TABLE_WIDTH = TABLE_LABEL_WIDTH + TABLE_COLUMNS * (
+    TABLE_CELL_WIDTH + TABLE_GAP
+)
+PANEL_RADIUS = 10
+PANEL_BORDER = 2
 
 
 class Align(StrEnum):
@@ -29,7 +40,9 @@ class Align(StrEnum):
 
 
 def aligned_rect(
-    pos: tuple[float, float], size: tuple[float, float], align: Align
+    pos: tuple[float, float],
+    size: tuple[float, float],
+    align: Align = Align.TOP_LEFT,
 ) -> Rect:
     """Rectangle of `size` positioned by `align` at `pos`.
 
@@ -69,20 +82,23 @@ class Button:
         self,
         batch: SpriteBatch,
         text: TextRenderer,
-        style: UiConfig,
+        style: Style,
         mouse: tuple[float, float],
+        *,
+        selected: bool = False,
     ) -> None:
-        """Queue the button for drawing."""
+        """Queue the button for drawing. `selected` adds an accent border."""
         b = style.button
         r = self.rect
         rect = (r.x, r.y, r.w, r.h)
         inner = "button_hover" if self.contains(mouse) else "button_inner"
         batch.shape(rect, rgba(style.color(inner)), radius=b.border_radius)
+        border = "accent" if selected else "button_border"
         batch.shape(
             rect,
-            rgba(style.color("button_border")),
+            rgba(style.color(border)),
             radius=b.border_radius,
-            border=b.border_width,
+            border=b.border_width if selected else b.border_width / 2,
         )
         text.draw(
             batch,
@@ -96,11 +112,23 @@ class Button:
         )
 
 
+def draw_panel(batch: SpriteBatch, rect: Rect, style: Style) -> None:
+    """Queue a translucent rounded panel with a thin border."""
+    box = (rect.x, rect.y, rect.w, rect.h)
+    batch.shape(box, rgba(style.color("panel")), radius=PANEL_RADIUS)
+    batch.shape(
+        box,
+        rgba(style.color("button_border"), 0.6),
+        radius=PANEL_RADIUS,
+        border=PANEL_BORDER,
+    )
+
+
 def button_at(
     button_id: str,
     label: str,
     pos: tuple[float, float],
-    style: UiConfig,
+    style: Style,
     align: Align = Align.CENTER,
 ) -> Button:
     """Create a standard sized button.
@@ -117,7 +145,7 @@ def button_column(
     entries: Sequence[tuple[str, str]],
     center: tuple[float, float],
     spacing: float,
-    style: UiConfig,
+    style: Style,
 ) -> list[Button]:
     """Buttons stacked vertically, the first one centered at `center`.
 
@@ -162,7 +190,7 @@ class InventoryLayout:
 
     @classmethod
     def create(
-        cls, columns: int, slot_count: int, gui_size: int, style: UiConfig
+        cls, columns: int, slot_count: int, gui_size: int, style: Style
     ) -> InventoryLayout:
         """Layout from the GUI settings.
 
@@ -277,18 +305,32 @@ class TableLayout:
             TableLayout: The layout.
 
         """
-        label_width, cell_width, gap, columns = 200, 160, 12, 2
-        width = label_width + columns * (cell_width + gap)
+        left = (screen[0] - TABLE_WIDTH) / 2
+        return cls.placed(rows, left, top, bottom, row_height)
+
+    @classmethod
+    def placed(
+        cls,
+        rows: int,
+        left: float,
+        top: float,
+        bottom: float,
+        row_height: float = 32,
+    ) -> TableLayout:
+        """Lay out a table with the default column widths at `left`.
+
+        Returns:
+            TableLayout: The layout.
+
+        """
         return cls(
             rows=rows,
-            area=Rect(
-                (screen[0] - width) / 2, top, width, max(bottom - top, 0)
-            ),
+            area=Rect(left, top, TABLE_WIDTH, max(bottom - top, 0)),
             row_height=row_height,
-            label_width=label_width,
-            cell_width=cell_width,
-            columns=columns,
-            gap=gap,
+            label_width=TABLE_LABEL_WIDTH,
+            cell_width=TABLE_CELL_WIDTH,
+            columns=TABLE_COLUMNS,
+            gap=TABLE_GAP,
         )
 
     @property

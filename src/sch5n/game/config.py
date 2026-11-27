@@ -6,9 +6,16 @@ from __future__ import annotations
 from enum import StrEnum
 lazy from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 type Color = tuple[int, int, int]
+type Rgba = tuple[int, int, int] | tuple[int, int, int, int]
 
 
 class _Model(BaseModel):
@@ -129,6 +136,11 @@ class Settings(_Model):
     """Frame cap when vsync is off. 0 means unlimited."""
     fullscreen: bool = False
     gui_size: int = 24
+    theme: str = "dusk"
+    """Name of a theme in `ui.json`."""
+    master_volume: int = Field(default=100, ge=0, le=100)
+    music_volume: int = Field(default=70, ge=0, le=100)
+    effects_volume: int = Field(default=80, ge=0, le=100)
     keybinds: dict[str, dict[str, tuple[str, ...]]] = Field(
         default_factory=dict
     )
@@ -173,34 +185,85 @@ class SlotStyle(_Model):
 class MainMenuStyle(_Model):
     """Main menu look."""
 
-    background: str = "icon/lolBG"
     button_spacing: int = 64
 
 
-class UiConfig(_Model):
-    """GUI styling, `ui.json`."""
+class ThemeColors(_Model):
+    """Every color a theme defines. Each may have an alpha component."""
 
-    colors: dict[str, Color]
+    background: Rgba
+    """Screen clear color, behind everything."""
+    panel: Rgba
+    """Panels behind menu content."""
+    button_inner: Rgba
+    button_border: Rgba
+    button_hover: Rgba
+    text: Rgba
+    text_dim: Rgba
+    """Secondary text, like hints."""
+    accent: Rgba
+    """Selection: the active hotbar slot, page or binding."""
+
+
+class BackgroundKind(StrEnum):
+    """What fills the screen behind menus."""
+
+    SHADER = "shader"
+    """Animated, pixelated noise in the theme's colors."""
+    IMAGE = "image"
+    SOLID = "solid"
+
+
+class ThemeBackground(_Model):
+    """Menu background of a theme."""
+
+    kind: BackgroundKind = BackgroundKind.SHADER
+    colors: tuple[Color, Color, Color] = (
+        (20, 16, 40),
+        (70, 40, 110),
+        (240, 140, 90),
+    )
+    """Dark, middle and highlight color of the shader."""
+    speed: float = 1.0
+    pixel_size: int = 4
+    """Size of the shader's pixels, to match the pixel art."""
+    image: str | None = None
+    """Texture for `kind: image`."""
+
+
+class Theme(_Model):
+    """A named look for the GUI."""
+
+    label: str
+    colors: ThemeColors
+    background: ThemeBackground = ThemeBackground()
+
+
+class UiConfig(_Model):
+    """GUI styling and themes, `ui.json`."""
+
+    default_theme: str
+    themes: dict[str, Theme]
     outer_padding: int = 16
     button: ButtonStyle = ButtonStyle()
     slot: SlotStyle = SlotStyle()
     main_menu: MainMenuStyle = MainMenuStyle()
 
-    def color(self, name: str) -> Color:
-        """Look up a named color.
+    @model_validator(mode="after")
+    def _default_theme_exists(self) -> UiConfig:
+        """Check that the default theme is defined.
 
         Returns:
-            Color: RGB triple.
+            UiConfig: The validated config.
 
         Raises:
-            KeyError: Unknown color name.
+            ValueError: The default theme is missing.
 
         """
-        try:
-            return self.colors[name]
-        except KeyError:
-            msg = f"Unknown UI color: {name!r}"
-            raise KeyError(msg) from None
+        if self.default_theme not in self.themes:
+            msg = f"Unknown default theme {self.default_theme!r}"
+            raise ValueError(msg)
+        return self
 
 
 class AnimationClip(_Model):
