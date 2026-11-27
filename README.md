@@ -9,6 +9,9 @@ double click `play.bat` (Windows) or run `./play.sh` (Linux), and play.
 
 The launchers `play.bat` and `play.sh` install [uv](https://docs.astral.sh/uv/)
 if needed and start the game; arguments are passed on (`./play.sh view --edit --map map1`).
+`uninstall.bat` and `uninstall.sh` remove the user's settings, logs and,
+when confirmed, worlds, uv and the game folder; `--yes` confirms all but
+removing uv.
 
 ### Python 3.15
 

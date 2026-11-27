@@ -185,14 +185,21 @@ first.
 
 ## Removing the game
 
-1. Delete the game folder.
-2. Optionally, delete your settings and worlds (see [Settings](#settings)
-   and [Saving](#saving) for where).
-3. Optionally, remove what the launcher downloaded. On Windows, delete the
-   `uv` folders in `C:\Users\<you>\AppData\Local` and
-   `C:\Users\<you>\AppData\Roaming`, and `uv.exe` in
-   `C:\Users\<you>\.local\bin`. On Linux, delete `~/.local/share/uv`,
-   `~/.cache/uv` and `~/.local/bin/uv`.
+Close the game, then:
+
+- **Windows:** double click **`uninstall.bat`** in the game folder.
+- **Linux:** run `./uninstall.sh` in the game folder.
+
+It shows what it will remove and asks before each step:
+
+1. Your settings and logs.
+2. Your saved worlds. Say no to keep them, for example to play them again
+   after downloading the game later.
+3. **uv** and the Python it downloaded. Say no if you use uv for anything
+   else, or aren't sure.
+4. The game folder itself.
+
+Answering no to a question skips just that step.
 
 ## Problems
 

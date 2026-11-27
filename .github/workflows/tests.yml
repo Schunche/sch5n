@@ -76,3 +76,36 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: play.bat view --edit --map map1 --frames 30 --hidden
+
+      - name: Uninstall a copy of the game (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          game="$RUNNER_TEMP/game"
+          fake="$RUNNER_TEMP/home"
+          mkdir -p "$game/data" "$fake/.config/sch5n" "$fake/.local/share/sch5n/worlds" "$fake/.local/state/sch5n/log"
+          cp uninstall.sh play.sh "$game/"
+          cp data/game.json "$game/data/"
+          touch "$fake/.config/sch5n/settings.json" "$fake/.local/share/sch5n/worlds/a.world.json" "$fake/.local/state/sch5n/log/sch5n.log.jsonl"
+          env -u XDG_CONFIG_HOME -u XDG_DATA_HOME -u XDG_STATE_HOME HOME="$fake" "$game/uninstall.sh" --yes
+          test ! -e "$game"
+          test ! -e "$fake/.config/sch5n"
+          test ! -e "$fake/.local/share/sch5n"
+          test ! -e "$fake/.local/state/sch5n"
+
+      - name: Uninstall a copy of the game (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $game = Join-Path $env:RUNNER_TEMP "game"
+          $local = Join-Path $env:RUNNER_TEMP "local"
+          $user = Join-Path $local "Schunche\sch5n"
+          New-Item -ItemType Directory -Force "$game\data", "$user\worlds", "$user\Logs" | Out-Null
+          Copy-Item uninstall.bat, play.bat $game
+          Copy-Item data\game.json "$game\data"
+          Set-Content "$user\settings.json" "{}"
+          Set-Content "$user\worlds\a.world.json" "{}"
+          Set-Content "$user\Logs\sch5n.log.jsonl" ""
+          $env:LOCALAPPDATA = $local
+          cmd /c "`"$game\uninstall.bat`" --yes"
+          if (Test-Path $game) { throw "The game folder is still there" }
+          if (Test-Path (Join-Path $local "Schunche")) { throw "User files are still there" }
