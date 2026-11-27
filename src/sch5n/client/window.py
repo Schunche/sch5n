@@ -81,11 +81,13 @@ type Event = (
 
 
 # The glfw type stubs are stricter than glfw: it takes images as plain
-# `(width, height, pixels)` tuples, and `None` as "no monitor". The stubs'
-# own types are private, so these calls are typed loosely instead.
+# `(width, height, pixels)` tuples, and `None` as "no monitor" or "default
+# cursor". The stubs' own types are private, so these calls are typed
+# loosely instead.
 _create_cursor: Callable[..., Any] = glfw.create_cursor
 _set_window_icon: Callable[..., None] = glfw.set_window_icon
 _set_window_monitor: Callable[..., None] = glfw.set_window_monitor
+_set_cursor: Callable[..., None] = glfw.set_cursor
 
 
 class Cursor:
@@ -113,6 +115,12 @@ class Cursor:
         glfw.set_cursor(self._window, image)
         self.release()
         self._image = image
+        glfw.set_input_mode(self._window, glfw.CURSOR, glfw.CURSOR_NORMAL)
+
+    def use_system(self) -> None:
+        """Show the operating system's normal pointer."""
+        _set_cursor(self._window, None)
+        self.release()
         glfw.set_input_mode(self._window, glfw.CURSOR, glfw.CURSOR_NORMAL)
 
     @property

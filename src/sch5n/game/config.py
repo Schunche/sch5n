@@ -29,6 +29,15 @@ class GameMode(StrEnum):
     ADMIN = "admin"
 
 
+class CursorStyle(StrEnum):
+    """Which mouse cursor is shown."""
+
+    GAME = "game"
+    """The game's cursor image (tinted by `cursor_color` if set)."""
+    SYSTEM = "system"
+    """The operating system's normal pointer."""
+
+
 class MenuBackground(StrEnum):
     """What menus show behind them."""
 
@@ -213,6 +222,9 @@ class Settings(_Model):
     theme: str = "dusk"
     """Name of a theme in `ui.json`."""
     menu_background: MenuBackground = MenuBackground.WORLD
+    cursor: CursorStyle = CursorStyle.GAME
+    font: str = "pixelify"
+    """Name of a font in `ui.json`."""
     cursor_color: Color | None = None
     """`None` uses the operating system cursor with the cursor image. A
     color hides it and draws the cursor image tinted with this color."""
@@ -325,11 +337,33 @@ class Theme(_Model):
     background: ThemeBackground = ThemeBackground()
 
 
+class FontStyle(_Model):
+    """A font to choose from."""
+
+    label: str
+    file: str | None = None
+    """File in `assets/fonts`. `None` is pygame's built in font."""
+    pixel_grid: int = Field(default=0, ge=0)
+    """For pixel fonts, the size at which one font pixel is one screen
+    pixel: text keeps hard edges at multiples of it. 0 for smooth fonts."""
+
+
 class UiConfig(_Model):
     """GUI styling and themes, `ui.json`."""
 
     default_theme: str
     themes: dict[str, Theme]
+    default_font: str = "pixelify"
+    fonts: dict[str, FontStyle] = Field(
+        default_factory=lambda: {
+            "pixelify": FontStyle(
+                label="Pixelify Sans",
+                file="PixelifySans.ttf",
+                pixel_grid=10,
+            ),
+            "classic": FontStyle(label="Classic"),
+        }
+    )
     outer_padding: int = 16
     button: ButtonStyle = ButtonStyle()
     slot: SlotStyle = SlotStyle()

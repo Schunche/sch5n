@@ -121,9 +121,13 @@ per topic:
 - **Video**: windowed or fullscreen, window size, VSync, frame rate limit.
 - **Audio**: master, music and effects volume. There is no sound yet; the
   values are stored for later.
-- **Interface**: theme, menu background and GUI size. The menu background is
-  either the game world (a live world behind the main menu, the paused game
-  behind the in-game settings) or the theme's background.
+- **Interface**: theme, menu background, GUI size, font and cursor. The
+  menu background is either the game world (a live world behind the main
+  menu, the paused game behind the in-game settings) or the theme's
+  background. Fonts are listed under `fonts` in `data/ui.json`: Pixelify
+  Sans (default) and Classic, pygame's smooth built in font; add one by
+  putting it, with its license, in `assets/fonts` and listing it there.
+  The cursor is the game's or the system's normal pointer.
 - **Controls**: the bindings of what you are in. The game and the map
   viewer (also when editing) each have their own, and each can only be
   changed from inside it. Click a slot,
@@ -139,10 +143,11 @@ Every program uses the same settings. They are saved immediately to
 `~/.config/sch5n/settings.json` on Linux), which overrides
 `data/settings.json`.
 
-The mouse cursor is the operating system cursor showing
+The game cursor is the operating system cursor showing
 `assets/textures/icon/cursor.png`, so it never lags. Setting `cursor_color` in
 `settings.json` (e.g. `[255, 120, 120]`) hides it and has the game draw the
-image tinted with that color instead.
+image tinted with that color instead. The System cursor is always the
+operating system's normal pointer.
 
 ### Themes
 

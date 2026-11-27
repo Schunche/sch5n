@@ -91,8 +91,9 @@ page on the left:
 
 - **Video:** window size, fullscreen, VSync and the frame rate limit.
 - **Audio:** volume. There is no sound yet; your choice is kept for later.
-- **Interface:** colour theme, what the menus show behind them, and the size
-  of the inventory.
+- **Interface:** colour theme, what the menus show behind them, the size
+  of the inventory, the font, and whether the mouse pointer is the game's
+  or your computer's usual one.
 - **Controls:** click a key on the right, then press the key or mouse button
   you want instead. Esc cancels, right click clears.
 

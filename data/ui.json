@@ -1,5 +1,10 @@
 {
     "default_theme": "dusk",
+    "default_font": "pixelify",
+    "fonts": {
+        "pixelify": {"label": "Pixelify Sans", "file": "PixelifySans.ttf", "pixel_grid": 10},
+        "classic": {"label": "Classic"}
+    },
     "themes": {
         "dusk": {
             "label": "Dusk",

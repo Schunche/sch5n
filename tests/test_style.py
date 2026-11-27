@@ -71,3 +71,21 @@ def test_volumes_are_percentages(volume: int) -> None:
     """Volumes outside 0 to 100 are rejected."""
     with pytest.raises(pydantic.ValidationError):
         Settings(master_volume=volume)
+
+
+def test_fonts_exist_with_their_licenses(config: UiConfig) -> None:
+    """Every font file in config.json is there, with its license next to it."""
+    assert config.default_font in config.fonts
+    for font in config.fonts.values():
+        if font.file is None:
+            continue
+        file = path.FONTS_DIR / font.file
+        assert file.is_file()
+        assert list(path.FONTS_DIR.glob(f"{file.stem}*OFL*.txt"))
+
+
+def test_unknown_font_falls_back(config: UiConfig) -> None:
+    """A font name from an old settings file picks the default."""
+    style = Style(config, config.default_theme)
+    assert style.font_name("Comic Sans") == config.default_font
+    assert style.font_name("classic") == "classic"

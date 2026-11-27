@@ -51,6 +51,23 @@ class Style:
             name = self.config.default_theme
         self.theme_name = name
 
+    @property
+    def font_names(self) -> list[str]:
+        """Every font, in `ui.json` order."""
+        return list(self.config.fonts)
+
+    def font_name(self, name: str) -> str:
+        """Pick a font that exists: `name`, or the default font.
+
+        Returns:
+            str: The font's name in `ui.json`.
+
+        """
+        if name in self.config.fonts:
+            return name
+        LOGGER.warning("Unknown font %r, using the default", name)
+        return self.config.default_font
+
     def color(self, name: str) -> Rgba:
         """Look up a color of the active theme.
 

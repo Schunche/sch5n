@@ -36,7 +36,7 @@ from sch5n.client.window import (
     WindowError,
 )
 from sch5n.client.world_view import load_start_map
-from sch5n.game.config import Settings
+from sch5n.game.config import CursorStyle, Settings
 from sch5n.game.inventory import ItemStack
 from sch5n.net.client import ClientSession
 from sch5n.server.server import Server
@@ -849,3 +849,36 @@ def test_hosts_name_themselves(app: App) -> None:
     assert stack.item.name == "oak_log"
     renamed.leave()
     app.update_settings(player_name=default)
+
+
+def test_cursor_can_be_the_system_pointer(app: App) -> None:
+    """The Cursor option switches to the OS pointer, even when colored."""
+    settings = SettingsScene(app, back=MainMenu(app), page=Page.INTERFACE)
+    click_value(settings, Option.CURSOR)
+    assert app.settings.cursor is CursorStyle.SYSTEM
+    assert app.window.cursor.visible
+    app.update_settings(cursor_color=(255, 0, 0))
+    assert app.window.cursor.visible
+    assert not cursor_pixels(app).any()
+
+    click_value(settings, Option.CURSOR)
+    assert app.settings.cursor is CursorStyle.GAME
+    assert not app.window.cursor.visible  # Colored: the game draws it.
+    app.update_settings(cursor_color=None)
+    assert app.window.cursor.visible
+
+
+def test_font_can_be_chosen(app: App) -> None:
+    """The Font option switches every text to another font right away."""
+    settings = SettingsScene(app, back=MainMenu(app), page=Page.INTERFACE)
+    first = app.settings.font
+    pixel_width = app.text.measure("Settings", 16)[0]
+    click_value(settings, Option.FONT)
+    assert app.settings.font != first
+    assert app.text.measure("Settings", 16)[0] != pixel_width
+    assert draw(app, settings).any()
+    saved = json.loads(app.settings_file.read_text(encoding="utf-8"))
+    assert saved["font"] == app.settings.font
+    for _ in app.ui.font_names[1:]:
+        click_value(settings, Option.FONT)
+    assert app.settings.font == first

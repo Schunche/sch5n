@@ -27,7 +27,7 @@ from sch5n.client.window import (
     MouseButtonEvent,
     ScrollEvent,
 )
-from sch5n.game.config import MenuBackground, Settings
+from sch5n.game.config import CursorStyle, MenuBackground, Settings
 from sch5n.math.rect import Rect
 lazy from sch5n.client.scenes.menu import MainMenu, draw_menu_background
 lazy from sch5n.client.scenes.play import PlayScene
@@ -39,6 +39,10 @@ if TYPE_CHECKING:
     from sch5n.client.window import Event
 
 GUI_SIZES = (16, 20, 24, 28, 32)
+CURSOR_LABELS = {
+    CursorStyle.GAME: "Game",
+    CursorStyle.SYSTEM: "System",
+}
 MENU_BACKGROUND_LABELS = {
     MenuBackground.WORLD: "Game world",
     MenuBackground.THEME: "Theme",
@@ -87,6 +91,8 @@ class Option(StrEnum):
     THEME = "Theme"
     MENU_BACKGROUND = "Menu background"
     GUI_SIZE = "GUI size"
+    FONT = "Font"
+    CURSOR = "Cursor"
 
 
 PAGE_OPTIONS: dict[Page, tuple[Option, ...]] = {
@@ -101,7 +107,13 @@ PAGE_OPTIONS: dict[Page, tuple[Option, ...]] = {
         Option.MUSIC_VOLUME,
         Option.EFFECTS_VOLUME,
     ),
-    Page.INTERFACE: (Option.THEME, Option.MENU_BACKGROUND, Option.GUI_SIZE),
+    Page.INTERFACE: (
+        Option.THEME,
+        Option.MENU_BACKGROUND,
+        Option.GUI_SIZE,
+        Option.FONT,
+        Option.CURSOR,
+    ),
 }
 
 OPTION_FIELDS: dict[Option, tuple[str, ...]] = {
@@ -115,6 +127,8 @@ OPTION_FIELDS: dict[Option, tuple[str, ...]] = {
     Option.THEME: ("theme",),
     Option.MENU_BACKGROUND: ("menu_background",),
     Option.GUI_SIZE: ("gui_size",),
+    Option.FONT: ("font",),
+    Option.CURSOR: ("cursor",),
 }
 """Settings fields behind each option."""
 
@@ -184,6 +198,10 @@ _VALUE_TEXT: dict[Option, Callable[[App], str]] = {
         app.settings.menu_background
     ],
     Option.GUI_SIZE: lambda app: f"{app.settings.gui_size} px",
+    Option.FONT: lambda app: (
+        app.ui.config.fonts[app.ui.font_name(app.settings.font)].label
+    ),
+    Option.CURSOR: lambda app: CURSOR_LABELS[app.settings.cursor],
 } | {
     option: lambda app, field=field: f"{getattr(app.settings, field)} %"
     for option, field in VOLUMES.items()
@@ -225,6 +243,13 @@ def change_option(app: App, option: Option, step: int) -> None:
             )
         case Option.GUI_SIZE:
             app.update_settings(gui_size=cycle(GUI_SIZES, s.gui_size, step))
+        case Option.FONT:
+            current = app.ui.font_name(s.font)
+            app.update_settings(font=cycle(app.ui.font_names, current, step))
+        case Option.CURSOR:
+            app.update_settings(
+                cursor=cycle(list(CursorStyle), s.cursor, step)
+            )
         case _:
             field = VOLUMES[option]
             value = getattr(s, field) + step * VOLUME_STEP
@@ -474,7 +499,8 @@ class SettingsScene(Scene):
             step = 1 if event.button == glfw.MOUSE_BUTTON_LEFT else -1
             change_option(self.app, option, step)
         self.message = f"{option}: {option_value(self.app, option)}"
-        if option is Option.WINDOW_SIZE:
+        if option in {Option.WINDOW_SIZE, Option.FONT}:
+            # New sizes: the window's, or the text's on the buttons.
             self.layout()
 
     def _click_binding(self, row: BindRow, event: MouseButtonEvent) -> None:

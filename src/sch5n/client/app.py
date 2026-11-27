@@ -19,7 +19,13 @@ from sch5n.client.render.sky import SkyRenderer
 from sch5n.client.render.text import TextRenderer
 from sch5n.client.style import Style
 from sch5n.client.window import ResizeEvent, Window
-from sch5n.game.config import BackgroundKind, GameMode, Rgba, Settings
+from sch5n.game.config import (
+    BackgroundKind,
+    CursorStyle,
+    GameMode,
+    Rgba,
+    Settings,
+)
 from sch5n.game.content import (
     Content,
     load_animations,
@@ -93,12 +99,7 @@ class App:
         self.batch = SpriteBatch(self.ctx, path.SHADER_DIR)
         self.background = BackgroundRenderer(self.ctx, path.SHADER_DIR)
         self.sky = SkyRenderer(self.ctx, path.SHADER_DIR)
-        self.text = TextRenderer(
-            self.ctx,
-            str(path.FONT_FILE),
-            pixelated=True,
-            pixel_grid=path.FONT_PIXEL_GRID,
-        )
+        self.text = self._text_renderer()
         self.assets = ClientAssets(
             self.ctx, path.TEXTURES_DIR, self.content, self.animations
         )
@@ -156,6 +157,9 @@ class App:
         self._apply_video(previous)
         self.ui.set_theme(self.settings.theme)
         self._apply_cursor(previous)
+        if previous.font != self.settings.font:
+            self.text.release()
+            self.text = self._text_renderer()
         save_settings(self.settings, self.settings_file)
         LOGGER.info("Saved settings to %s", self.settings_file)
 
@@ -207,16 +211,49 @@ class App:
         upcoming.update_layout()
         return upcoming
 
-    def _apply_cursor(self, previous: Settings | None) -> None:
-        """Use the OS cursor, unless the cursor is colored.
+    def _text_renderer(self) -> TextRenderer:
+        """Render text in the chosen font.
 
-        A colored cursor is drawn by `draw_cursor` instead, since the OS
-        cursor cannot be tinted.
+        Returns:
+            TextRenderer: A renderer for the font in the settings.
+
         """
-        color = self.settings.cursor_color
-        if previous is not None and previous.cursor_color == color:
+        font = self.ui.config.fonts[self.ui.font_name(self.settings.font)]
+        return TextRenderer(
+            self.ctx,
+            None if font.file is None else str(path.FONTS_DIR / font.file),
+            pixelated=font.pixel_grid > 0,
+            pixel_grid=max(font.pixel_grid, 1),
+        )
+
+    @property
+    def draws_cursor(self) -> bool:
+        """Whether the game draws the cursor instead of the OS.
+
+        The OS cursor cannot be tinted, so a colored game cursor is drawn.
+        """
+        settings = self.settings
+        return (
+            settings.cursor is CursorStyle.GAME
+            and settings.cursor_color is not None
+        )
+
+    def _apply_cursor(self, previous: Settings | None) -> None:
+        """Show the OS pointer, the game's cursor image, or hide the OS one.
+
+        The game's image is shown by the OS so it never lags, unless it is
+        colored: then `draw_cursor` draws it.
+        """
+        s = self.settings
+        if (
+            previous is not None
+            and previous.cursor == s.cursor
+            and previous.cursor_color == s.cursor_color
+        ):
             return
-        if color is None:
+        if s.cursor is CursorStyle.SYSTEM:
+            self.window.cursor.use_system()
+        elif s.cursor_color is None:
             self.window.cursor.set_image(
                 self.assets.load_image(self.animations.cursor)
             )
@@ -230,7 +267,7 @@ class App:
         `pos` defaults to the mouse position.
         """
         color = self.settings.cursor_color
-        if color is None:
+        if color is None or not self.draws_cursor:
             return
         region = self.assets.cursor
         x, y = self.window.mouse_pos if pos is None else pos
