@@ -5,10 +5,10 @@ from __future__ import annotations
 
 import json
 import math
-import os
 from typing import TYPE_CHECKING
 
 import glfw
+import moderngl
 import numpy as np
 import pytest
 
@@ -39,11 +39,6 @@ if TYPE_CHECKING:
     from sch5n.client.scenes.base import Scene
     from sch5n.client.scenes.settings import Row
 
-pytestmark = pytest.mark.skipif(
-    not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"),
-    reason="needs a display (run under xvfb-run)",
-)
-
 RED = (255, 0, 0)
 MIN_BACKGROUND_STD = 10
 """A drawn background image is far from a flat color."""
@@ -64,8 +59,10 @@ def app(tmp_path_factory: pytest.TempPathFactory) -> Iterator[App]:
     settings = tmp_path_factory.mktemp("user") / "settings.json"
     try:
         application = App(Options(hidden=True, seed=0, settings_file=settings))
-    except WindowError as e:
-        pytest.skip(str(e))
+    except (WindowError, moderngl.Error, glfw.GLFWError) as e:
+        # No display, or no OpenGL 3.3 (e.g. a server, or Linux without
+        # xvfb-run): rendering cannot be tested here.
+        pytest.skip(f"No OpenGL 3.3 window available: {e}")
     yield application
     application.release()
 

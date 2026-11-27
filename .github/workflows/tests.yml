@@ -6,11 +6,16 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
 
-      - name: Install virtual display and software OpenGL
+      - name: Install virtual display and software OpenGL (Linux)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb libgl1-mesa-dri libglx-mesa0 libegl1
@@ -20,5 +25,36 @@ jobs:
       - name: Install Python and dependencies
         run: uv sync --python 3.15
 
-      - name: Run tests
-        run: xvfb-run -a uv run pytest
+      - name: Install software OpenGL (Windows)
+        # Runners have no GPU and only OpenGL 1.1. Mesa's software renderer
+        # next to python.exe provides OpenGL 3.3 for the rendering tests.
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download --repo pal1000/mesa-dist-win --pattern "*release-msvc.7z" --dir mesa
+          7z x (Get-ChildItem mesa/*.7z).FullName -omesa -y | Out-Null
+          $dirs = uv run python -c "import os, sys; print(os.path.dirname(sys.executable)); print(os.path.dirname(sys._base_executable))"
+          foreach ($dir in $dirs) { Copy-Item mesa/x64/*.dll $dir -Force }
+          "GALLIUM_DRIVER=llvmpipe" >> $env:GITHUB_ENV
+
+      - name: Build
+        run: uv build
+
+      - name: Run tests (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a uv run pytest -rs
+
+      - name: Run tests (Windows)
+        if: runner.os == 'Windows'
+        run: uv run pytest -rs
+
+      - name: Start the game with the launcher (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a ./play.sh --frames 60 --hidden
+
+      - name: Start the game with the launcher (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: play.bat --frames 60 --hidden
