@@ -16,7 +16,7 @@ from sch5n.client.render.atlas import create_texture
 from sch5n.client.render.background import BackgroundRenderer
 from sch5n.client.render.batch import SpriteBatch, rgba
 from sch5n.client.render.sky import SkyRenderer
-from sch5n.client.render.text import TextRenderer
+from sch5n.client.render.text import TextRenderer, system_font
 from sch5n.client.style import Style
 from sch5n.client.window import ResizeEvent, Window
 from sch5n.game.config import (
@@ -219,11 +219,15 @@ class App:
 
         """
         font = self.ui.config.fonts[self.ui.font_name(self.settings.font)]
+        if font.file is not None:
+            file = str(path.FONTS_DIR / font.file)
+        else:
+            file = system_font(font.system)
         return TextRenderer(
             self.ctx,
-            None if font.file is None else str(path.FONTS_DIR / font.file),
-            pixelated=font.pixel_grid > 0,
-            pixel_grid=max(font.pixel_grid, 1),
+            file,
+            pixel_grid=font.pixel_grid,
+            scale_step=font.scale_step,
         )
 
     @property

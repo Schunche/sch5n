@@ -124,9 +124,12 @@ per topic:
 - **Interface**: theme, menu background, GUI size, font and cursor. The
   menu background is either the game world (a live world behind the main
   menu, the paused game behind the in-game settings) or the theme's
-  background. Fonts are listed under `fonts` in `data/ui.json`: Pixelify
-  Sans (default) and Classic, pygame's smooth built in font; add one by
-  putting it, with its license, in `assets/fonts` and listing it there.
+  background. Fonts are listed under `fonts` in `data/ui.json`: VT323
+  (default), Jersey 10 and Pixelify Sans, pixel fonts shipped with the
+  game; Arial, from the computer (Liberation Sans or Arimo stand in where
+  Arial is not installed, as their letters have Arial's sizes); and Classic,
+  pygame's built in font. Add one by putting it, with its license, in
+  `assets/fonts` and listing it there.
   The cursor is the game's or the system's normal pointer.
 - **Controls**: the bindings of what you are in. The game and the map
   viewer (also when editing) each have their own, and each can only be
@@ -166,18 +169,22 @@ own by copying an entry.
     - [numpy](https://numpy.org/), [pydantic](https://docs.pydantic.dev/)
     - [zeroconf](https://pypi.org/project/zeroconf/): finding games on the
       local network
-- [Pixelify Sans](https://fonts.google.com/specimen/Pixelify+Sans) by
-  Stefie Justprince, the game's font, under the SIL Open Font License 1.1
-  (`assets/fonts/PixelifySans-OFL.txt`, which must ship with the font). It
-  is drawn with hard pixel edges, at multiples of 10 px, where each of its
-  pixels is a whole number of screen pixels.
+- Fonts, each under the SIL Open Font License 1.1, whose license file in
+  `assets/fonts` must ship with it:
+  [VT323](https://fonts.google.com/specimen/VT323) by Peter Hull,
+  [Jersey 10](https://fonts.google.com/specimen/Jersey+10) by Sarah Cadigan-Fried
+  and [Pixelify Sans](https://fonts.google.com/specimen/Pixelify+Sans) by
+  Stefie Justprince. Pixel fonts are drawn at their native size, where one
+  font pixel is one screen pixel, and enlarged by whole factors with hard
+  edges, so they stay crisp. Arial is not shipped (its license forbids it);
+  the game uses the one installed on the computer.
 
 ## Layout
 
     assets/              what draws the game
         textures/        images
         shaders/         GLSL shaders
-        fonts/           Pixelify Sans and its license
+        fonts/           pixel fonts and their licenses
     data/                what defines the game: rules, blocks, items, animations, UI style, default settings (JSON)
         maps/            bundled maps, and the ones made with the editor
     dev/                 ignored by git: everything the game writes while developing

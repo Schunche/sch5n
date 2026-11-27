@@ -1,8 +1,11 @@
 {
     "default_theme": "dusk",
-    "default_font": "pixelify",
+    "default_font": "vt323",
     "fonts": {
+        "vt323": {"label": "VT323", "file": "VT323.ttf", "pixel_grid": 25, "scale_step": 20},
+        "jersey": {"label": "Jersey 10", "file": "Jersey10.ttf", "pixel_grid": 18.666666666666668},
         "pixelify": {"label": "Pixelify Sans", "file": "PixelifySans.ttf", "pixel_grid": 10},
+        "arial": {"label": "Arial", "system": ["arial", "liberationsans", "arimo"]},
         "classic": {"label": "Classic"}
     },
     "themes": {

@@ -225,7 +225,7 @@ class Settings(_Model):
     """Name of a theme in `ui.json`."""
     menu_background: MenuBackground = MenuBackground.WORLD
     cursor: CursorStyle = CursorStyle.GAME
-    font: str = "pixelify"
+    font: str = "vt323"
     """Name of a font in `ui.json`."""
     cursor_color: Color | None = None
     """`None` uses the operating system cursor with the cursor image. A
@@ -344,10 +344,19 @@ class FontStyle(_Model):
 
     label: str
     file: str | None = None
-    """File in `assets/fonts`. `None` is pygame's built in font."""
-    pixel_grid: int = Field(default=0, ge=0)
+    """File in `assets/fonts`."""
+    system: tuple[str, ...] = ()
+    """Fonts installed on the computer to use instead, first found wins,
+    for fonts that may not be shipped with the game. Without `file` or
+    any of these, pygame's built in font is used."""
+    pixel_grid: float = Field(default=0, ge=0)
     """For pixel fonts, the size at which one font pixel is one screen
-    pixel: text keeps hard edges at multiples of it. 0 for smooth fonts."""
+    pixel: units per em divided by the units of one font pixel. Text is
+    drawn at that size, enlarged by whole factors. 0 for smooth fonts."""
+    scale_step: float | None = None
+    """Requested text size per enlargement step; `pixel_grid` if unset.
+    Fonts drawn large at their native size use a smaller step, so
+    headings are still enlarged."""
 
 
 class UiConfig(_Model):
@@ -355,13 +364,22 @@ class UiConfig(_Model):
 
     default_theme: str
     themes: dict[str, Theme]
-    default_font: str = "pixelify"
+    default_font: str = "vt323"
     fonts: dict[str, FontStyle] = Field(
         default_factory=lambda: {
+            "vt323": FontStyle(
+                label="VT323", file="VT323.ttf", pixel_grid=25, scale_step=20
+            ),
+            "jersey": FontStyle(
+                label="Jersey 10", file="Jersey10.ttf", pixel_grid=1400 / 75
+            ),
             "pixelify": FontStyle(
                 label="Pixelify Sans",
                 file="PixelifySans.ttf",
                 pixel_grid=10,
+            ),
+            "arial": FontStyle(
+                label="Arial", system=("arial", "liberationsans", "arimo")
             ),
             "classic": FontStyle(label="Classic"),
         }

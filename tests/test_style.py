@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 import pydantic
+import pygame
 import pytest
 
+from sch5n.client.render.text import system_font
 from sch5n.client.style import COLOR_NAMES, Style
 from sch5n.game.config import BackgroundKind, Settings, UiConfig
 from sch5n.game.content import load_ui
@@ -89,3 +91,19 @@ def test_unknown_font_falls_back(config: UiConfig) -> None:
     style = Style(config, config.default_theme)
     assert style.font_name("Comic Sans") == config.default_font
     assert style.font_name("classic") == "classic"
+
+
+def test_system_fonts_must_really_be_found(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A substitute does not count as the font, unless nothing else is."""
+    installed = {
+        "arial": "/fonts/FreeSans.ttf",  # A substitute, as on Linux.
+        "liberationsans": "/fonts/LiberationSans-Regular.ttf",
+    }
+    monkeypatch.setattr(pygame.font, "match_font", installed.get)
+    assert (
+        system_font(["arial", "liberationsans"]) == installed["liberationsans"]
+    )
+    assert system_font(["arial"]) == installed["arial"]
+    assert system_font(["comic"]) is None

@@ -3,18 +3,23 @@
 
 from __future__ import annotations
 
+import math
 from collections import OrderedDict
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pygame
+import pygame.freetype
 
 from sch5n.client.render.atlas import create_texture
 from sch5n.client.render.batch import WHITE
 from sch5n.client.render.image import surface_to_rgba
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     import moderngl
 
     from sch5n.client.render.batch import RGBA, SpriteBatch
@@ -72,6 +77,34 @@ class TextStyle:
 DEFAULT_STYLE = TextStyle()
 
 
+def _simple(name: str) -> str:
+    return "".join(c for c in name.lower() if c.isalnum())
+
+
+def system_font(names: Sequence[str]) -> str | None:
+    """Find a font installed on the computer.
+
+    Font lookups substitute similar fonts for missing ones, like FreeSans
+    for Arial on Linux, so a font counts as found only if its file is named
+    after it. Without any, the first substitute is used.
+
+    Returns:
+        str | None: The font file, `None` if there is none at all.
+
+    """
+    if not pygame.font.get_init():
+        pygame.font.init()
+    substitute = None
+    for name in names:
+        found = pygame.font.match_font(name)
+        if found is None:
+            continue
+        if _simple(name) in _simple(Path(found).stem):
+            return found
+        substitute = substitute or found
+    return substitute
+
+
 class TextRenderer:
     """Renders strings with pygame and keeps recently used ones on the GPU.
 
@@ -85,27 +118,52 @@ class TextRenderer:
         font_path: str | None = None,
         max_cached: int = 512,
         *,
-        pixelated: bool = False,
-        pixel_grid: int = 1,
+        pixel_grid: float = 0,
+        scale_step: float | None = None,
     ) -> None:
         """Create a renderer. `font_path=None` uses pygame's default font.
 
-        `pixelated` keeps hard pixel edges, for pixel fonts: no smoothing
-        when rendering or scaling. Sizes are then rounded to a multiple of
-        `pixel_grid`, the size at which one pixel of the font is one screen
-        pixel, so every font pixel is whole screen pixels.
+        `pixel_grid` is for pixel fonts: the size at which one pixel of the
+        font is one screen pixel. Text is then rendered at exactly that size
+        and enlarged by a whole factor with hard edges, so every font pixel
+        is the same number of screen pixels, at any size. The factor is the
+        requested size divided by `scale_step` (by default `pixel_grid`),
+        rounded.
         """
         if not pygame.font.get_init():
             pygame.font.init()
         self.ctx = ctx
         self.font_path = font_path
-        self.pixelated = pixelated
-        self.pixel_grid = pixel_grid if pixelated else 1
+        self.pixel_grid = pixel_grid if font_path is not None else 0
+        self.scale_step = scale_step or self.pixel_grid
         self.max_cached = max_cached
         self._fonts: dict[int, pygame.font.Font] = {}
+        self._pixel_font: pygame.freetype.Font | None = None
+        if self.pixel_grid > 0:
+            if not pygame.freetype.get_init():
+                pygame.freetype.init()
+            font = pygame.freetype.Font(font_path, self.pixel_grid)
+            font.antialiased = False
+            font.origin = True
+            font.pad = False
+            self._pixel_font = font
         self._cache: OrderedDict[
             tuple[str, int], tuple[moderngl.Texture, tuple[int, int]]
         ] = OrderedDict()
+
+    @property
+    def pixelated(self) -> bool:
+        """Whether text keeps hard pixel edges."""
+        return self._pixel_font is not None
+
+    def scale(self, size: int) -> int:
+        """Whole factor a pixel font is enlarged by for a requested size.
+
+        Returns:
+            int: At least 1.
+
+        """
+        return max(1, round(size / self.scale_step)) if self.pixelated else 1
 
     def font(self, size: int) -> pygame.font.Font:
         """Font of a pixel size, roughly matching common system fonts.
@@ -116,12 +174,8 @@ class TextRenderer:
         """
         font = self._fonts.get(size)
         if font is None:
-            if self.font_path is None:
-                # pygame's default font renders small, scale it up a bit.
-                scaled = round(size * 4 / 3)
-            else:
-                grid = self.pixel_grid
-                scaled = max(grid, round(size / grid) * grid)
+            # pygame's default font renders small, scale it up a bit.
+            scaled = round(size * 4 / 3) if self.font_path is None else size
             font = self._fonts[size] = pygame.font.Font(self.font_path, scaled)
         return font
 
@@ -130,6 +184,21 @@ class TextRenderer:
         """Number of strings currently kept as textures."""
         return len(self._cache)
 
+    def _native_size(self, text: str) -> tuple[int, int]:
+        """Size of text in a pixel font at its native size.
+
+        Returns:
+            tuple[int, int]: Width and height in font pixels.
+
+        """
+        font = self._pixel_font
+        if font is None:
+            return (0, 0)
+        grid = self.pixel_grid
+        advance = sum(m[4] for m in font.get_metrics(text, size=grid) if m)
+        width = max(math.ceil(advance), font.get_rect(text, size=grid).right)
+        return (width, font.get_sized_height(grid))
+
     def measure(self, text: str, size: int) -> tuple[int, int]:
         """Size of rendered text in pixels.
 
@@ -137,24 +206,52 @@ class TextRenderer:
             tuple[int, int]: Width and height.
 
         """
+        if self.pixelated:
+            w, h = self._native_size(text)
+            k = self.scale(size)
+            return (w * k, h * k)
         return self.font(size).size(text)
+
+    def _render(self, text: str, size: int) -> pygame.Surface:
+        font = self._pixel_font
+        if font is None:
+            return self.font(size).render(
+                text, antialias=True, color=(255, 255, 255)
+            )
+        w, h = self._native_size(text)
+        surface = pygame.Surface((max(w, 1), h), pygame.SRCALPHA)
+        grid = self.pixel_grid
+        font.render_to(
+            surface,
+            (0, font.get_sized_ascender(grid)),
+            text,
+            fgcolor=(255, 255, 255),
+            size=grid,
+        )
+        return surface
 
     def _texture(
         self, text: str, size: int
     ) -> tuple[moderngl.Texture, tuple[int, int]]:
-        key = (text, size)
+        """Get the texture of a text, and its size on screen.
+
+        Returns:
+            tuple[moderngl.Texture, tuple[int, int]]: Texture and size.
+
+        """
+        k = self.scale(size)
+        key = (text, k if self.pixelated else size)
         cached = self._cache.get(key)
         if cached is not None:
             self._cache.move_to_end(key)
             return cached
 
-        surface = self.font(size).render(
-            text, antialias=not self.pixelated, color=(255, 255, 255)
-        )
+        surface = self._render(text, size)
         texture = create_texture(
             self.ctx, surface_to_rgba(surface), smooth=not self.pixelated
         )
-        entry = (texture, surface.get_size())
+        w, h = surface.get_size()
+        entry = (texture, (w * k, h * k))
         self._cache[key] = entry
         while len(self._cache) > self.max_cached:
             _, (old, _) = self._cache.popitem(last=False)
