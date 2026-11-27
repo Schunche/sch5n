@@ -8,6 +8,7 @@ in vec4 i_rect;    // x, y, width, height (world or screen pixels)
 in vec4 i_uv;      // u0, v0, u1, v1
 in vec4 i_color;   // tint / fill color
 in vec4 i_params;  // kind, corner radius, border width, unused
+in vec4 i_transform;  // rotation (radians, clockwise), pivot x, pivot y (fractions), unused
 
 uniform vec2 u_screen;  // viewport size in pixels
 uniform vec2 u_offset;  // camera top left in world pixels
@@ -20,7 +21,16 @@ flat out vec2 v_size;
 flat out vec4 v_params;
 
 void main() {
-    vec2 world = i_rect.xy + in_corner * i_rect.zw;
+    vec2 local = in_corner * i_rect.zw;
+    float angle = i_transform.x;
+    if (angle != 0.0) {
+        vec2 pivot = i_transform.yz * i_rect.zw;
+        vec2 d = local - pivot;
+        float c = cos(angle);
+        float s = sin(angle);
+        local = pivot + vec2(c * d.x - s * d.y, s * d.x + c * d.y);
+    }
+    vec2 world = i_rect.xy + local;
     vec2 screen = (world - u_offset) * u_zoom;
     vec2 ndc = screen / u_screen * 2.0 - 1.0;
     gl_Position = vec4(ndc.x, -ndc.y, 0.0, 1.0);

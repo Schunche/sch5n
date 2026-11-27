@@ -10,6 +10,7 @@ import numpy as np
 
 from sch5n.client.render.atlas import AtlasBuilder, Region, create_texture
 from sch5n.client.render.image import load_rgba
+from sch5n.game.config import Rig, load_model
 from sch5n.log.logger import LOGGER
 
 if TYPE_CHECKING:
@@ -50,6 +51,15 @@ class Animation:
 
         """
         return self.frames[self.clip.frame_index(age, len(self.frames))]
+
+    def frame_index(self, age: int) -> int:
+        """Index of the frame shown after `age` ticks.
+
+        Returns:
+            int: Index into `frames`.
+
+        """
+        return self.clip.frame_index(age, len(self.frames))
 
     @property
     def duration(self) -> int:
@@ -95,6 +105,21 @@ class ClientAssets:
             for mob, actions in animations.mobs.items()
             for action, clip in actions.items()
         }
+        armless_keys: dict[tuple[str, str], tuple[AnimationClip, list[Key]]]
+        armless_keys = {}
+        for mob, tool_use in animations.tool_use.items():
+            for action, clip in animations.mobs[mob].items():
+                armless = clip.model_copy(
+                    update={"path": f"{tool_use.armless}/{action}"}
+                )
+                armless_keys[mob, action] = (armless, add_clip(armless))
+        arm_keys = {
+            mob: [
+                add(f"{tool_use.arm}/{f.stem}")
+                for f in frame_files(textures_dir / tool_use.arm)
+            ]
+            for mob, tool_use in animations.tool_use.items()
+        }
         particle_keys = {
             name: (clip, add_clip(clip))
             for name, clip in animations.particles.items()
@@ -108,6 +133,9 @@ class ClientAssets:
 
         pixels, regions = builder.build()
         self.atlas = create_texture(ctx, pixels)
+        self.atlas_smooth = create_texture(ctx, pixels, smooth=True)
+        """The same atlas with linear filtering, for rotated sprites:
+        rotating pixel art with nearest filtering breaks thin lines."""
         LOGGER.debug(
             "Packed %s images into a %sx%s atlas",
             len(regions),
@@ -124,6 +152,21 @@ class ClientAssets:
             key: Animation(clip, tuple(regions[k] for k in keys))
             for key, (clip, keys) in mob_keys.items()
         }
+        self.armless = {
+            key: Animation(clip, tuple(regions[k] for k in keys))
+            for key, (clip, keys) in armless_keys.items()
+        }
+        """Copies of mob clips without the front arm, for swinging items."""
+        self.arms = {
+            mob: tuple(regions[k] for k in keys)
+            for mob, keys in arm_keys.items()
+        }
+        """Front arm poses per mob, matching `rigs[mob].arm`."""
+        self.rigs = {
+            mob: load_model(Rig, textures_dir / tool_use.rig)
+            for mob, tool_use in animations.tool_use.items()
+        }
+        self._check_rigs()
         self.particles = {
             name: Animation(clip, tuple(regions[k] for k in keys))
             for name, (clip, keys) in particle_keys.items()
@@ -148,6 +191,26 @@ class ClientAssets:
                 region = block_regions[min(variant, len(block_regions) - 1)]
                 self.block_uvs[block, variant] = region.uv
 
+    def _check_rigs(self) -> None:
+        """Make sure every rig matches the frames it describes.
+
+        Raises:
+            ValueError: A rig and its frames disagree.
+
+        """
+        for mob, rig in self.rigs.items():
+            arms = self.arms[mob]
+            if not len(arms) == len(rig.arm.angles) == len(rig.arm.hands):
+                msg = f"{mob}: rig describes another number of arm poses"
+                raise ValueError(msg)
+            for (owner, action), animation in self.mobs.items():
+                if owner != mob:
+                    continue
+                shoulders = rig.shoulders.get(action, ())
+                if len(shoulders) != len(animation.frames):
+                    msg = f"{mob}/{action}: rig has no shoulder per frame"
+                    raise ValueError(msg)
+
     def load_image(
         self, path: str, size: tuple[int, int] | None = None
     ) -> np.ndarray:
@@ -162,5 +225,6 @@ class ClientAssets:
         )
 
     def release(self) -> None:
-        """Free the atlas texture."""
+        """Free the atlas textures."""
         self.atlas.release()
+        self.atlas_smooth.release()

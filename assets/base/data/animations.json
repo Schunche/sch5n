@@ -12,6 +12,15 @@
             "run_stop": {"path": "mob/player/run_stop", "frame_ticks": 7, "loop": false}
         }
     },
+    "tool_use": {
+        "player": {
+            "armless": "mob/player/armless",
+            "arm": "mob/player/use_arm",
+            "rig": "mob/player/rig.json",
+            "swing": [-120, 60],
+            "grip": [0.15, 0.85]
+        }
+    },
     "transitions": {
         "player": [
             {"from": ["jump", "fall"], "to": ["idle", "run"], "play": "land"},

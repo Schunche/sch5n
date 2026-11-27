@@ -157,16 +157,15 @@ class Game:
         if player.use_cooldown < held.item.spec.use_time:
             return
         x, y = inp.target
+        target_x = (x + 0.5) * self.config.tile_size
 
         if inp.use and held.item.is_tool:
-            hit = hit_tile(self.tilemap, x, y, held.item)
-            if hit.result is HitResult.WRONG_TOOL:
-                if self.ticks % 10 == 0:
-                    LOGGER.debug("Another tool is needed for %s", hit.block)
-                return
-            if hit.result is HitResult.NOTHING:
-                return
+            # Tools swing whether or not they hit anything, like in the air.
+            player.start_swing(held.item, target_x)
             player.use_cooldown = 0
+            hit = hit_tile(self.tilemap, x, y, held.item)
+            if hit.result is HitResult.WRONG_TOOL and self.ticks % 10 == 0:
+                LOGGER.debug("Another tool is needed for %s", hit.block)
             if (
                 hit.result is HitResult.BROKEN
                 and hit.block is not None
@@ -190,6 +189,7 @@ class Game:
                 return
             block = self.content.blocks.id_of(held.item.spec.places)
             self.tilemap.set(x, y, block)
+            player.start_swing(held.item, target_x)
             player.inventory.consume_held()
             player.use_cooldown = 0
 

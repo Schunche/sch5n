@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
@@ -10,6 +11,7 @@ from sch5n.game.physics import Body, approach, move_and_collide
 
 if TYPE_CHECKING:
     from sch5n.game.config import GameConfig, GameMode
+    from sch5n.game.content import ItemDef
     from sch5n.game.inventory import Inventory
     from sch5n.game.physics import Collisions
     from sch5n.world.tilemap import TileMap
@@ -25,6 +27,21 @@ class Action(StrEnum):
     FALL = "fall"
     """In the air, going down."""
     WALL_SLIDE = "wall_slide"
+
+
+@dataclass(slots=True)
+class Swing:
+    """The player swinging an item: a tool, or a block being placed."""
+
+    item: ItemDef
+    duration: int
+    """Ticks the swing takes."""
+    age: int = 0
+
+    @property
+    def progress(self) -> float:
+        """How far the swing is, from 0 to 1."""
+        return min(self.age / max(self.duration, 1), 1.0)
 
 
 class Player:
@@ -54,6 +71,8 @@ class Player:
         self.use_cooldown = 0
         self.jump_hold = 0
         """Ticks the current jump may still be held to rise higher."""
+        self.swing: Swing | None = None
+        """The item swing in progress, if any."""
         self._jump_speed = self.tuning.jump_velocity
         """Ticks since the held item was last used."""
 
@@ -87,17 +106,31 @@ class Player:
         self._choose_action(hits, move_x)
         self.action_age += 1
         self.use_cooldown += 1
+        if self.swing is not None:
+            self.swing.age += 1
+            if self.swing.age >= self.swing.duration:
+                self.swing = None
+
+    def start_swing(self, item: ItemDef, toward_x: float) -> None:
+        """Swing `item` once, turning to face `toward_x` (world pixels).
+
+        The swing takes the item's use time; the player keeps facing that
+        way until it ends.
+        """
+        self.swing = Swing(item, item.spec.use_time)
+        self.facing_left = toward_x < self.body.center[0]
 
     def _walk(self, move_x: int, hits: Collisions) -> None:
         """Speed up towards `move_x`, or slow down without input."""
         tuning = self.tuning
         body = self.body
+        if move_x and self.swing is None:
+            # While swinging, the player keeps facing what it swings at.
+            self.facing_left = move_x < 0
         if move_x > 0:
-            self.facing_left = False
             if not hits.right:
                 body.vx = min(tuning.max_speed, body.vx + tuning.acceleration)
         elif move_x < 0:
-            self.facing_left = True
             if not hits.left:
                 body.vx = max(-tuning.max_speed, body.vx - tuning.acceleration)
         elif abs(body.vx) > tuning.friction:

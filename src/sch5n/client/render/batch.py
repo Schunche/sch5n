@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import IntEnum
 from typing import TYPE_CHECKING
 
@@ -20,8 +21,23 @@ type RGBA = tuple[float, float, float, float]
 
 WHITE: RGBA = (1.0, 1.0, 1.0, 1.0)
 _RGBA_LEN = 4
-INSTANCE_FLOATS = 16
-"""rect (4) + uv (4) + color (4) + params (4)."""
+INSTANCE_FLOATS = 20
+"""rect (4) + uv (4) + color (4) + params (4) + transform (4)."""
+
+
+@dataclass(frozen=True, slots=True)
+class Transform:
+    """How a sprite is mirrored and rotated."""
+
+    flip_x: bool = False
+    """Mirror the image horizontally (before rotating)."""
+    rotation: float = 0.0
+    """Clockwise, in radians, since y grows downwards."""
+    pivot: tuple[float, float] = (0.5, 0.5)
+    """Point the sprite rotates around, as a fraction of its size."""
+
+
+IDENTITY = Transform()
 
 
 class Kind(IntEnum):
@@ -119,11 +135,12 @@ class SpriteBatch:
                 (self._quad, "2f", "in_corner"),
                 (
                     self._vbo,
-                    "4f 4f 4f 4f/i",
+                    "4f 4f 4f 4f 4f/i",
                     "i_rect",
                     "i_uv",
                     "i_color",
                     "i_params",
+                    "i_transform",
                 ),
             ],
         )
@@ -156,14 +173,13 @@ class SpriteBatch:
         rect: tuple[float, float, float, float],
         region: Region = FULL,
         color: RGBA = WHITE,
-        *,
-        flip_x: bool = False,
+        transform: Transform = IDENTITY,
     ) -> None:
-        """Queue a textured quad."""
+        """Queue a textured quad, optionally mirrored and rotated."""
         self._use_texture(texture)
         self._reserve(1)
         u0, v0, u1, v1 = region.uv
-        if flip_x:
+        if transform.flip_x:
             u0, u1 = u1, u0
         self._instances[self._count] = (
             *rect,
@@ -175,6 +191,9 @@ class SpriteBatch:
             Kind.SPRITE,
             0,
             0,
+            0,
+            transform.rotation,
+            *transform.pivot,
             0,
         )
         self._count += 1
@@ -198,6 +217,10 @@ class SpriteBatch:
             Kind.SHAPE,
             radius,
             border,
+            0,
+            0,
+            0,
+            0,
             0,
         )
         self._count += 1

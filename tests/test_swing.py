@@ -1,0 +1,226 @@
+# Copyright (c) 2026 Schunche
+"""Swinging tools and blocks."""
+
+from __future__ import annotations
+
+import itertools
+import math
+
+import pytest
+
+from sch5n.client.assets import frame_files
+from sch5n.client.render.image import load_rgba
+from sch5n.client.world_view import (
+    SwingMoment,
+    held_item_pose,
+    swing_direction,
+)
+from sch5n.game.config import Rig, load_model
+from sch5n.game.content import AIR, Content, ItemDef, load_animations
+from sch5n.game.inventory import ItemStack
+from sch5n.game.session import Game, GameSetup, TickInput
+from sch5n.utility import path
+from sch5n.world.tilemap import TileMap
+
+TILE = 32
+
+
+@pytest.fixture
+def game(content: Content) -> Game:
+    """Start a game on flat ground with the starting tools.
+
+    Returns:
+        Game: The game, player at tile column 0.
+
+    """
+    tilemap = TileMap(content.blocks)
+    dirt = content.blocks.id_of("dirt")
+    for x in range(-30, 30):
+        for y in range(10, 14):
+            tilemap.set(x, y, dirt)
+    return Game(content, tilemap, GameSetup(seed=1, spawn=(0, 0)))
+
+
+def swings(game: Game, ticks: int, inputs: TickInput) -> list[int]:
+    """Run the game with the same input and record every new swing.
+
+    Returns:
+        list[int]: Ticks at which a swing started.
+
+    """
+    started = []
+    current = None
+    for tick in range(ticks):
+        game.tick(inputs)
+        swing = game.player.swing
+        if swing is not None and swing is not current:
+            started.append(tick)
+        current = swing
+    return started
+
+
+def held_item(game: Game) -> ItemDef:
+    """Get the item in the player's hand.
+
+    Returns:
+        ItemDef: The item.
+
+    """
+    held = game.inventory.held
+    assert held is not None
+    return held.item
+
+
+def test_holding_use_swings_back_to_back(game: Game) -> None:
+    """A held button keeps swinging, one swing per use time."""
+    use_time = held_item(game).spec.use_time
+    rounds = 4
+    started = swings(
+        game, use_time * rounds, TickInput(use=True, target=(1, 10))
+    )
+    assert len(started) >= rounds - 1
+    gaps = {b - a for a, b in itertools.pairwise(started)}
+    assert gaps == {use_time}
+
+
+def test_swing_lasts_the_use_time(game: Game) -> None:
+    """A single swing takes the item's use time, then ends."""
+    pickaxe = held_item(game)
+    game.player.start_swing(pickaxe, toward_x=1000)
+    for _ in range(pickaxe.spec.use_time - 1):
+        game.tick(TickInput())
+    assert game.player.swing is not None
+    game.tick(TickInput())
+    assert game.player.swing is None
+
+
+def test_swinging_at_air_and_wrong_blocks_still_swings(
+    game: Game, content: Content
+) -> None:
+    """Swings animate even when nothing is hit."""
+    assert swings(game, 60, TickInput(use=True, target=(2, 2)))  # Empty air.
+    game.inventory.select(1)  # The axe cannot break dirt.
+    assert swings(game, 60, TickInput(use=True, target=(1, 10)))
+    assert game.tilemap.get(1, 10) == content.blocks.id_of("dirt")
+
+
+def test_player_faces_what_it_swings_at(game: Game) -> None:
+    """The player turns to the target and keeps facing it while moving."""
+    swings(game, 40, TickInput(use=True, target=(-5, 10)))
+    assert game.player.facing_left
+    game.tick(TickInput(move_x=1, use=True, target=(-5, 10)))
+    assert game.player.facing_left  # Walking away mid swing.
+    for _ in range(60):
+        game.tick(TickInput(move_x=1))
+    assert not game.player.facing_left  # Free to turn after the swing.
+
+
+def test_placing_blocks_swings(game: Game, content: Content) -> None:
+    """Placing a block swings the block."""
+    game.inventory.slots[2] = ItemStack(content.items["dirt_block"], 5)
+    game.inventory.select(2)
+    started = swings(game, 40, TickInput(place=True, target=(3, 9)))
+    assert started
+    assert game.tilemap.get(3, 9) != AIR
+
+
+# Drawing
+
+
+@pytest.fixture(scope="module")
+def rig() -> Rig:
+    """Load the player's rig.
+
+    Returns:
+        Rig: Shoulder and hand positions.
+
+    """
+    tool_use = load_animations(path.DATA_DIR).tool_use["player"]
+    return load_model(Rig, path.TEXTURES_DIR / tool_use.rig)
+
+
+def test_rig_matches_the_frames(rig: Rig) -> None:
+    """Every clip has an armless copy and a shoulder for every frame."""
+    animations = load_animations(path.DATA_DIR)
+    tool_use = animations.tool_use["player"]
+    for action, clip in animations.mobs["player"].items():
+        frames = frame_files(path.TEXTURES_DIR / clip.path)
+        armless = frame_files(path.TEXTURES_DIR / tool_use.armless / action)
+        assert len(armless) == len(frames) == len(rig.shoulders[action])
+        for normal, bare in zip(frames, armless, strict=True):
+            assert load_rgba(normal).shape == load_rgba(bare).shape
+            assert (load_rgba(bare)[..., 3] > 0).sum() < (
+                load_rgba(normal)[..., 3] > 0
+            ).sum()
+    arms = frame_files(path.TEXTURES_DIR / tool_use.arm)
+    assert len(arms) == len(rig.arm.angles) == len(rig.arm.hands)
+
+
+def test_swing_goes_from_overhead_to_forward_down() -> None:
+    """The swing starts fast behind the head and ends forward and down."""
+    tool_use = load_animations(path.DATA_DIR).tool_use["player"]
+    start, end = tool_use.swing
+    assert swing_direction(tool_use, 0) == start
+    assert swing_direction(tool_use, 1) == end
+    halfway = swing_direction(tool_use, 0.5)
+    assert halfway > (start + end) / 2  # Eased: most of the way already.
+
+
+def moment(progress: float, *, facing_left: bool) -> SwingMoment:
+    """Create a moment of a swing on the idle frame.
+
+    Returns:
+        SwingMoment: The moment.
+
+    """
+    return SwingMoment(
+        progress=progress,
+        shoulder=(25.0, 25.0),
+        frame_width=40,
+        item_size=32,
+        facing_left=facing_left,
+    )
+
+
+def test_arm_follows_the_item(rig: Rig) -> None:
+    """The arm goes from raised to lowered during a swing."""
+    tool_use = load_animations(path.DATA_DIR).tool_use["player"]
+    arms = [
+        held_item_pose(rig, tool_use, moment(p / 10, facing_left=False)).arm
+        for p in range(11)
+    ]
+    assert arms == sorted(arms)
+    assert arms[0] == 0
+    assert arms[-1] == len(rig.arm.angles) - 1
+
+
+@pytest.mark.parametrize("progress", [0.0, 0.3, 0.7, 1.0])
+def test_facing_left_mirrors_the_swing(rig: Rig, progress: float) -> None:
+    """Facing left is the exact mirror image of facing right."""
+    tool_use = load_animations(path.DATA_DIR).tool_use["player"]
+    right = held_item_pose(rig, tool_use, moment(progress, facing_left=False))
+    left = held_item_pose(rig, tool_use, moment(progress, facing_left=True))
+    width = 40
+    rx, ry, rw, rh = right.item_rect
+    lx, ly, _, _ = left.item_rect
+    assert left.arm == right.arm
+    assert lx == pytest.approx(width - (rx + rw))
+    assert ly == pytest.approx(ry)
+    assert left.item_transform.rotation == pytest.approx(
+        -right.item_transform.rotation
+    )
+    assert left.item_transform.flip_x
+    assert not right.item_transform.flip_x
+    # The grip sits on the hand.
+    gx, gy = right.item_transform.pivot
+    hand = rig.arm.hands[right.arm]
+    assert (rx + gx * rw, ry + gy * rh) == pytest.approx(hand)
+
+
+def test_item_points_where_the_swing_goes(rig: Rig) -> None:
+    """At the end of the swing the item points forward and down."""
+    tool_use = load_animations(path.DATA_DIR).tool_use["player"]
+    end = held_item_pose(rig, tool_use, moment(1.0, facing_left=False))
+    # Item images point at -45 degrees; rotated, they point at the swing end.
+    pointing = math.degrees(end.item_transform.rotation) - 45
+    assert pointing == pytest.approx(tool_use.swing[1])

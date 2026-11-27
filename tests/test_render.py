@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 from typing import TYPE_CHECKING
 
@@ -13,6 +14,7 @@ import pytest
 
 from sch5n.client.app import App, Options
 from sch5n.client.keybinds import Action, Binding, Context, Mod
+from sch5n.client.render.batch import Transform
 from sch5n.client.scenes.map_tools import EditorScene, ViewerScene
 from sch5n.client.scenes.menu import MainMenu
 from sch5n.client.scenes.play import PlayScene
@@ -509,3 +511,22 @@ def test_reset_controls_keeps_other_programs(
     )
     app.keybinds.reset()
     app.update_settings()
+
+
+def test_rotated_sprite(app: App) -> None:
+    """A wide sprite rotated by 90 degrees around its center stands up."""
+    app.clear((0, 0, 0))
+    app.batch.begin(app.screen)
+    app.batch.sprite(
+        app.assets.atlas,
+        (100, 145, 100, 10),
+        app.assets.blocks[1][0],  # An opaque tile texture.
+        transform=Transform(rotation=math.pi / 2),
+    )
+    app.batch.flush()
+    pixels = read_pixels(app).any(axis=2)
+    ys, xs = pixels.nonzero()
+    width, height = 100, 10
+    slack = 5
+    assert xs.max() - xs.min() < height + slack  # Narrow,
+    assert ys.max() - ys.min() > width - 2 * slack  # and tall.

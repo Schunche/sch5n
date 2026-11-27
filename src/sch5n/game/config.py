@@ -351,6 +351,44 @@ class Transition(_Model):
     """Clip played in between; it must not loop."""
 
 
+class ToolUseConfig(_Model):
+    """How a mob swings items.
+
+    The body is drawn without its front arm, then the item rotating around
+    the hand, then the arm pose closest to the item's direction.
+    """
+
+    armless: str
+    """Texture directory with an armless copy of every clip."""
+    arm: str
+    """Texture directory with the front arm poses."""
+    rig: str
+    """JSON file with shoulder and hand positions, see `Rig`."""
+    swing: tuple[float, float] = (-120.0, 60.0)
+    """Direction of the item at the start and end of a swing, in degrees,
+    clockwise from straight forward."""
+    grip: tuple[float, float] = (0.15, 0.85)
+    """Where the hand holds an item image, as a fraction of its size. Item
+    images point up and forward (45 degrees) from the grip."""
+
+
+class ArmRig(_Model):
+    """Front arm poses: their shoulder, hand positions and directions."""
+
+    shoulder: tuple[float, float]
+    angles: tuple[float, ...]
+    """Direction of each pose, degrees clockwise from straight forward."""
+    hands: tuple[tuple[float, float], ...]
+
+
+class Rig(_Model):
+    """Attachment points in sprite pixels, written next to the frames."""
+
+    shoulders: dict[str, tuple[tuple[float, float], ...]]
+    """Front shoulder in every frame of every clip."""
+    arm: ArmRig
+
+
 class AnimationsConfig(_Model):
     """Which textures make up which animation, `animations.json`."""
 
@@ -359,6 +397,8 @@ class AnimationsConfig(_Model):
         default_factory=dict
     )
     """Per mob, clips that bridge changes between animations."""
+    tool_use: dict[str, ToolUseConfig] = Field(default_factory=dict)
+    """Per mob, how it swings items."""
     particles: dict[str, AnimationClip]
     tile_breakage: AnimationClip
     clouds: str

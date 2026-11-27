@@ -4,12 +4,18 @@
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import numpy as np
 
 from sch5n.client.animation import Animator
-from sch5n.client.render.batch import INSTANCE_FLOATS, WHITE, sprite_instances
+from sch5n.client.render.batch import (
+    INSTANCE_FLOATS,
+    WHITE,
+    Transform,
+    sprite_instances,
+)
 from sch5n.game.mining import durability_fraction
 from sch5n.utility import path
 from sch5n.world.io import load_tilemap
@@ -33,8 +39,9 @@ if TYPE_CHECKING:
     from sch5n.client.render.atlas import Region
     from sch5n.client.render.batch import RGBA, SpriteBatch
     from sch5n.game.ambient import Ambience, Cloud
+    from sch5n.game.config import Rig, ToolUseConfig
     from sch5n.game.floating_item import FloatingItem
-    from sch5n.game.player import Player
+    from sch5n.game.player import Player, Swing
     from sch5n.game.session import Game
     from sch5n.math.rect import Rect
     from sch5n.math.vector import IntTuple2
@@ -123,23 +130,182 @@ class TileRenderer:
             )
 
 
-def draw_player(
-    batch: SpriteBatch, assets: ClientAssets, player: Player, frame: Region
-) -> None:
-    """Queue the player sprite, standing on the bottom of the hitbox.
+@dataclass(frozen=True, slots=True)
+class HeldItemPose:
+    """Where the swinging arm and item go, relative to the sprite's corner."""
 
-    Frames are drawn at their own size, centered on the hitbox, so they
-    may be wider than the body for swinging arms and legs.
+    arm: int
+    """Index of the arm pose."""
+    arm_offset: tuple[float, float]
+    """Top left of the arm image."""
+    item_rect: tuple[float, float, float, float]
+    item_transform: Transform
+
+
+def swing_direction(tool_use: ToolUseConfig, progress: float) -> float:
+    """Direction of the swung item, fast at first and slowing down.
+
+    Returns:
+        float: Degrees clockwise from straight forward.
+
     """
-    body = player.body
-    x = round(body.x + (body.w - frame.width) / 2)
-    y = round(body.y + body.h - frame.height)
-    batch.sprite(
-        assets.atlas,
-        (x, y, frame.width, frame.height),
-        frame,
-        flip_x=player.facing_left,
+    start, end = tool_use.swing
+    eased = 1 - (1 - min(max(progress, 0.0), 1.0)) ** 2
+    return start + (end - start) * eased
+
+
+@dataclass(frozen=True, slots=True)
+class SwingMoment:
+    """One moment of a swing, as seen on one body frame."""
+
+    progress: float
+    """How far the swing is, 0 to 1."""
+    shoulder: tuple[float, float]
+    """Front shoulder in the body frame."""
+    frame_width: float
+    item_size: float
+    facing_left: bool
+
+
+def held_item_pose(
+    rig: Rig, tool_use: ToolUseConfig, moment: SwingMoment
+) -> HeldItemPose:
+    """Place the arm and the item for a moment of a swing.
+
+    Returns:
+        HeldItemPose: Positions relative to the body sprite's top left.
+
+    """
+    angle = swing_direction(tool_use, moment.progress)
+    arm = min(
+        range(len(rig.arm.angles)),
+        key=lambda i: abs(rig.arm.angles[i] - angle),
     )
+    dx = moment.shoulder[0] - rig.arm.shoulder[0]
+    dy = moment.shoulder[1] - rig.arm.shoulder[1]
+    hand_x, hand_y = rig.arm.hands[arm]
+    grip_x, grip_y = tool_use.grip
+    # Item images point up and forward (-45 degrees) from the grip.
+    rotation = math.radians(angle + 45)
+    if moment.facing_left:
+        # Everything is mirrored around the sprite's middle.
+        dx = -dx
+        hand_x = moment.frame_width - hand_x
+        grip_x = 1 - grip_x
+        rotation = -rotation
+    size = moment.item_size
+    return HeldItemPose(
+        arm=arm,
+        arm_offset=(dx, dy),
+        item_rect=(
+            dx + hand_x - grip_x * size,
+            dy + hand_y - grip_y * size,
+            size,
+            size,
+        ),
+        item_transform=Transform(
+            flip_x=moment.facing_left,
+            rotation=rotation,
+            pivot=(grip_x, grip_y),
+        ),
+    )
+
+
+class PlayerRenderer:
+    """Draws the player, including items it swings."""
+
+    def __init__(
+        self, assets: ClientAssets, tool_use: ToolUseConfig | None
+    ) -> None:
+        """Create a renderer. Without `tool_use` swings are not shown."""
+        self.assets = assets
+        self.tool_use = tool_use if "player" in assets.rigs else None
+
+    def draw(
+        self, batch: SpriteBatch, player: Player, animator: Animator
+    ) -> None:
+        """Queue the player, standing on the bottom of the hitbox.
+
+        Frames are drawn at their own size, centered on the hitbox, so
+        they may be wider than the body for swinging arms and legs.
+        """
+        frame = animator.frame
+        body = player.body
+        corner = (
+            round(body.x + (body.w - frame.width) / 2),
+            round(body.y + body.h - frame.height),
+        )
+        if player.swing is not None and self.tool_use is not None:
+            self._draw_swinging(batch, player, animator, corner)
+            return
+        batch.sprite(
+            self.assets.atlas,
+            (*corner, frame.width, frame.height),
+            frame,
+            transform=Transform(flip_x=player.facing_left),
+        )
+
+    def _swing_pose(
+        self, player: Player, animator: Animator, swing: Swing
+    ) -> tuple[Region, HeldItemPose]:
+        """Armless body frame and arm and item placement for this tick.
+
+        Returns:
+            tuple[Region, HeldItemPose]: Body frame and pose.
+
+        Raises:
+            RuntimeError: Swings are not configured.
+
+        """
+        if self.tool_use is None:
+            msg = "No tool use configured for the player"
+            raise RuntimeError(msg)
+        rig = self.assets.rigs["player"]
+        armless = self.assets.armless["player", animator.clip]
+        index = armless.frame_index(animator.age)
+        body = armless.frames[index]
+        moment = SwingMoment(
+            progress=swing.progress,
+            shoulder=rig.shoulders[animator.clip][index],
+            frame_width=body.width,
+            item_size=swing.item.spec.drop_size,
+            facing_left=player.facing_left,
+        )
+        return body, held_item_pose(rig, self.tool_use, moment)
+
+    def _draw_swinging(
+        self,
+        batch: SpriteBatch,
+        player: Player,
+        animator: Animator,
+        corner: tuple[int, int],
+    ) -> None:
+        """Body without its front arm, then the item, then the arm."""
+        swing = player.swing
+        if swing is None:
+            return
+        body, pose = self._swing_pose(player, animator, swing)
+        atlas = self.assets.atlas
+        x, y = corner
+        mirror = Transform(flip_x=player.facing_left)
+        batch.sprite(
+            atlas, (x, y, body.width, body.height), body, transform=mirror
+        )
+        ix, iy, iw, ih = pose.item_rect
+        batch.sprite(
+            self.assets.atlas_smooth,
+            (x + ix, y + iy, iw, ih),
+            self.assets.items[swing.item.name],
+            transform=pose.item_transform,
+        )
+        arm = self.assets.arms["player"][pose.arm]
+        ax, ay = pose.arm_offset
+        batch.sprite(
+            atlas,
+            (x + ax, y + ay, arm.width, arm.height),
+            arm,
+            transform=mirror,
+        )
 
 
 def draw_floating_items(
@@ -275,6 +441,9 @@ class WorldRenderer:
         self.app = app
         self.tiles = TileRenderer(app.assets, app.content.game.tile_size)
         self.player_animator: Animator | None = None
+        self.player_renderer = PlayerRenderer(
+            app.assets, app.animations.tool_use.get("player")
+        )
 
     def _animator(self, game: Game) -> Animator:
         if self.player_animator is None:
@@ -310,8 +479,7 @@ class WorldRenderer:
         batch.begin(app.screen, offset, camera.zoom)
         self.tiles.draw(batch, game.tilemap, camera.view(app.screen))
         if show_player:
-            frame = self._animator(game).frame
-            draw_player(batch, app.assets, game.player, frame)
+            self.player_renderer.draw(batch, game.player, self._animator(game))
         draw_particles(batch, app.assets, game.ambience)
         draw_wind_streaks(batch, game.ambience)
         draw_floating_items(batch, app.assets, game.floating_items)
