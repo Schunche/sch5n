@@ -36,6 +36,30 @@ def frame_files(directory: Path) -> list[Path]:
     return sorted(frames, key=lambda p: int(p.stem))
 
 
+def add_item_icon(
+    builder: AtlasBuilder[Key],
+    textures_dir: Path,
+    icon: Key,
+    size: int,
+    colorkey: tuple[int, int, int],
+) -> Key:
+    """Pack an item icon, scaled up by whole pixels to fit `size`.
+
+    Swinging items are drawn from the smooth atlas. Scaled up there, small
+    images blur; scaled up here first, they are drawn 1:1 and stay sharp.
+
+    Returns:
+        Key: The key of the packed image.
+
+    """
+    pixels = load_rgba(textures_dir / f"{icon}.png", colorkey)
+    factor = max(size // max(pixels.shape[:2]), 1)
+    key = icon if factor == 1 else f"{icon}@x{factor}"
+    if key not in builder.images:
+        builder.add(key, pixels.repeat(factor, axis=0).repeat(factor, axis=1))
+    return key
+
+
 @dataclass(frozen=True, slots=True)
 class Animation:
     """An animation clip with its atlas regions."""
@@ -100,7 +124,16 @@ class ClientAssets:
             block.id: [add(texture) for texture in block.spec.textures]
             for block in content.blocks
         }
-        item_keys = {item.name: add(item.spec.icon) for item in content.items}
+        item_keys = {
+            item.name: add_item_icon(
+                builder,
+                textures_dir,
+                item.spec.icon,
+                item.spec.drop_size,
+                self.colorkey,
+            )
+            for item in content.items
+        }
         mob_keys = {
             (mob, action): (clip, add_clip(clip))
             for mob, actions in animations.mobs.items()

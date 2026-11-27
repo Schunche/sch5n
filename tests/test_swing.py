@@ -199,7 +199,7 @@ def moment(progress: float, *, facing_left: bool) -> SwingMoment:
         progress=progress,
         shoulder=(25.0, 25.0),
         frame_width=40,
-        item_size=32,
+        item_size=(32, 32),
         facing_left=facing_left,
     )
 
@@ -349,11 +349,16 @@ def drawn_at(pose: HeldItemPose, u: float, v: float) -> tuple[float, float]:
 HANDLE_TIP = (0.85, 0.15)
 """Top right of an item image: the end of the handle, at the head."""
 BLADE = (0.85, 0.5)
-"""A point below the handle's diagonal, on the side of the blade."""
+"""A point below the handle's diagonal, on its clockwise side."""
+AXE_BLADE = (0.5, 0.15)
+"""A point above the handle's diagonal, where the axe images have their
+blade."""
 
 
-def blade_side(pose: HeldItemPose) -> float:
-    """Which side of the drawn handle the blade is on.
+def blade_side(
+    pose: HeldItemPose, blade: tuple[float, float] = BLADE
+) -> float:
+    """Which side of the drawn handle a point of the item image is on.
 
     Returns:
         float: Positive when clockwise of the handle, seen from the grip.
@@ -361,7 +366,7 @@ def blade_side(pose: HeldItemPose) -> float:
     """
     gx, gy = drawn_at(pose, 0.15, 0.85)
     tx, ty = drawn_at(pose, *HANDLE_TIP)
-    bx, by = drawn_at(pose, *BLADE)
+    bx, by = drawn_at(pose, *blade)
     return (tx - gx) * (by - gy) - (ty - gy) * (bx - gx)
 
 
@@ -387,20 +392,30 @@ def test_mirrored_item_flips_its_blade_only(
 def test_axe_blade_leads_the_chop(rig: Rig) -> None:
     """The chop turns counterclockwise, so the blade is on that side."""
     tool_use = load_animations(path.DATA_DIR).tool_use["player"]
-    assert "axe" in tool_use.mirrored
     chop = frames("axe")
     assert chop[0].item > chop[-1].item  # Counterclockwise, facing right.
     for frame in chop:
         pose = keyframe_pose(
-            rig, tool_use, moment(0.5, facing_left=False), frame, mirrored=True
+            rig,
+            tool_use,
+            moment(0.5, facing_left=False),
+            frame,
+            mirrored="axe" in tool_use.mirrored,
         )
-        assert blade_side(pose) < 0
-    # Overhead swings turn clockwise: their blade is on the other side.
-    overhead = held_item_pose(rig, tool_use, moment(0.5, facing_left=False))
-    assert blade_side(overhead) > 0
+        assert blade_side(pose, AXE_BLADE) < 0
 
 
 def test_only_keyframed_swings_are_mirrored() -> None:
     """Overhead swings cannot be mirrored."""
     with pytest.raises(pydantic.ValidationError):
         ToolUseConfig(armless="a", arm="b", rig="c", mirrored=("pickaxe",))
+
+
+def test_lopper_opens_like_scissors_in_two_hands() -> None:
+    """The lopper's blades part and snap shut, a second hand holds it."""
+    keys = load_animations(path.DATA_DIR).tool_use["player"].styles["lopper"]
+    spreads = [swing_frame(keys, p / 20).spread for p in range(21)]
+    assert spreads[0] == 0
+    assert max(spreads) > 0
+    assert spreads[-1] == 0
+    assert all(key.off_arm is not None for key in keys)

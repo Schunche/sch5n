@@ -50,6 +50,16 @@ class Trim(_Model):
     durability: int = Field(default=50, gt=0)
 
 
+class ChanceDrop(_Model):
+    """An extra item a broken block may drop, on top of its `drop`."""
+
+    item: str
+    chance: float = Field(default=1.0, gt=0, le=1)
+    """Probability that it drops at all."""
+    min_amount: int = Field(default=1, gt=0)
+    max_amount: int = Field(default=1, gt=0)
+
+
 class BlockSpec(_Model):
     """A block as written in `blocks.json`."""
 
@@ -64,6 +74,8 @@ class BlockSpec(_Model):
     slower_tool_power: float = Field(default=0.7, gt=0, le=1)
     drop: str | None = None
     """Item id dropped when broken."""
+    extra_drops: tuple[ChanceDrop, ...] = ()
+    """Items that may also drop when the block is broken."""
     transform_to: str | None = None
     """Block left behind instead of air when broken."""
     particle: str | None = None
@@ -266,6 +278,13 @@ class ItemRegistry:
             if block.spec.drop is not None and block.spec.drop not in self:
                 msg = f"{block.name}: unknown drop {block.spec.drop!r}"
                 raise ValueError(msg)
+            for extra in block.spec.extra_drops:
+                if extra.item not in self:
+                    msg = f"{block.name}: unknown drop {extra.item!r}"
+                    raise ValueError(msg)
+                if extra.min_amount > extra.max_amount:
+                    msg = f"{block.name}: min_amount above max_amount"
+                    raise ValueError(msg)
 
     def __contains__(self, name: object) -> bool:
         """Check whether an item exists.

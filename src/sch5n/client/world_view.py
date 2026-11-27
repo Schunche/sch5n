@@ -147,6 +147,13 @@ class HeldItemPose:
     item_transform: Transform
     behind: bool = False
     """Draw the arm and item behind the body."""
+    second_item: tuple[tuple[float, float, float, float], Transform] | None = (
+        None
+    )
+    """Rect and transform of the other half of an opened two-part tool,
+    like the lopper's second blade. Drawn along with the item."""
+    off_arm: int | None = None
+    """Index of the arm pose of the other hand, drawn behind the body."""
 
 
 def _eased(progress: float) -> float:
@@ -193,7 +200,8 @@ class SwingMoment:
     shoulder: tuple[float, float]
     """Front shoulder in the body frame."""
     frame_width: float
-    item_size: float
+    item_size: tuple[float, float]
+    """Width and height of the item image, as drawn."""
     facing_left: bool
 
 
@@ -206,6 +214,8 @@ class SwingFrame:
     scale: float
     behind: bool
     body: str | None
+    spread: float = 0.0
+    off_arm: str | None = None
 
 
 def swing_frame(keys: Sequence[SwingKey], progress: float) -> SwingFrame:
@@ -233,6 +243,8 @@ def swing_frame(keys: Sequence[SwingKey], progress: float) -> SwingFrame:
         scale=start.scale + (end.scale - start.scale) * f,
         behind=near.behind,
         body=near.body,
+        spread=start.spread + (end.spread - start.spread) * f,
+        off_arm=near.off_arm,
     )
 
 
@@ -301,14 +313,24 @@ def keyframe_pose(
         HeldItemPose: Positions relative to the body sprite's top left.
 
     """
-    hold = Hold(
-        rig.arm.names.index(frame.arm),
-        frame.item,
-        frame.scale,
-        mirrored=mirrored,
-    )
+    arm = rig.arm.names.index(frame.arm)
+    # An opened two-part tool fans out around the hand: one half turns
+    # each way, both held by it.
+    half = frame.spread / 2
+    hold = Hold(arm, frame.item + half, frame.scale, mirrored=mirrored)
     pose = place_item(rig, tool_use, moment, hold)
-    return replace(pose, behind=frame.behind)
+    second = None
+    if frame.spread > 0:
+        other = place_item(
+            rig, tool_use, moment, replace(hold, direction=frame.item - half)
+        )
+        second = (other.item_rect, other.item_transform)
+    off_arm = None
+    if frame.off_arm is not None:
+        off_arm = rig.arm.names.index(frame.off_arm)
+    return replace(
+        pose, behind=frame.behind, second_item=second, off_arm=off_arm
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -354,15 +376,16 @@ def place_item(
         grip_x = 1 - grip_x
         rotation = -rotation
         flip = not flip
-    size = moment.item_size * hold.scale
+    width = moment.item_size[0] * hold.scale
+    height = moment.item_size[1] * hold.scale
     return HeldItemPose(
         arm=hold.arm,
         arm_offset=(dx, dy),
         item_rect=(
-            dx + hand_x - grip_x * size,
-            dy + hand_y - grip_y * size,
-            size,
-            size,
+            dx + hand_x - grip_x * width,
+            dy + hand_y - grip_y * height,
+            width,
+            height,
         ),
         item_transform=Transform(
             flip_x=flip,
@@ -439,7 +462,9 @@ class PlayerRenderer:
             progress=swing.progress,
             shoulder=rig.shoulders[clip][index],
             frame_width=body.width,
-            item_size=swing.item.spec.drop_size,
+            item_size=self.assets.items[swing.item.name].fit(
+                swing.item.spec.drop_size
+            ),
             facing_left=player.facing_left,
         )
         if frame is None:
@@ -470,19 +495,31 @@ class PlayerRenderer:
         atlas = self.assets.atlas
         x, y = corner
         mirror = Transform(flip_x=player.facing_left)
+        ax, ay = pose.arm_offset
+        if pose.off_arm is not None:
+            # The other hand, on the far side of the body.
+            off = self.assets.arms["player"][pose.off_arm]
+            batch.sprite(
+                atlas,
+                (x + ax, y + ay, off.width, off.height),
+                off,
+                transform=mirror,
+            )
         if not pose.behind:
             batch.sprite(
                 atlas, (x, y, body.width, body.height), body, transform=mirror
             )
-        ix, iy, iw, ih = pose.item_rect
-        batch.sprite(
-            self.assets.atlas_smooth,
-            (x + ix, y + iy, iw, ih),
-            self.assets.items[swing.item.name],
-            transform=pose.item_transform,
-        )
+        halves = [(pose.item_rect, pose.item_transform)]
+        if pose.second_item is not None:
+            halves.append(pose.second_item)
+        for (ix, iy, iw, ih), transform in halves:
+            batch.sprite(
+                self.assets.atlas_smooth,
+                (x + ix, y + iy, iw, ih),
+                self.assets.items[swing.item.name],
+                transform=transform,
+            )
         arm = self.assets.arms["player"][pose.arm]
-        ax, ay = pose.arm_offset
         batch.sprite(
             atlas,
             (x + ax, y + ay, arm.width, arm.height),
@@ -501,10 +538,13 @@ def draw_floating_items(
     """Queue dropped items."""
     for floating in items:
         r = floating.sprite_rect
+        region = assets.items[floating.stack.item.name]
+        w, h = region.fit(r.w)
+        # Images that are not square sit on the bottom, centered.
         batch.sprite(
             assets.atlas,
-            (r.x, r.y, r.w, r.h),
-            assets.items[floating.stack.item.name],
+            (r.x + (r.w - w) / 2, r.y + r.h - h, w, h),
+            region,
         )
 
 

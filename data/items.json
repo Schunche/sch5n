@@ -1,11 +1,18 @@
 {
     "items": {
-        "copper_pickaxe": {"name": "Copper Pickaxe", "description": "Breaks stone and ore. Digs dirt too, slowly.", "icon": "tool/copperPickaxe", "max_stack": 1, "use_time": 25, "tool_power": {"pickaxe": 25}, "damage": 3, "knockback": 2, "drop_size": 32},
-        "copper_axe": {"name": "Copper Axe", "description": "Chops down trees. Cuts leaves too, slowly.", "icon": "tool/copperAxe", "max_stack": 1, "use_time": 40, "tool_power": {"axe": 30}, "damage": 4, "knockback": 3, "drop_size": 32},
-        "copper_lopper": {"name": "Copper Lopper", "description": "Cuts leaves quickly.", "icon": "tool/copperLopper", "max_stack": 1, "use_time": 30, "tool_power": {"lopper": 25}, "damage": 2, "knockback": 1, "drop_size": 32},
-        "iron_shovel": {"name": "Iron Shovel", "description": "Made for digging dirt.", "icon": "tool/ironShovel", "max_stack": 1, "use_time": 32, "tool_power": {"shovel": 50}, "damage": 4, "knockback": 2, "drop_size": 32},
+        "copper_pickaxe": {"name": "Copper Pickaxe", "description": "Breaks stone and ore. Digs dirt too, slowly.", "icon": "tool/copper_pickaxe", "max_stack": 1, "use_time": 25, "tool_power": {"pickaxe": 25}, "damage": 3, "knockback": 2, "drop_size": 32},
+        "copper_axe": {"name": "Copper Axe", "description": "Chops down trees. Cuts leaves too, slowly.", "icon": "tool/copper_axe", "max_stack": 1, "use_time": 40, "tool_power": {"axe": 30}, "damage": 4, "knockback": 3, "drop_size": 32},
+        "copper_shovel": {"name": "Copper Shovel", "description": "Made for digging dirt.", "icon": "tool/copper_shovel", "max_stack": 1, "use_time": 36, "tool_power": {"shovel": 25}, "damage": 3, "knockback": 2, "drop_size": 32},
+        "copper_lopper": {"name": "Copper Lopper", "description": "Cuts leaves quickly.", "icon": "tool/copper_lopper", "max_stack": 1, "use_time": 30, "tool_power": {"lopper": 25}, "damage": 2, "knockback": 1, "drop_size": 32},
+        "iron_pickaxe": {"name": "Iron Pickaxe", "description": "Breaks stone and ore. Digs dirt too, slowly.", "icon": "tool/iron_pickaxe", "max_stack": 1, "use_time": 22, "tool_power": {"pickaxe": 50}, "damage": 4, "knockback": 2, "drop_size": 32},
+        "iron_axe": {"name": "Iron Axe", "description": "Chops down trees. Cuts leaves too, slowly.", "icon": "tool/iron_axe", "max_stack": 1, "use_time": 34, "tool_power": {"axe": 36}, "damage": 5, "knockback": 3, "drop_size": 32},
+        "iron_shovel": {"name": "Iron Shovel", "description": "Made for digging dirt.", "icon": "tool/iron_shovel", "max_stack": 1, "use_time": 32, "tool_power": {"shovel": 50}, "damage": 4, "knockback": 2, "drop_size": 32},
+        "iron_lopper": {"name": "Iron Lopper", "description": "Cuts leaves quickly.", "icon": "tool/iron_lopper", "max_stack": 1, "use_time": 27, "tool_power": {"lopper": 50}, "damage": 3, "knockback": 1, "drop_size": 32},
         "dirt_block": {"name": "Dirt Block", "description": "Place it to build.", "icon": "tile/dirt/0", "max_stack": 1024, "places": "dirt", "drop_size": 16},
         "stone_block": {"name": "Stone Block", "description": "Place it to build.", "icon": "tile/stone/0", "max_stack": 1024, "places": "stone", "drop_size": 16},
-        "oak_log": {"name": "Oak Log", "description": "Place it to build.", "icon": "tile/oakLog/0", "max_stack": 1024, "places": "oak_log", "drop_size": 16}
+        "oak_log": {"name": "Oak Log", "description": "Place it to build.", "icon": "tile/oakLog/0", "max_stack": 1024, "places": "oak_log", "drop_size": 16},
+        "branch": {"name": "Branch", "description": "A twig from a tree.", "icon": "item/branch", "drop_size": 16},
+        "leaf": {"name": "Leaf", "description": "A leaf from a tree.", "icon": "item/leaf", "drop_size": 16},
+        "bird_nest": {"name": "Bird's Nest", "description": "Found in the leaves, rarely.", "icon": "item/bird_nest", "drop_size": 16}
     }
 }

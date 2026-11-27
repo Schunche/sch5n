@@ -21,7 +21,20 @@ def surface_to_rgba(surface: pygame.Surface) -> np.ndarray:
     """
     width, height = surface.get_size()
     data = pygame.image.tobytes(surface, "RGBA")
-    return np.frombuffer(data, dtype=np.uint8).reshape(height, width, 4).copy()
+    pixels = np.frombuffer(data, dtype=np.uint8).reshape(height, width, 4)
+    pixels = pixels.copy()
+    if surface.get_colorkey() is not None:
+        # Palette images keep their transparent entry as a colorkey, which
+        # the bytes leave out. Compared by palette index, so an opaque entry
+        # of the same color stays.
+        opaque = pygame.mask.from_surface(surface).to_surface(
+            setcolor=(255, 255, 255, 255), unsetcolor=(0, 0, 0, 255)
+        )
+        mask = np.frombuffer(
+            pygame.image.tobytes(opaque, "RGBA"), dtype=np.uint8
+        ).reshape(height, width, 4)[..., 0]
+        pixels[mask == 0] = 0
+    return pixels
 
 
 def apply_colorkey(

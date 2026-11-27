@@ -117,10 +117,12 @@ class Hud:
         """Draw an item icon with its amount, centered at `center`."""
         size = self.gui_size
         x, y = round(center[0] - size / 2), round(center[1] - size / 2)
+        region = self.assets.items[stack.item.name]
+        w, h = region.fit(size)
         batch.sprite(
             self.assets.atlas,
-            (x, y, size, size),
-            self.assets.items[stack.item.name],
+            (center[0] - w / 2, center[1] - h / 2, w, h),
+            region,
         )
         if stack.item.is_stackable:
             self.text.draw(

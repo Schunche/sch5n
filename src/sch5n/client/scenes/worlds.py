@@ -28,8 +28,10 @@ from sch5n.world.save import (
     MAX_NAME_LENGTH,
     World,
     clean_name,
+    delete_world,
     list_worlds,
     load_world,
+    set_favorite,
     unique_name,
     world_path,
 )
@@ -55,6 +57,9 @@ FOOTER_WIDTH = 160
 DIM = 0.55
 TEXT_SIZE = 14
 CARET_BLINK_TICKS = 30
+FAVORITE_WIDTH = 50
+DELETE_WIDTH = 64
+SMALL_GAP = 6
 
 
 def last_played(modified: float, now: float) -> str:
@@ -104,6 +109,10 @@ class WorldsScene(Scene):
         self.panel = Rect(0, 0, 0, 0)
         self.list_top = 0.0
         self.world_buttons: list[Button] = []
+        self.side_buttons: list[Button] = []
+        """Favorite and delete buttons of the listed worlds."""
+        self.confirming: int | None = None
+        """The world whose deletion awaits a second click."""
         self.buttons: list[Button] = []
         self.message = ""
         self.ticks = 0
@@ -166,19 +175,40 @@ class WorldsScene(Scene):
         )
         self.list_top = y + FIELD_HEIGHT + FIELD_GAP
         now = time.time()
-        self.world_buttons = [
-            Button(
-                f"world:{index}",
-                f"{world.name}  ({last_played(world.modified, now)})",
-                Rect(
-                    left,
-                    self.list_top + index * (ROW_HEIGHT + ROW_GAP),
-                    inner,
-                    ROW_HEIGHT,
-                ),
+        row_width = inner - FAVORITE_WIDTH - DELETE_WIDTH - 2 * SMALL_GAP
+        self.world_buttons = []
+        self.side_buttons = []
+        for index, world in enumerate(self.worlds[:MAX_LISTED_WORLDS]):
+            row_y = self.list_top + index * (ROW_HEIGHT + ROW_GAP)
+            star = "* " if world.favorite else ""
+            self.world_buttons.append(
+                Button(
+                    f"world:{index}",
+                    f"{star}{world.name}  "
+                    f"({last_played(world.modified, now)})",
+                    Rect(left, row_y, row_width, ROW_HEIGHT),
+                )
             )
-            for index, world in enumerate(self.worlds[:MAX_LISTED_WORLDS])
-        ]
+            fav_x = left + row_width + SMALL_GAP
+            self.side_buttons.append(
+                Button(
+                    f"fav:{index}",
+                    "Unfav" if world.favorite else "Fav",
+                    Rect(fav_x, row_y, FAVORITE_WIDTH, ROW_HEIGHT),
+                )
+            )
+            self.side_buttons.append(
+                Button(
+                    f"del:{index}",
+                    "Sure?" if self.confirming == index else "Delete",
+                    Rect(
+                        fav_x + FAVORITE_WIDTH + SMALL_GAP,
+                        row_y,
+                        DELETE_WIDTH,
+                        ROW_HEIGHT,
+                    ),
+                )
+            )
         button_height = self.app.ui.button.height
         back = Button(
             "back",
@@ -203,6 +233,34 @@ class WorldsScene(Scene):
             self.message = f"Cannot open {world.name}: {error}"
             return
         self.app.switch(PlayScene.singleplayer(self.app, loaded, world.path))
+
+    def toggle_favorite(self, world: WorldInfo) -> None:
+        """Pin a world to the top of the list, or unpin it."""
+        set_favorite(world.path, favorite=not world.favorite)
+        self._refresh()
+
+    def delete(self, index: int) -> None:
+        """Delete a world, after a second click on its button."""
+        if self.confirming != index:
+            self.confirming = index
+            self.layout()
+            return
+        world = self.worlds[index]
+        try:
+            delete_world(world.path)
+        except OSError as error:
+            self.message = f"Cannot delete {world.name}: {error}"
+        else:
+            self.message = f"Deleted {world.name}"
+        self._refresh(keep_message=True)
+
+    def _refresh(self, *, keep_message: bool = False) -> None:
+        self.worlds = list_worlds(self.app.worlds_dir)
+        self.confirming = None
+        if not keep_message:
+            self.message = ""
+        self._suggest_world_name()
+        self.layout()
 
     def create(self) -> None:
         """Start a new world from the start map, named as typed."""
@@ -247,7 +305,14 @@ class WorldsScene(Scene):
             if field.contains(pos):
                 self.focused = field
                 return
-        button_id = hit_button(self.buttons + self.world_buttons, pos)
+        button_id = hit_button(
+            self.buttons + self.world_buttons + self.side_buttons, pos
+        )
+        if self.confirming is not None and button_id != (
+            f"del:{self.confirming}"
+        ):
+            self.confirming = None
+            self.layout()
         match button_id:
             case "create":
                 self.create()
@@ -255,6 +320,11 @@ class WorldsScene(Scene):
                 self.app.switch(self.back)
             case str() if button_id.startswith("world:"):
                 self.play(self.worlds[int(button_id.removeprefix("world:"))])
+            case str() if button_id.startswith("fav:"):
+                index = int(button_id.removeprefix("fav:"))
+                self.toggle_favorite(self.worlds[index])
+            case str() if button_id.startswith("del:"):
+                self.delete(int(button_id.removeprefix("del:")))
             case _:
                 pass
 
@@ -316,7 +386,7 @@ class WorldsScene(Scene):
                 (self.panel.x + PADDING, self.list_top + ROW_HEIGHT / 2),
                 TextStyle(TEXT_SIZE + 2, dim_color, Anchor.MIDDLE_LEFT),
             )
-        for button in self.world_buttons:
+        for button in self.world_buttons + self.side_buttons:
             button.draw(app.batch, app.text, style, mouse)
         if self.message:
             self._text(

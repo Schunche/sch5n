@@ -458,6 +458,12 @@ class SwingKey(_Model):
     body: str | None = None
     """Body pose (a clip of the mob) shown while standing, like stepping
     onto a shovel. `None` keeps the current animation."""
+    spread: float = Field(default=0.0, ge=0)
+    """Degrees between the two halves of a two-part tool, like the
+    lopper's blades. Zero keeps the tool closed."""
+    off_arm: str | None = None
+    """Arm pose of the other hand, behind the body, for two-handed tools.
+    `None` holds the tool with one hand."""
 
 
 class ToolUseConfig(_Model):
@@ -493,9 +499,9 @@ class ToolUseConfig(_Model):
     """Swings of tool kinds that are not overhead, like the axe's chop:
     keyframes over the swing. Other items swing overhead."""
     mirrored: tuple[str, ...] = ()
-    """Tool kinds whose swing turns the other way round, counterclockwise
-    facing right, like the axe's chop. Their item is mirrored across its
-    handle so the blade still leads the swing."""
+    """Tool kinds whose item is mirrored across its handle, for images with
+    the blade on the wrong side for a swing that turns counterclockwise
+    facing right."""
 
     @field_validator("styles")
     @classmethod

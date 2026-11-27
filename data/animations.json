@@ -23,7 +23,7 @@
             "swing": [-100, 55],
             "wrist": [-90, -15],
             "grip": [0.15, 0.85],
-            "mirrored": ["axe"],
+            "mirrored": [],
             "styles": {
                 "axe": [
                     {"at": 0.0, "arm": "back", "item": 200, "behind": true},
@@ -33,6 +33,14 @@
                     {"at": 0.78, "arm": "front_short", "item": 40, "scale": 0.8},
                     {"at": 0.86, "arm": "forward", "item": 0},
                     {"at": 1.0, "arm": "forward", "item": 15}
+                ],
+                "lopper": [
+                    {"at": 0.0, "arm": "forward", "item": -35, "off_arm": "down_forward"},
+                    {"at": 0.15, "arm": "forward", "item": -35, "spread": 0, "off_arm": "down_forward"},
+                    {"at": 0.45, "arm": "forward", "item": -30, "spread": 60, "off_arm": "down_forward"},
+                    {"at": 0.58, "arm": "forward", "item": -30, "spread": 60, "off_arm": "down_forward"},
+                    {"at": 0.74, "arm": "forward", "item": -20, "spread": 0, "off_arm": "down_forward"},
+                    {"at": 1.0, "arm": "forward", "item": -30, "spread": 0, "off_arm": "down_forward"}
                 ],
                 "shovel": [
                     {"at": 0.0, "arm": "down_forward", "item": 75, "body": "dig_hold"},

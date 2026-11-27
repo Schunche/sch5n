@@ -30,6 +30,16 @@ class Region:
         """`(u0, v0, u1, v1)`."""
         return (self.u0, self.v0, self.u1, self.v1)
 
+    def fit(self, size: float) -> tuple[float, float]:
+        """Scale the region so its longer side is `size`, keeping its shape.
+
+        Returns:
+            tuple[float, float]: Width and height.
+
+        """
+        longest = max(self.width, self.height, 1)
+        return self.width * size / longest, self.height * size / longest
+
 
 FULL = Region(0.0, 0.0, 1.0, 1.0, 1, 1)
 """The whole texture."""

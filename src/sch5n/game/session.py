@@ -280,6 +280,8 @@ class Game:
                 LOGGER.debug("Another tool is needed for %s", hit.block)
             if hit.result is HitResult.BROKEN and hit.block is not None:
                 self._broken(hit.block, (x, y))
+            elif hit.result is HitResult.TRIMMED and hit.block is not None:
+                self._drop_extras(hit.block, (x, y))
 
         elif inp.place and held.item.spec.places is not None:
             size = self.config.tile_size
@@ -295,6 +297,16 @@ class Game:
             player.inventory.consume_held()
             player.use_cooldown = 0
 
+    def _drop_extras(self, block: BlockDef, tile: tuple[int, int]) -> None:
+        """Roll the block's chance drops, like branches from leaves."""
+        for extra in block.spec.extra_drops:
+            if self.rng.random() >= extra.chance:
+                continue
+            amount = int(
+                self.rng.integers(extra.min_amount, extra.max_amount + 1)
+            )
+            self.drop(ItemStack(self.content.items[extra.item], amount), tile)
+
     def _broken(self, block: BlockDef, tile: tuple[int, int]) -> None:
         """Drop what a broken block leaves, and fell a tree above it.
 
@@ -302,6 +314,7 @@ class Game:
         """
         if block.spec.drop is not None:
             self.drop(ItemStack(self.content.items[block.spec.drop]), tile)
+        self._drop_extras(block, tile)
         if (
             self.tilemap.get(*tile) != AIR
             or block.spec.tree is not TreePart.TRUNK

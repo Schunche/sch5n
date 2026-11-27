@@ -54,10 +54,10 @@ def test_spawns_on_the_ground(game: Game) -> None:
 def test_starting_items(game: Game) -> None:
     """The player starts with the configured tools."""
     assert [s.item.name for s in game.inventory if s] == [
-        "copper_pickaxe",
-        "copper_axe",
+        "iron_pickaxe",
+        "iron_axe",
         "iron_shovel",
-        "copper_lopper",
+        "iron_lopper",
     ]
 
 
@@ -161,6 +161,7 @@ MIN_JUMP_TILES = 2.1
 """A held jump must clear a two block step."""
 MAX_JUMP_TILES = 2.6
 MAX_WALK_TILES_PER_SECOND = 5.0
+MAX_NEST_CHANCE = 0.05
 
 
 def test_jump_height_and_walk_speed(content: Content) -> None:
@@ -268,7 +269,7 @@ def test_leafy_logs_are_logs(content: Content) -> None:
 def test_logs_take_longer_than_one_swing_a_second(content: Content) -> None:
     """A log takes many axe hits."""
     game, _ = planted(content)
-    axe = content.items["copper_axe"]
+    axe = content.items["iron_axe"]
     log = content.blocks.by_name("oak_log")
     hits = -(-log.durability // axe.spec.tool_power["axe"])
     assert hits >= MIN_LOG_HITS
@@ -277,7 +278,7 @@ def test_logs_take_longer_than_one_swing_a_second(content: Content) -> None:
 
 
 def test_lopper_trims_leafy_logs(content: Content) -> None:
-    """A lopper strips a leafy log to a log: nothing drops, nothing falls."""
+    """A lopper strips a leafy log to a log, dropping only leaf extras."""
     game, ids = planted(content)
     tilemap = game.tilemap
     game.inventory.select(3)  # The lopper.
@@ -285,7 +286,8 @@ def test_lopper_trims_leafy_logs(content: Content) -> None:
     assert tilemap.get(2, 5) == ids["oak_log"]
     assert tilemap.get(2, 4) == ids["oak_leaf"]  # The crown stays up.
     run(game, 120)
-    assert not game.floating_items
+    allowed = {"branch", "leaf", "bird_nest"}
+    assert {f.stack.item.name for f in game.floating_items} <= allowed
     assert not any(s and s.item.name == "oak_log" for s in game.inventory)
 
 
@@ -300,3 +302,29 @@ def test_every_felled_log_drops_where_it_was(content: Content) -> None:
     )
     assert len(game.floating_items) == LOGS_ABOVE_AND_CHOPPED
     assert places[0] < places[-1]  # From up the tree, not all at the cut.
+
+
+def test_broken_leaves_drop_branches_and_leaves(content: Content) -> None:
+    """Leaves give some branches and leaves, and rarely a bird's nest."""
+    game, ids = planted(content)
+    game.inventory.select(3)  # The lopper.
+    # Leaves within the player's reach.
+    crown = [(-1, 6), (0, 6), (1, 6), (1, 4), (1, 5), (3, 5)]
+    for x, y in crown:
+        game.tilemap.set(x, y, ids["oak_leaf"])
+        run(game, 100, use=True, target=(x, y))
+        assert game.tilemap.get(x, y) == AIR
+    dropped = [f.stack for f in game.floating_items]
+    dropped += [s for s in list(game.inventory)[4:] if s]  # Picked up.
+    names = {stack.item.name for stack in dropped}
+    assert names
+    assert names <= {"branch", "leaf", "bird_nest"}
+    for name in ("branch", "leaf", "bird_nest"):
+        assert content.items[name].spec.places is None
+
+
+def test_bird_nest_is_rare(content: Content) -> None:
+    """A leaf block holds a small chance of a nest."""
+    leaf = content.blocks.by_name("oak_leaf")
+    nest = next(d for d in leaf.spec.extra_drops if d.item == "bird_nest")
+    assert nest.chance <= MAX_NEST_CHANCE

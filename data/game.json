@@ -45,10 +45,10 @@
         "columns": 10,
         "rows": 5,
         "starting_items": [
-            {"item": "copper_pickaxe", "amount": 1},
-            {"item": "copper_axe", "amount": 1},
+            {"item": "iron_pickaxe", "amount": 1},
+            {"item": "iron_axe", "amount": 1},
             {"item": "iron_shovel", "amount": 1},
-            {"item": "copper_lopper", "amount": 1}
+            {"item": "iron_lopper", "amount": 1}
         ]
     },
     "particles": {

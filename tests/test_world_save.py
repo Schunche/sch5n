@@ -14,9 +14,11 @@ from sch5n.game.inventory import Inventory, ItemStack
 from sch5n.game.session import Game, GameSetup
 from sch5n.world.save import (
     SUFFIX,
+    delete_world,
     list_worlds,
     load_world,
     save_world,
+    set_favorite,
     unique_name,
     world_path,
 )
@@ -131,3 +133,34 @@ def test_owner_keeps_inventory_when_renamed(
     world.hand_over("Guest")
     assert world.inventories["Guest"] is other
     assert "New" in world.inventories
+
+
+def test_favorites_come_first_and_survive_saving(
+    tmp_path: Path, content: Content
+) -> None:
+    """A favorite world is listed first, even after it is saved again."""
+    for name in ("old", "new"):
+        save_world(world_path(tmp_path, name), name, flat_world(content), {})
+    os.utime(world_path(tmp_path, "old"), (OLDER, OLDER))
+    assert [w.name for w in list_worlds(tmp_path)] == ["new", "old"]
+
+    set_favorite(world_path(tmp_path, "old"), favorite=True)
+    save_world(world_path(tmp_path, "old"), "old", flat_world(content), {})
+    worlds = list_worlds(tmp_path)
+    assert [w.name for w in worlds] == ["old", "new"]
+    assert worlds[0].favorite
+    assert not worlds[1].favorite
+
+    set_favorite(world_path(tmp_path, "old"), favorite=False)
+    assert not any(w.favorite for w in list_worlds(tmp_path))
+
+
+def test_delete_world(tmp_path: Path, content: Content) -> None:
+    """A deleted world is gone from the list, favorite or not."""
+    path = world_path(tmp_path, "doomed")
+    save_world(path, "doomed", flat_world(content), {})
+    set_favorite(path, favorite=True)
+    delete_world(path)
+    assert not path.exists()
+    assert list_worlds(tmp_path) == []
+    delete_world(path)

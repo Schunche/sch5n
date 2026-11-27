@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 
 WORLD_FORMAT = 1
 SUFFIX = ".world.json"
+FAVORITES_FILE = "favorites.json"
 MAX_NAME_LENGTH = 40
 _UNSAFE = re.compile(r"[^\w\- ]+")
 
@@ -87,10 +88,48 @@ class WorldInfo:
     path: Path
     modified: float
     """Last save, as a timestamp."""
+    favorite: bool = False
+
+
+def _read_favorites(directory: Path) -> set[str]:
+    try:
+        data = json.loads(
+            (directory / FAVORITES_FILE).read_text(encoding="utf-8")
+        )
+    except OSError, ValueError:
+        return set()
+    if not isinstance(data, list):
+        return set()
+    return {entry for entry in data if isinstance(entry, str)}
+
+
+def set_favorite(path: Path, *, favorite: bool) -> None:
+    """Mark a world as a favorite, or not.
+
+    Favorites are kept beside the worlds, so saving a world never
+    changes them.
+    """
+    directory = path.parent
+    names = _read_favorites(directory)
+    if favorite:
+        names.add(path.name)
+    else:
+        names.discard(path.name)
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / FAVORITES_FILE).write_text(
+        json.dumps(sorted(names)), encoding="utf-8"
+    )
+
+
+def delete_world(path: Path) -> None:
+    """Delete a world file, and forget it was a favorite."""
+    path.unlink(missing_ok=True)
+    set_favorite(path, favorite=False)
+    LOGGER.info("Deleted world %s", path)
 
 
 def list_worlds(directory: Path) -> list[WorldInfo]:
-    """List the saved worlds, most recently played first.
+    """List the saved worlds: favorites first, then most recently played.
 
     Returns:
         list[WorldInfo]: The worlds. Unreadable files are left out.
@@ -99,6 +138,7 @@ def list_worlds(directory: Path) -> list[WorldInfo]:
     worlds: list[WorldInfo] = []
     if not directory.is_dir():
         return worlds
+    favorites = _read_favorites(directory)
     for file in directory.glob(f"*{SUFFIX}"):
         try:
             data = json.loads(file.read_text(encoding="utf-8"))
@@ -108,8 +148,10 @@ def list_worlds(directory: Path) -> list[WorldInfo]:
             LOGGER.warning("Skipping unreadable world %s", file)
             continue
         if isinstance(name, str):
-            worlds.append(WorldInfo(name, file, modified))
-    return sorted(worlds, key=lambda w: w.modified, reverse=True)
+            worlds.append(
+                WorldInfo(name, file, modified, file.name in favorites)
+            )
+    return sorted(worlds, key=lambda w: (not w.favorite, -w.modified))
 
 
 def inventory_to_json(inventory: Inventory) -> dict[str, Json]:
