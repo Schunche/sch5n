@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from sch5n.game.ambient import Ambience
+from sch5n.game.config import GameMode
 from sch5n.game.floating_item import FloatingItem
 from sch5n.game.inventory import Inventory, ItemStack
 from sch5n.game.mining import HitResult, can_place, hit_tile
@@ -16,7 +17,6 @@ from sch5n.game.player import Player
 from sch5n.log.logger import LOGGER
 
 if TYPE_CHECKING:
-    from sch5n.game.config import GameMode
     from sch5n.game.content import Content
     from sch5n.math.rect import Rect
     from sch5n.world.tilemap import TileMap
@@ -86,7 +86,7 @@ class Game:
             self.config,
             inventory,
             self._spawn_point(spawn),
-            mode or self.config.game_mode,
+            mode or GameMode.SURVIVAL,
         )
         self.floating_items: list[FloatingItem] = []
         self.ambience = Ambience(

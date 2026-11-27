@@ -353,6 +353,29 @@ class TableLayout:
             self.row_height - 2 * self.padding,
         )
 
+    def span_rect(self, row: int, scroll: float) -> Rect:
+        """Rectangle covering every button column of a row.
+
+        Returns:
+            Rect: Screen rectangle.
+
+        """
+        first = self.cell_rect(row, 0, scroll)
+        last = self.cell_rect(row, self.columns - 1, scroll)
+        return Rect(first.x, first.y, last.right - first.x, first.h)
+
+    def row_at(self, pos: tuple[float, float], scroll: float) -> int | None:
+        """Visible row under a screen position.
+
+        Returns:
+            int | None: Row index, if any.
+
+        """
+        if not self.area.contains_point(*pos):
+            return None
+        row = int((pos[1] - self.area.y + scroll) // self.row_height)
+        return row if self.is_visible(row, scroll) else None
+
     def cell_at(
         self, pos: tuple[float, float], scroll: float
     ) -> tuple[int, int] | None:

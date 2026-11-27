@@ -6,7 +6,7 @@ from __future__ import annotations
 from enum import StrEnum
 lazy from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 type Color = tuple[int, int, int]
 
@@ -109,7 +109,6 @@ class GameConfig(_Model):
     title: str = "sch5n"
     tick_rate: int = 60
     tile_size: int = 32
-    game_mode: GameMode = GameMode.SURVIVAL
     sky_color: Color = (31, 127, 191)
     physics: PhysicsConfig = PhysicsConfig()
     player: PlayerConfig = PlayerConfig()
@@ -128,10 +127,23 @@ class Settings(_Model):
     vsync: bool = True
     fps_limit: int = 0
     """Frame cap when vsync is off. 0 means unlimited."""
+    fullscreen: bool = False
     gui_size: int = 24
-    keybinds: dict[str, tuple[str, ...]] = Field(default_factory=dict)
-    """Action name to bindings like `key:SPACE`. Missing actions use the
-    defaults."""
+    keybinds: dict[str, dict[str, tuple[str, ...]]] = Field(
+        default_factory=dict
+    )
+    """Context (`game`, `editor`, `viewer`) to action to bindings like
+    `key:SPACE`. Missing entries use the defaults."""
+
+    @field_validator("keybinds", mode="before")
+    @classmethod
+    def _upgrade_flat_keybinds(cls, value: object) -> object:
+        """Accept the old format without contexts as the game's binds."""  # ruff: ignore[docstring-missing-returns]
+        if isinstance(value, dict) and any(
+            isinstance(v, list | tuple) for v in value.values()
+        ):
+            return {"game": value}
+        return value
 
 
 class ButtonStyle(_Model):

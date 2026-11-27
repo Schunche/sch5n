@@ -2,7 +2,6 @@
     "title": "Das Spielplatz",
     "tick_rate": 60,
     "tile_size": 32,
-    "game_mode": "admin",
     "sky_color": [31, 127, 191],
     "physics": {
         "gravity": 0.1,

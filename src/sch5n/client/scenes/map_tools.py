@@ -9,9 +9,11 @@ from typing import TYPE_CHECKING
 import glfw
 
 from sch5n.client.camera import Camera
+from sch5n.client.keybinds import Action, Context, ContextBinds
 from sch5n.client.render.batch import rgba
 from sch5n.client.scenes.base import Scene
-from sch5n.client.window import KeyEvent, ScrollEvent
+from sch5n.client.scenes.menu import SettingsScene
+from sch5n.client.window import KeyEvent
 from sch5n.client.world_view import TileRenderer
 from sch5n.game.content import AIR
 from sch5n.log.logger import LOGGER
@@ -32,9 +34,10 @@ BACKGROUND = (0, 0, 0)
 
 
 class ViewerScene(Scene):
-    """Fly over a map. WASD to pan, wheel to zoom, R to reset."""
+    """Fly over a map. Uses the map viewer key bindings."""
 
     title = "Map Viewer"
+    context = Context.VIEWER
 
     def __init__(self, app: App, map_path: Path) -> None:
         """Open `map_path`. A missing file gives an empty map."""
@@ -51,9 +54,10 @@ class ViewerScene(Scene):
         self.tiles = TileRenderer(app.assets, self.tile_size)
         app.window.set_title(f"{map_path.stem} - {self.title}")
 
-    def reset_camera(self) -> None:
-        """Go back to the origin at zoom 1."""
-        self.camera = Camera()
+    @property
+    def keys(self) -> ContextBinds:
+        """Bindings of this tool."""
+        return self.app.keybinds[self.context]
 
     def mouse_tile(self) -> tuple[int, int]:
         """Tile under the mouse cursor.
@@ -69,37 +73,44 @@ class ViewerScene(Scene):
         """Leave the tool."""
         self.app.quit()
 
-    def on_scroll(self, dy: float) -> None:
-        """Zoom around the cursor."""
-        self.camera.zoom_at(
-            ZOOM_STEP ** math.copysign(1, dy), self.app.window.mouse_pos
-        )
-
-    def on_key(self, event: KeyEvent) -> None:
-        """Handle tool specific keys."""
-        match event.key:
-            case glfw.KEY_ESCAPE:
-                self.on_escape()
-            case glfw.KEY_R:
-                self.reset_camera()
+    def on_action(self, action: Action) -> None:
+        """Handle a pressed binding."""
+        mouse = self.app.window.mouse_pos
+        match action:
+            case Action.ZOOM_IN:
+                self.camera.zoom_at(ZOOM_STEP, mouse)
+            case Action.ZOOM_OUT:
+                self.camera.zoom_at(1 / ZOOM_STEP, mouse)
+            case Action.RESET_CAMERA:
+                self.camera = Camera()
+            case Action.SETTINGS:
+                self.app.switch(SettingsScene(self.app, back=self))
             case _:
                 pass
 
     def on_event(self, event: Event) -> None:
         """Handle input."""
-        match event:
-            case KeyEvent() if event.pressed:
-                self.on_key(event)
-            case ScrollEvent(dy=dy) if dy:
-                self.on_scroll(dy)
-            case _:
-                pass
+        if (
+            isinstance(event, KeyEvent)
+            and event.pressed
+            and event.key == glfw.KEY_ESCAPE
+        ):
+            self.on_escape()
+            return
+        action = self.keys.pressed(event)
+        if action is not None:
+            self.on_action(action)
 
     def tick(self) -> None:
         """Pan the camera."""
         window = self.app.window
-        dx = window.is_key_down(glfw.KEY_D) - window.is_key_down(glfw.KEY_A)
-        dy = window.is_key_down(glfw.KEY_S) - window.is_key_down(glfw.KEY_W)
+        keys = self.keys
+        dx = keys.is_held(Action.PAN_RIGHT, window) - keys.is_held(
+            Action.PAN_LEFT, window
+        )
+        dy = keys.is_held(Action.PAN_DOWN, window) - keys.is_held(
+            Action.PAN_UP, window
+        )
         speed = PAN_SPEED / self.camera.zoom
         self.camera.x += dx * speed
         self.camera.y += dy * speed
@@ -112,9 +123,14 @@ class ViewerScene(Scene):
 
         """
         x, y = self.mouse_tile()
-        return [
-            f"{x}, {y}  zoom {self.camera.zoom:.2f}  {len(self.tilemap)} tiles"
-        ]
+        settings = self.keys.slots(Action.SETTINGS)[0]
+        hint = f"{settings.label}: controls  " if settings else ""
+        zoom = self.camera.zoom
+        tiles = len(self.tilemap)
+        line = f"{x}, {y}  zoom {zoom:.2f}  {tiles} tiles  "
+        return [f"{line}{hint}Esc: {self.escape_hint}"]
+
+    escape_hint = "quit"
 
     def draw_overlay(self) -> None:
         """Draw tool specific things in world space."""
@@ -147,14 +163,14 @@ class ViewerScene(Scene):
 
 
 class EditorScene(ViewerScene):
-    """Edit a map.
+    """Edit a map. Uses the map editor key bindings.
 
-    Left mouse places the selected tile, right mouse removes tiles, the
-    wheel changes the selected tile (Ctrl + wheel zooms), Ctrl+S saves and
     Escape saves and quits.
     """
 
     title = "Map Editor"
+    context = Context.EDITOR
+    escape_hint = "save & quit"
 
     def __init__(self, app: App, map_path: Path) -> None:
         """Open `map_path` for editing."""
@@ -176,37 +192,27 @@ class EditorScene(ViewerScene):
         self.save()
         super().on_escape()
 
-    def on_key(self, event: KeyEvent) -> None:
-        """Ctrl+S saves."""
-        if event.key == glfw.KEY_S and event.mods & glfw.MOD_CONTROL:
-            self.save()
-            return
-        super().on_key(event)
-
-    def on_scroll(self, dy: float) -> None:
-        """Cycle the palette; zoom with Ctrl held."""
-        window = self.app.window
-        if window.is_key_down(glfw.KEY_LEFT_CONTROL) or window.is_key_down(
-            glfw.KEY_RIGHT_CONTROL
-        ):
-            super().on_scroll(dy)
-            return
-        step = 1 if dy > 0 else -1
-        self.selected = (self.selected + step) % len(self.palette)
+    def on_action(self, action: Action) -> None:
+        """Handle editor actions, then the shared ones."""
+        match action:
+            case Action.SAVE:
+                self.save()
+            case Action.NEXT_TILE:
+                self.selected = (self.selected + 1) % len(self.palette)
+            case Action.PREVIOUS_TILE:
+                self.selected = (self.selected - 1) % len(self.palette)
+            case _:
+                super().on_action(action)
 
     def tick(self) -> None:
         """Pan, place and remove tiles."""
+        super().tick()
         window = self.app.window
-        if not (
-            window.is_key_down(glfw.KEY_LEFT_CONTROL)
-            or window.is_key_down(glfw.KEY_RIGHT_CONTROL)
-        ):
-            super().tick()
         x, y = self.mouse_tile()
-        if window.is_mouse_down(glfw.MOUSE_BUTTON_LEFT):
+        if self.keys.is_held(Action.PLACE_TILE, window):
             block, variant = self.palette[self.selected]
             self.tilemap.set(x, y, block, variant)
-        elif window.is_mouse_down(glfw.MOUSE_BUTTON_RIGHT):
+        elif self.keys.is_held(Action.ERASE_TILE, window):
             self.tilemap.set(x, y, AIR)
 
     def _selected_region(self) -> Region:
@@ -241,18 +247,3 @@ class EditorScene(ViewerScene):
             16,
             rgba(app.ui.color("text")),
         )
-
-    def status_lines(self) -> list[str]:
-        """Add editor help.
-
-        Returns:
-            list[str]: Lines of text.
-
-        """
-        return [
-            (
-                "LMB place  RMB erase  wheel: tile  Ctrl+wheel: zoom  "
-                "Ctrl+S: save  Esc: save & quit"
-            ),
-            *super().status_lines(),
-        ]

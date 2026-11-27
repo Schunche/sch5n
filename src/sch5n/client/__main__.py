@@ -55,7 +55,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         "--map", type=map_file, default=None, help="map name or file"
     )
     parser.add_argument(
-        "--game-mode", type=GameMode, choices=list(GameMode), default=None
+        "--game-mode",
+        type=GameMode,
+        choices=list(GameMode),
+        default=GameMode.SURVIVAL,
+        help="admin allows unlimited jumps (default: survival)",
     )
     parser.add_argument("--seed", type=int, default=None)
     add_common_arguments(parser)

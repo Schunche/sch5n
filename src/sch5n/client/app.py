@@ -93,6 +93,7 @@ class App:
             )
         )
         self.window.hide_cursor()
+        self._apply_video(None)
         self._textures: dict[str, moderngl.Texture] = {}
 
         self.screen: tuple[int, int] = self.window.size
@@ -124,14 +125,32 @@ class App:
             )
         return texture
 
-    def save_settings(self) -> None:
-        """Store the current keybinds in the user's settings file."""
+    def update_settings(self, **changes: object) -> None:
+        """Change settings, apply them to the window and save them.
+
+        The current keybinds are always included.
+        """
+        previous = self.settings
         self.settings = Settings.model_validate({
-            **self.settings.model_dump(),
+            **previous.model_dump(),
+            **changes,
             "keybinds": self.keybinds.to_config(),
         })
+        self._apply_video(previous)
         save_settings(self.settings, self.settings_file)
         LOGGER.info("Saved settings to %s", self.settings_file)
+
+    def _apply_video(self, previous: Settings | None) -> None:
+        s = self.settings
+        size = (s.window_width, s.window_height)
+        if previous is None or previous.fullscreen != s.fullscreen:
+            self.window.set_fullscreen(fullscreen=s.fullscreen, size=size)
+        if previous is not None and (
+            (previous.window_width, previous.window_height) != size
+        ):
+            self.window.set_size(size)
+        if previous is None or previous.vsync != s.vsync:
+            Window.set_vsync(vsync=s.vsync)
 
     def switch(self, scene: Scene) -> None:
         """Make `scene` active at the end of the current frame."""
@@ -176,7 +195,6 @@ class App:
         self._apply_scene_switch()
 
         tick = 1.0 / self.tick_rate
-        frame_limit = self.settings.fps_limit if not self.settings.vsync else 0
         previous = Window.time()
         lag = 0.0
         fps_timer, fps_frames = previous, 0
@@ -215,6 +233,9 @@ class App:
                     and self.frame >= self.options.max_frames
                 ):
                     break
+                frame_limit = (
+                    0 if self.settings.vsync else self.settings.fps_limit
+                )
                 if frame_limit > 0:
                     remaining = 1.0 / frame_limit - (Window.time() - now)
                     if remaining > 0:

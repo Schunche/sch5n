@@ -47,6 +47,8 @@ class ScrollEvent:
 
     dx: float
     dy: float
+    mods: int = 0
+    """glfw `MOD_*` flags held while scrolling."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,6 +58,13 @@ class ResizeEvent:
     width: int
     height: int
 
+
+_MODIFIERS = (
+    (glfw.KEY_LEFT_SHIFT, glfw.KEY_RIGHT_SHIFT, glfw.MOD_SHIFT),
+    (glfw.KEY_LEFT_CONTROL, glfw.KEY_RIGHT_CONTROL, glfw.MOD_CONTROL),
+    (glfw.KEY_LEFT_ALT, glfw.KEY_RIGHT_ALT, glfw.MOD_ALT),
+    (glfw.KEY_LEFT_SUPER, glfw.KEY_RIGHT_SUPER, glfw.MOD_SUPER),
+)
 
 type Event = KeyEvent | MouseButtonEvent | ScrollEvent | ResizeEvent
 
@@ -120,7 +129,7 @@ class Window:
         )
 
     def _on_scroll(self, _w: object, dx: float, dy: float) -> None:
-        self._events.append(ScrollEvent(dx, dy))
+        self._events.append(ScrollEvent(dx, dy, self.held_mods()))
 
     def _on_resize(self, _w: object, width: int, height: int) -> None:
         self._events.append(ResizeEvent(width, height))
@@ -165,6 +174,19 @@ class Window:
         """
         return glfw.get_key(self.handle, key) == glfw.PRESS
 
+    def held_mods(self) -> int:
+        """Read the modifier keys currently held.
+
+        Returns:
+            int: glfw `MOD_*` flags.
+
+        """
+        mods = 0
+        for left, right, flag in _MODIFIERS:
+            if self.is_key_down(left) or self.is_key_down(right):
+                mods |= flag
+        return mods
+
     def is_mouse_down(self, button: int) -> bool:
         """Whether a mouse button is held.
 
@@ -182,6 +204,46 @@ class Window:
         """Set the window icon from an RGBA array `(height, width, 4)`."""
         height, width = pixels.shape[:2]
         glfw.set_window_icon(self.handle, 1, [(width, height, pixels)])
+
+    @property
+    def is_fullscreen(self) -> bool:
+        """Whether the window covers a monitor."""
+        return bool(glfw.get_window_monitor(self.handle))
+
+    def set_size(self, size: tuple[int, int]) -> None:
+        """Resize a windowed window."""
+        if not self.is_fullscreen:
+            glfw.set_window_size(self.handle, *size)
+
+    def set_fullscreen(
+        self, *, fullscreen: bool, size: tuple[int, int]
+    ) -> None:
+        """Switch to fullscreen on the primary monitor, or back to `size`."""
+        if fullscreen == self.is_fullscreen:
+            return
+        if fullscreen:
+            monitor = glfw.get_primary_monitor()
+            if not monitor:
+                return
+            mode = glfw.get_video_mode(monitor)
+            glfw.set_window_monitor(
+                self.handle,
+                monitor,
+                0,
+                0,
+                mode.size.width,
+                mode.size.height,
+                mode.refresh_rate,
+            )
+        else:
+            glfw.set_window_monitor(
+                self.handle, None, 100, 100, size[0], size[1], 0
+            )
+
+    @staticmethod
+    def set_vsync(*, vsync: bool) -> None:
+        """Wait for the display refresh when presenting frames."""
+        glfw.swap_interval(1 if vsync else 0)
 
     def hide_cursor(self) -> None:
         """Hide the OS cursor while it is over the window."""

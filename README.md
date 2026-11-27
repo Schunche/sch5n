@@ -16,16 +16,19 @@ Install [uv](https://docs.astral.sh/uv/), then:
 ## Usage
 
     sch5n                       # play (same as `sch5n client`)
-    sch5n client --map procedural --game-mode survival --seed 1
-    sch5n view procedural       # fly over a map: WASD, wheel zooms, R resets
-    sch5n edit map1             # edit a map: LMB place, RMB erase, wheel picks tile, Ctrl+S saves
+    sch5n client --map procedural --seed 1
+    sch5n client --game-mode admin   # unlimited jumps; survival is the default
+    sch5n view procedural       # fly over a map
+    sch5n edit map1             # edit a map, Esc saves and quits
     sch5n generate mymap --seed 42 --width 300 --height 160
 
 Prefix with `uv run` when the virtual environment is not activated.
 
 ### Controls
 
-| Key | Action |
+Default game controls:
+
+| Input | Action |
 | --- | --- |
 | A / D | Move |
 | Space | Jump (wall jump while sliding on a wall) |
@@ -36,9 +39,22 @@ Prefix with `uv run` when the virtual environment is not activated.
 | Esc | Close inventory, open settings |
 | F3 | Debug info |
 
-These are the defaults. Every control except Esc can be rebound in
-Settings: click a binding, then press a key or mouse button (Esc cancels,
-Backspace clears). Each action has two slots. Changes are saved to
+The map editor defaults to WASD to pan, left/right mouse to place/erase,
+wheel to pick a tile, Ctrl+wheel to zoom and Ctrl+S to save. The map viewer
+pans with WASD and zooms with the wheel. F1 opens the settings in both.
+
+### Settings
+
+The settings screen (main menu, Esc in game, F1 in the map tools) changes:
+
+- Video: windowed or fullscreen, window size, VSync and frame rate limit.
+  Click a value for the next option, right click for the previous one.
+- Controls of the game, the map editor and the map viewer, each separately.
+  Click a slot, then press a key, mouse button or wheel direction, with
+  modifiers if you like (Ctrl+S). Esc cancels, Backspace or right click
+  clears. Every action has two slots; Esc itself cannot be rebound.
+
+Every program uses the same settings. They are saved immediately to
 `settings.json` in your user config directory (e.g.
 `~/.config/sch5n/settings.json` on Linux), which overrides
 `assets/base/data/settings.json`.

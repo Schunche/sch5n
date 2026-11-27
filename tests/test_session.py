@@ -105,3 +105,12 @@ def test_leaves_emit_particles_deterministically(content: Content) -> None:
     assert first
     assert first == particles(5)
     assert first != particles(6)
+
+
+def test_survival_is_the_default_mode(content: Content) -> None:
+    game = Game(content, flat_world(content), spawn=(0, 0))
+    assert game.player.max_jumps == 1
+    admin = Game(
+        content, flat_world(content), mode=GameMode.ADMIN, spawn=(0, 0)
+    )
+    assert admin.player.max_jumps > 1

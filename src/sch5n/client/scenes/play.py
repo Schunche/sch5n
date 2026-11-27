@@ -10,7 +10,7 @@ import glfw
 
 from sch5n.client.camera import Camera
 from sch5n.client.hud import Hud
-from sch5n.client.keybinds import Action
+from sch5n.client.keybinds import Action, Context
 from sch5n.client.render.batch import rgba
 from sch5n.client.scenes.base import Scene
 from sch5n.client.scenes.menu import SettingsScene
@@ -19,7 +19,6 @@ from sch5n.client.window import (
     KeyEvent,
     MouseButtonEvent,
     ResizeEvent,
-    ScrollEvent,
 )
 from sch5n.client.world_view import (
     TileRenderer,
@@ -128,6 +127,10 @@ class PlayScene(Scene):
                 self._jump_requested = True
             case Action.DEBUG:
                 self.debug = not self.debug
+            case Action.HOTBAR_NEXT if not self.inventory_open:
+                self.game.inventory.scroll(1)
+            case Action.HOTBAR_PREVIOUS if not self.inventory_open:
+                self.game.inventory.scroll(-1)
             case _ if action.hotbar_slot is not None:
                 self.game.inventory.select(action.hotbar_slot)
             case _:
@@ -180,12 +183,9 @@ class PlayScene(Scene):
                 event
             ):
                 return
-            case ScrollEvent(dy=dy) if dy and not self.inventory_open:
-                self.game.inventory.scroll(-int(math.copysign(1, dy)))
-                return
             case _:
                 pass
-        action = self.app.keybinds.pressed(event)
+        action = self.app.keybinds[Context.GAME].pressed(event)
         if action is not None:
             self._on_action(action)
 
@@ -204,7 +204,7 @@ class PlayScene(Scene):
                 math.floor(world_y / self.tile_size),
             )
         )
-        keys = app.keybinds
+        keys = app.keybinds[Context.GAME]
         move_x = int(keys.is_held(Action.MOVE_RIGHT, window)) - int(
             keys.is_held(Action.MOVE_LEFT, window)
         )

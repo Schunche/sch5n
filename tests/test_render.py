@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from sch5n.client.app import App
+    from sch5n.client.scenes.menu import SettingsScene
+    from sch5n.client.window import KeyEvent, MouseButtonEvent
 
 pytestmark = pytest.mark.skipif(
     not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"),
@@ -117,53 +119,192 @@ def test_play_scene_input(app: App) -> None:
     assert inventory[0] is not None
 
 
+def _press(key: int, mods: int = 0) -> KeyEvent:
+    import glfw
+
+    from sch5n.client.window import KeyEvent
+
+    return KeyEvent(key, glfw.PRESS, mods)
+
+
+def _click(
+    pos: tuple[float, float], *, right: bool = False
+) -> MouseButtonEvent:
+    import glfw
+
+    from sch5n.client.window import MouseButtonEvent
+
+    button = glfw.MOUSE_BUTTON_RIGHT if right else glfw.MOUSE_BUTTON_LEFT
+    return MouseButtonEvent(button, glfw.PRESS, 0, pos)
+
+
+def _show_row(settings: SettingsScene, row: object) -> int:
+    """Scroll so `row` is visible; return its index."""
+    index = settings.row_index(row)  # type: ignore[arg-type]
+    settings.scroll = settings.table.clamp_scroll(
+        index * settings.ROW_HEIGHT - settings.table.area.h / 2
+    )
+    assert settings.table.is_visible(index, settings.scroll)
+    return index
+
+
 def test_rebind_in_settings_and_play(app: App) -> None:
     import json
 
     import glfw
 
-    from sch5n.client.keybinds import Action, Binding
-    from sch5n.client.scenes.menu import SettingsScene
+    from sch5n.client.keybinds import Action, Binding, Context
+    from sch5n.client.scenes.menu import BindRow, SettingsScene
     from sch5n.client.scenes.play import PlayScene
-    from sch5n.client.window import KeyEvent, MouseButtonEvent
 
     play = PlayScene(app)
     settings = SettingsScene(app, back=play, in_game=True)
-    row = settings.actions.index(Action.JUMP)
-    cell = settings.table.cell_rect(row, 0, settings.scroll).center
-
-    def press(key: int) -> KeyEvent:
-        return KeyEvent(key, glfw.PRESS, 0)
-
-    click = MouseButtonEvent(glfw.MOUSE_BUTTON_LEFT, glfw.PRESS, 0, cell)
+    jump = BindRow(Context.GAME, Action.JUMP)
+    index = _show_row(settings, jump)
+    cell = settings.table.cell_rect(index, 0, settings.scroll).center
+    binds = app.keybinds[Context.GAME]
 
     # Escape cancels without changing anything.
-    settings.on_event(click)
-    assert settings.capturing == (Action.JUMP, 0)
-    settings.on_event(press(glfw.KEY_ESCAPE))
+    settings.on_event(_click(cell))
+    assert settings.capturing == jump
+    settings.on_event(_press(glfw.KEY_ESCAPE))
     assert settings.capturing is None
-    assert app.keybinds.slots(Action.JUMP)[0] == Binding.key(glfw.KEY_SPACE)
+    assert binds.slots(Action.JUMP)[0] == Binding.key(glfw.KEY_SPACE)
 
     # Rebind jump to K.
-    settings.on_event(click)
-    settings.on_event(press(glfw.KEY_K))
-    assert app.keybinds.action_for(Binding.key(glfw.KEY_K)) is Action.JUMP
+    settings.on_event(_click(cell))
+    settings.on_event(_press(glfw.KEY_K))
+    assert binds.action_for(Binding.key(glfw.KEY_K)) is Action.JUMP
     saved = json.loads(app.settings_file.read_text(encoding="utf-8"))
-    assert saved["keybinds"]["jump"] == ["key:K"]
-    pixels = draw(app, settings)
-    assert pixels.any()
+    assert saved["keybinds"]["game"]["jump"] == ["key:K"]
+    assert draw(app, settings).any()
 
     # The game uses the new binding right away.
-    play.on_event(press(glfw.KEY_SPACE))
+    play.on_event(_press(glfw.KEY_SPACE))
     assert not play._jump_requested
-    play.on_event(press(glfw.KEY_K))
+    play.on_event(_press(glfw.KEY_K))
     assert play._jump_requested
+
+    # Right click clears a slot.
+    settings.on_event(_click(cell, right=True))
+    assert binds.slots(Action.JUMP)[0] is None
 
     # Reset restores the defaults.
     reset = next(b for b in settings.buttons if b.id == "reset")
-    settings.on_event(
-        MouseButtonEvent(
-            glfw.MOUSE_BUTTON_LEFT, glfw.PRESS, 0, reset.rect.center
-        )
+    settings.on_event(_click(reset.rect.center))
+    assert binds.action_for(Binding.key(glfw.KEY_SPACE)) is Action.JUMP
+
+
+def test_capture_modifier_combinations(app: App) -> None:
+    import glfw
+
+    from sch5n.client.keybinds import Action, Binding, Context, Mod
+    from sch5n.client.scenes.menu import BindRow, MainMenu, SettingsScene
+    from sch5n.client.window import KeyEvent, ScrollEvent
+
+    settings = SettingsScene(app, back=MainMenu(app))
+    binds = app.keybinds[Context.EDITOR]
+    reset = BindRow(Context.EDITOR, Action.RESET_CAMERA)
+    index = _show_row(settings, reset)
+
+    def capture(slot: int) -> None:
+        cell = settings.table.cell_rect(index, slot, settings.scroll).center
+        settings.on_event(_click(cell))
+
+    # Ctrl, then Shift+R: modifiers held during the press become part of it.
+    capture(0)
+    settings.on_event(_press(glfw.KEY_LEFT_CONTROL, glfw.MOD_CONTROL))
+    assert settings.capturing == reset
+    settings.on_event(_press(glfw.KEY_R, glfw.MOD_CONTROL | glfw.MOD_SHIFT))
+    assert binds.slots(Action.RESET_CAMERA)[0] == Binding.key(
+        glfw.KEY_R, Mod.CTRL | Mod.SHIFT
     )
-    assert app.keybinds.action_for(Binding.key(glfw.KEY_SPACE)) is Action.JUMP
+
+    # A modifier pressed and released alone binds the modifier key.
+    capture(1)
+    settings.on_event(_press(glfw.KEY_LEFT_ALT, glfw.MOD_ALT))
+    settings.on_event(KeyEvent(glfw.KEY_LEFT_ALT, glfw.RELEASE, 0))
+    assert binds.slots(Action.RESET_CAMERA)[1] == Binding.key(
+        glfw.KEY_LEFT_ALT
+    )
+
+    # Wheel directions can be bound too.
+    capture(1)
+    settings.on_event(ScrollEvent(0, 1, glfw.MOD_SHIFT))
+    assert binds.slots(Action.RESET_CAMERA)[1] == Binding.wheel(1, Mod.SHIFT)
+    app.keybinds.reset()
+    app.update_settings()
+
+
+def test_video_options_apply_and_save(app: App) -> None:
+    import json
+
+    from sch5n.client.scenes.menu import (
+        MainMenu,
+        OptionRow,
+        SettingsScene,
+        VideoOption,
+    )
+
+    settings = SettingsScene(app, back=MainMenu(app))
+
+    def click_option(option: VideoOption, *, right: bool = False) -> None:
+        row = OptionRow(option)
+        index = _show_row(settings, row)
+        span = settings.table.span_rect(index, settings.scroll)
+        settings.on_event(_click(span.center, right=right))
+
+    before = (app.settings.window_width, app.settings.window_height)
+    click_option(VideoOption.WINDOW_SIZE)
+    after = (app.settings.window_width, app.settings.window_height)
+    assert after != before
+    app.window.poll()
+    assert tuple(app.window.size) == after
+
+    vsync = app.settings.vsync
+    click_option(VideoOption.VSYNC)
+    assert app.settings.vsync is not vsync
+
+    click_option(VideoOption.FPS_LIMIT)
+    limit = app.settings.fps_limit
+    click_option(VideoOption.FPS_LIMIT, right=True)
+    click_option(VideoOption.FPS_LIMIT)
+    assert app.settings.fps_limit == limit
+
+    saved = json.loads(app.settings_file.read_text(encoding="utf-8"))
+    assert (saved["window_width"], saved["window_height"]) == after
+    assert saved["vsync"] is not vsync
+    assert saved["fps_limit"] == limit
+
+    click_option(VideoOption.WINDOW_SIZE, right=True)
+    app.window.poll()
+    assert (app.settings.window_width, app.settings.window_height) == before
+
+
+def test_editor_uses_its_own_binds(
+    app: App, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    import glfw
+
+    from sch5n.client.scenes.map_tools import EditorScene, ViewerScene
+    from sch5n.client.scenes.menu import SettingsScene
+    from sch5n.client.window import ScrollEvent
+
+    target = tmp_path_factory.mktemp("maps") / "new.json"
+    editor = EditorScene(app, target)
+    editor.on_event(ScrollEvent(0, 1))
+    assert editor.selected == 1
+    zoom = editor.camera.zoom
+    editor.on_event(ScrollEvent(0, 1, glfw.MOD_CONTROL))
+    assert editor.camera.zoom > zoom
+    assert editor.selected == 1
+    editor.on_event(_press(glfw.KEY_S, glfw.MOD_CONTROL))
+    assert target.exists()
+
+    viewer = ViewerScene(app, target)
+    viewer.on_event(ScrollEvent(0, 1))
+    assert viewer.camera.zoom > 1
+
+    viewer.on_event(_press(glfw.KEY_F1))
+    app._apply_scene_switch()
+    assert isinstance(app.scene, SettingsScene)
