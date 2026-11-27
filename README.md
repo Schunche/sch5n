@@ -201,6 +201,11 @@ game folder: all of it goes to `dev/user/` instead, and the tests keep
 their temporary files in `dev/tmp/`. A git checkout counts as developing;
 `SCH5N_DEV=1` or `SCH5N_DEV=0` decides explicitly.
 
+Each start logs to `latest.log.jsonl` in the logs directory. The previous
+one is renamed after when it was written (`2026-11-27_16-26-17.log.jsonl`)
+and only the ten newest of those are kept. If another program of the game
+is still writing `latest.log.jsonl`, the new one adds to it instead.
+
 ## Tests
 
     uv run pytest                 # logic tests; rendering tests are skipped without a display

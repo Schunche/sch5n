@@ -9,6 +9,7 @@ lazy import logging.config as logging_config
 lazy import logging.handlers as logging_handlers
 lazy import os
 lazy from copy import deepcopy
+lazy from datetime import UTC, datetime
 lazy from pathlib import Path
 
 from sch5n.about import NAME
@@ -20,6 +21,10 @@ if TYPE_CHECKING:
     )
 
 LOGGER = logging.getLogger(NAME)
+KEPT_LOGS = 10
+"""Logs of earlier starts kept next to the latest one."""
+OLD_LOG_NAME = "sch5n.log.jsonl"
+"""The single log file of earlier versions."""
 
 
 class _State:
@@ -35,7 +40,7 @@ def default_config(log_file: Path) -> dict[str, Any]:
     """Build the logging setup written to the user's config on first start.
 
     Warnings go to the console; everything goes to `log_file` as JSON
-    lines, rotated at a megabyte.
+    lines. Each start writes a fresh `log_file`, see `archive_latest`.
 
     Returns:
         dict[str, Any]: A `logging.config.dictConfig` configuration.
@@ -71,12 +76,12 @@ def default_config(log_file: Path) -> dict[str, Any]:
                 "stream": "ext://sys.stderr",
             },
             "file_jsonl": {
-                "class": "logging.handlers.RotatingFileHandler",
+                "class": "logging.FileHandler",
                 "level": "DEBUG",
                 "formatter": "json",
                 "filename": str(log_file),
-                "maxBytes": 1048576,
-                "backupCount": 5,
+                "mode": "w",
+                "encoding": "utf-8",
             },
             "queue_handler": {
                 "class": "logging.handlers.QueueHandler",
@@ -89,13 +94,50 @@ def default_config(log_file: Path) -> dict[str, Any]:
 
 
 def ensure_config(config_path: Path, log_file: Path) -> None:
-    """Write the default logging configuration if there is none yet."""
-    if config_path.exists():
+    """Write the default logging configuration if there is none yet.
+
+    A configuration from before `latest.log.jsonl` is replaced too.
+    """
+    if config_path.exists() and OLD_LOG_NAME not in config_path.read_text(
+        encoding="utf-8"
+    ):
         return
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(
         json.dumps(default_config(log_file), indent=2), encoding="utf-8"
     )
+
+
+def archive_latest(latest: Path, keep: int = KEPT_LOGS) -> bool:
+    """Move the last start's log aside, named after when it was written.
+
+    Only the newest `keep` old logs are kept.
+
+    Returns:
+        bool: False if the log could not be moved, like while another
+        program of the game is still writing it.
+
+    """
+    if not latest.exists():
+        return True
+    written = datetime.fromtimestamp(latest.stat().st_mtime, UTC).astimezone()
+    stem = written.strftime("%Y-%m-%d_%H-%M-%S")
+    suffix = latest.name.removeprefix("latest")
+    target, number = latest.with_name(stem + suffix), 2
+    while target.exists():
+        target = latest.with_name(f"{stem}-{number}{suffix}")
+        number += 1
+    try:
+        latest.rename(target)
+    except OSError:
+        return False
+    old = sorted(
+        (log for log in latest.parent.glob(f"*{suffix}") if log != latest),
+        key=lambda log: log.stat().st_mtime,
+    )
+    for log in old[:-keep] if keep else old:
+        log.unlink(missing_ok=True)
+    return True
 
 
 def init(
@@ -138,6 +180,11 @@ def init(
             if filename is None:
                 continue
             Path(filename).parent.mkdir(parents=True, exist_ok=True)
+            if Path(filename).name == path.LATEST_LOG and not archive_latest(
+                Path(filename)
+            ):
+                # Another program of the game is writing it: add to it.
+                handler["mode"] = "a"
 
     logging_config.dictConfig(config)
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import zlib
 from typing import TYPE_CHECKING
 
@@ -13,7 +14,7 @@ import pytest
 import sch5n
 from sch5n.client.map import Map
 from sch5n.log.formatter import JsonFormatter
-from sch5n.log.logger import default_config, ensure_config
+from sch5n.log.logger import archive_latest, default_config, ensure_config
 from sch5n.utility import path
 from sch5n.world.save import user_worlds_dir
 
@@ -21,6 +22,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 RED = (255, 0, 0)
+KEPT = 3
+OLDEST = 1_700_000_000
 LIGHT = 7
 
 
@@ -150,3 +153,30 @@ def test_developing_keeps_everything_in_the_game_folder(
     # Without the variable, a git checkout counts as developing.
     monkeypatch.delenv(path.DEV_ENV_VAR)
     assert path.is_developing() == (path.GAME_DIR / ".git").exists()
+
+
+def test_each_start_gets_a_latest_log(tmp_path: Path) -> None:
+    """The last start's log is kept under its time; only a few are."""
+    latest = tmp_path / path.LATEST_LOG
+    assert archive_latest(latest)  # Nothing to move yet.
+    for start in range(KEPT + 2):
+        latest.write_text(f"start {start}", encoding="utf-8")
+        written = OLDEST + start * 60
+        os.utime(latest, (written, written))
+        assert archive_latest(latest, keep=KEPT)
+        assert not latest.exists()
+    old = sorted(tmp_path.glob("*.log.jsonl"))
+    assert len(old) == KEPT
+    assert old[-1].read_text(encoding="utf-8") == f"start {KEPT + 1}"
+    assert old[0].name.startswith("20")
+
+
+def test_old_logging_config_is_replaced(tmp_path: Path) -> None:
+    """A config from before latest.log.jsonl gets the new defaults."""
+    config = tmp_path / "logging.json"
+    old = default_config(tmp_path / "sch5n.log.jsonl")
+    config.write_text(json.dumps(old), encoding="utf-8")
+    ensure_config(config, tmp_path / path.LATEST_LOG)
+    data = json.loads(config.read_text(encoding="utf-8"))
+    filename = data["handlers"]["file_jsonl"]["filename"]
+    assert filename.endswith(path.LATEST_LOG)

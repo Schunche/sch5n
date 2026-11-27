@@ -121,6 +121,11 @@ def user_logging_file() -> Path:
     return user_dirs().config / "logging.json"
 
 
+LATEST_LOG = "latest.log.jsonl"
+"""The log of the running (or last) start. Older ones are named after
+when they were written."""
+
+
 def user_log_file() -> Path:
     """Where the game writes its log by default.
 
@@ -128,7 +133,7 @@ def user_log_file() -> Path:
         Path: A file in the per-user log directory.
 
     """
-    return user_dirs().logs / "sch5n.log.jsonl"
+    return user_dirs().logs / LATEST_LOG
 
 
 def user_settings_file() -> Path:

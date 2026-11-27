@@ -237,10 +237,12 @@ Install your distribution's Mesa OpenGL packages, for example
 `sudo apt install libgl1-mesa-dri libglx-mesa0` on Ubuntu or Debian.
 
 **Something else.**
-The game writes a log, `sch5n.log.jsonl`, to
+The game writes a log to
 `C:\Users\<you>\AppData\Local\Schunche\sch5n\Logs` on Windows or
-`~/.local/state/sch5n/log` on Linux.
-When you report a problem, include that file and what you were doing.
+`~/.local/state/sch5n/log` on Linux. `latest.log.jsonl` is the log of the
+last start; the ones before it are named after when they were written, like
+`2026-11-27_16-26-17.log.jsonl`. When you report a problem, include the log
+of the start that went wrong and what you were doing.
 
 ## What is all this?
 
