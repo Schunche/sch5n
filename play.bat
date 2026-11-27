@@ -13,7 +13,7 @@ if errorlevel 1 (
     set "PATH=%USERPROFILE%\.local\bin;%PATH%"
 )
 
-uv run --python 3.15 sch5n %*
+uv run --no-dev --python 3.15 sch5n %*
 set "result=%errorlevel%"
 if not "%result%"=="0" (
     echo.

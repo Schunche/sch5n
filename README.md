@@ -2,11 +2,17 @@
 
 Experimental software
 
+**New to Python? Read [GETTING_STARTED.md](GETTING_STARTED.md)**: download,
+double click `play.bat` (Windows) or run `./play.sh` (Linux), and play.
+
 ## Run
+
+The launchers `play.bat` and `play.sh` install [uv](https://docs.astral.sh/uv/)
+if needed and start the game; arguments are passed on (`./play.sh edit map1`).
 
 ### Python 3.15
 
-Install [uv](https://docs.astral.sh/uv/), then:
+For development, install [uv](https://docs.astral.sh/uv/), then:
 
     uv sync --python 3.15
     uv run sch5n

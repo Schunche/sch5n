@@ -74,8 +74,10 @@ def read_pixels(app: App) -> np.ndarray:
         np.ndarray: RGB pixels, top row first.
 
     """
-    w, h = app.window.framebuffer_size
-    data = app.ctx.screen.read(components=3)
+    # The viewport, not the window: the OS may resize the window (e.g. to
+    # fit a small screen) before the app has handled that event.
+    _, _, w, h = app.ctx.viewport
+    data = app.ctx.screen.read(viewport=(0, 0, w, h), components=3)
     return np.frombuffer(data, np.uint8).reshape(h, w, 3)[::-1]
 
 
@@ -285,9 +287,10 @@ def test_video_options_apply_and_save(app: App) -> None:
         settings.on_event(click(span.center, right=right))
 
     before = (app.settings.window_width, app.settings.window_height)
-    click_option(Option.WINDOW_SIZE)
+    # Step down, to a size that fits even small (CI) screens.
+    click_option(Option.WINDOW_SIZE, right=True)
     after = (app.settings.window_width, app.settings.window_height)
-    assert after != before
+    assert after < before
     app.window.poll()
     assert tuple(app.window.size) == after
 
@@ -306,7 +309,7 @@ def test_video_options_apply_and_save(app: App) -> None:
     assert saved["vsync"] is not vsync
     assert saved["fps_limit"] == limit
 
-    click_option(Option.WINDOW_SIZE, right=True)
+    click_option(Option.WINDOW_SIZE)
     app.window.poll()
     assert (app.settings.window_width, app.settings.window_height) == before
 

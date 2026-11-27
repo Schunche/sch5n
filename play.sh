@@ -12,4 +12,4 @@ if ! command -v uv >/dev/null 2>&1; then
     PATH="$HOME/.local/bin:$PATH"
 fi
 
-exec uv run --python 3.15 sch5n "$@"
+exec uv run --no-dev --python 3.15 sch5n "$@"
