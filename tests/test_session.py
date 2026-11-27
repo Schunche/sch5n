@@ -56,6 +56,7 @@ def test_starting_items(game: Game) -> None:
     assert [s.item.name for s in game.inventory if s] == [
         "copper_pickaxe",
         "copper_axe",
+        "iron_shovel",
     ]
 
 
@@ -136,3 +137,15 @@ def test_survival_is_the_default_mode(content: Content) -> None:
     assert game.player.max_jumps == 1
     admin = Game(content, flat_world(content), GameSetup(mode=GameMode.ADMIN))
     assert admin.player.max_jumps > 1
+
+
+def test_stone_drops_a_stone_block(game: Game, content: Content) -> None:
+    """Mined stone can be picked up and placed again."""
+    target = (2, 10)
+    game.tilemap.set(*target, content.blocks.id_of("stone"))
+    run(game, 300, use=True, target=target)
+    assert game.tilemap.get(*target) == AIR
+    run(game, 300)
+    stones = [s for s in game.inventory if s and s.item.name == "stone_block"]
+    assert sum(s.amount for s in stones) == 1
+    assert stones[0].item.spec.places == "stone"

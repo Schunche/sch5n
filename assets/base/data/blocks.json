@@ -1,8 +1,8 @@
 {
     "default_durability": 100,
     "blocks": {
-        "dirt": {"textures": ["tile/dirt/0"], "solid": true, "durability": 50, "tool": "pickaxe", "drop": "dirt_block"},
-        "stone": {"textures": ["tile/stone/0"], "solid": true, "tool": "pickaxe"},
+        "dirt": {"textures": ["tile/dirt/0"], "solid": true, "durability": 50, "tool": "shovel", "slower_tools": ["pickaxe"], "drop": "dirt_block"},
+        "stone": {"textures": ["tile/stone/0"], "solid": true, "tool": "pickaxe", "drop": "stone_block"},
         "copper": {"textures": ["tile/copper/0"], "solid": true},
         "tin": {"textures": ["tile/tin/0"], "solid": true},
         "iron": {"textures": ["tile/iron/0"], "solid": true},

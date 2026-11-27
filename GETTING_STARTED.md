@@ -63,7 +63,7 @@ In the main menu, click **Singleplayer**.
 | --- | --- |
 | A / D or the arrow keys | Walk |
 | Space | Jump. Hold it to jump higher. Jump while sliding down a wall to jump off it |
-| Left mouse button | Use the item in your hand: dig with the pickaxe, chop with the axe |
+| Left mouse button | Use the item in your hand: dig dirt with the shovel, mine stone with the pickaxe, chop trees with the axe |
 | Right mouse button | Place the block in your hand |
 | Mouse wheel, 1 to 0 | Choose a hotbar slot |
 | Tab | Open the inventory. Left click picks up or swaps items, right click takes half or puts one down |

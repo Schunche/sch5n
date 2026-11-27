@@ -36,13 +36,23 @@ class Hit:
 def tool_power(tool: ItemDef | None, block: BlockDef) -> int:
     """How much durability one hit with `tool` removes from `block`.
 
+    The block's own tool type hits with full power; its `slower_tools`
+    with a part of it.
+
     Returns:
         int: 0 if the tool cannot break the block.
 
     """
-    if tool is None or block.spec.tool is None:
+    spec = block.spec
+    if tool is None or spec.tool is None:
         return 0
-    return tool.spec.tool_power.get(block.spec.tool, 0)
+    powers = tool.spec.tool_power
+    if spec.tool in powers:
+        return powers[spec.tool]
+    slower = max(
+        (powers.get(kind, 0) for kind in spec.slower_tools), default=0
+    )
+    return int(slower * spec.slower_tool_power)
 
 
 def durability_fraction(tilemap: TileMap, x: int, y: int) -> float:

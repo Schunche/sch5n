@@ -37,7 +37,11 @@ class BlockSpec(_Model):
     solid: bool = False
     durability: int | None = None
     tool: str | None = None
-    """Tool type able to break it. `None` means unbreakable."""
+    """Tool type that breaks it best. `None` means unbreakable."""
+    slower_tools: tuple[str, ...] = ()
+    """Other tool types that break it too, with `slower_tool_power` of
+    their power. A pickaxe digs dirt, but a shovel is made for it."""
+    slower_tool_power: float = Field(default=0.7, gt=0, le=1)
     drop: str | None = None
     """Item id dropped when broken."""
     transform_to: str | None = None

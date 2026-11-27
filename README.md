@@ -83,7 +83,7 @@ Default game controls:
 | --- | --- |
 | A / D | Move |
 | Space | Jump (wall jump while sliding on a wall) |
-| Left mouse | Use the held item: mine with pickaxe or axe |
+| Left mouse | Use the held item: shovel for dirt, pickaxe for stone (it digs dirt too, slower), axe for trees |
 | Right mouse | Place the held block |
 | Wheel, 1-0 | Select hotbar slot |
 | Tab | Inventory: left click picks up / swaps / merges, right click splits / places one |
