@@ -88,13 +88,13 @@ def game() -> ContextBinds:
 
 
 def editor() -> ContextBinds:
-    """Create the default map editor bindings.
+    """Create the default map viewer bindings, which include editing.
 
     Returns:
         ContextBinds: Fresh bindings.
 
     """
-    return ContextBinds(Context.EDITOR)
+    return ContextBinds(Context.VIEWER)
 
 
 # Bindings
@@ -185,13 +185,34 @@ def test_contexts_bind_independently() -> None:
     keys = Keybinds()
     # The same physical inputs mean different things per program.
     up = Binding.wheel(1)
-    assert keys[Context.EDITOR].action_for(up) is Action.NEXT_TILE
     assert keys[Context.VIEWER].action_for(up) is Action.ZOOM_IN
     assert keys[Context.GAME].action_for(up) is Action.HOTBAR_PREVIOUS
     # Rebinding in one context leaves the others alone.
-    keys[Context.EDITOR].bind(Action.SAVE, 0, K)
-    assert keys[Context.VIEWER].action_for(K) is None
+    keys[Context.VIEWER].bind(Action.SAVE, 0, K)
     assert keys[Context.GAME].action_for(K) is None
+
+
+def test_viewer_and_editor_share_controls() -> None:
+    """Viewing and editing use one set: the wheel zooms, Shift picks."""
+    binds = ContextBinds(Context.VIEWER)
+    assert binds.action_for(Binding.wheel(1)) is Action.ZOOM_IN
+    assert binds.action_for(Binding.wheel(-1, Mod.SHIFT)) is Action.NEXT_TILE
+    assert binds.action_for(Binding.key(glfw.KEY_E)) is Action.NEXT_TILE
+    assert binds.action_for(Binding.key(glfw.KEY_Q)) is Action.PREVIOUS_TILE
+    # No input means two things.
+    inputs = [str(b) for _, slots in binds for b in slots if b is not None]
+    assert len(inputs) == len(set(inputs))
+
+
+def test_old_editor_controls_are_dropped() -> None:
+    """Settings saved with separate editor controls still load."""
+    settings = Settings.model_validate({
+        "keybinds": {
+            "editor": {"save": ["key:F5"]},
+            "viewer": {"zoom_in": ["key:Z"]},
+        }
+    })
+    assert set(settings.keybinds) == {"viewer"}
 
 
 def test_most_specific_modifier_wins_on_press() -> None:
@@ -204,7 +225,7 @@ def test_most_specific_modifier_wins_on_press() -> None:
         Action.PAN_DOWN
     )
     assert binds.action_for(Binding.wheel(1, Mod.CTRL)) is Action.ZOOM_IN
-    assert binds.action_for(Binding.wheel(1)) is Action.NEXT_TILE
+    assert binds.action_for(Binding.wheel(-1, Mod.SHIFT)) is Action.NEXT_TILE
 
 
 def test_held_respects_modifiers_and_shadowing() -> None:
@@ -275,15 +296,15 @@ def test_config_roundtrip_keeps_cleared_and_ignores_unknown() -> None:
     keys = Keybinds()
     keys[Context.GAME].bind(Action.JUMP, 0, K)
     keys[Context.GAME].bind(Action.DEBUG, 0, None)
-    keys[Context.EDITOR].bind(Action.SAVE, 1, Binding.key(glfw.KEY_F5))
+    keys[Context.VIEWER].bind(Action.SAVE, 1, Binding.key(glfw.KEY_F5))
     config = keys.to_config()
     assert config["game"]["jump"] == ["key:K"]
     assert config["game"]["debug"] == []
-    assert config["editor"]["save"] == ["ctrl+key:S", "key:F5"]
+    assert config["viewer"]["save"] == ["ctrl+key:S", "key:F5"]
 
     config["game"] |= {"fly": ["key:F"], "inventory": ["key:BAD"]}
     loaded = Keybinds({**config, "toaster": {}})
-    assert loaded.to_config()["editor"] == config["editor"]
+    assert loaded.to_config()["viewer"] == config["viewer"]
     game_binds = loaded[Context.GAME]
     assert game_binds.action_for(K) is Action.JUMP
     assert game_binds.slots(Action.DEBUG) == (None, None)
@@ -313,12 +334,12 @@ def test_settings_file(tmp_path: Path) -> None:
         "window_width": 1600,
         "window_height": 900,
         "fps_limit": 144,
-        "keybinds": {"editor": {"save": ["key:F5"]}},
+        "keybinds": {"viewer": {"save": ["key:F5"]}},
     })
     save_settings(changed, user)
     loaded = load_settings(path.DATA_DIR, user)
     assert loaded == changed
-    assert loaded.keybinds == {"editor": {"save": ("key:F5",)}}
+    assert loaded.keybinds == {"viewer": {"save": ("key:F5",)}}
 
     user.write_text("{not json", encoding="utf-8")
     assert load_settings(path.DATA_DIR, user) == bundled

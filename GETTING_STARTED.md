@@ -149,9 +149,9 @@ The game comes with a map viewer that can also edit maps. Start it with
 `view` after the launcher's name, and add `--edit` to change the map.
 
 - **Viewing:** look at a whole map. WASD to move, mouse wheel to zoom.
-- **Editing** (`--edit`): change a map. WASD to move, left click places,
-  right click erases, the mouse wheel picks the block, Ctrl+mouse wheel
-  zooms, Ctrl+S saves, Esc saves and quits.
+- **Editing** (`--edit`): change a map. The same controls, and: left click
+  places, right click erases, Shift+mouse wheel or Q and E pick the block,
+  Ctrl+S saves, Esc saves and quits.
 
 On **Windows**, open the game folder, click the address bar at the top of the
 window, type `cmd` and press Enter. A black window opens in the game folder.

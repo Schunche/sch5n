@@ -37,8 +37,8 @@ BACKGROUND = (0, 0, 0)
 class MapScene(Scene):
     """Fly over a map, or edit it.
 
-    Viewing and editing have their own key bindings, as the mouse wheel
-    zooms in one and picks the tile in the other. Editing saves on Escape.
+    Viewing and editing share the map viewer's key bindings; the editing
+    ones only work when editing. Editing saves on Escape.
     """
 
     has_backdrop = True
@@ -50,7 +50,7 @@ class MapScene(Scene):
         super().__init__(app)
         self.map_path = map_path
         self.editing = editing
-        self.controls = Context.EDITOR if editing else Context.VIEWER
+        self.controls = Context.VIEWER
         blocks = app.content.blocks
         if map_path.exists():
             self.tilemap = load_tilemap(map_path, blocks)
@@ -71,7 +71,7 @@ class MapScene(Scene):
 
     @property
     def keys(self) -> ContextBinds:
-        """Bindings of the current mode."""
+        """Bindings of the map viewer."""
         return self.app.keybinds[self.controls]
 
     def mouse_tile(self) -> tuple[int, int]:

@@ -19,8 +19,8 @@ class Scene:
     """
 
     controls: Context = Context.GAME
-    """Controls the settings opened here may change: the game's, or the
-    map viewer's for viewing or editing."""
+    """Controls the settings opened here may change: the game's or the
+    map viewer's."""
     has_backdrop: ClassVar[bool] = False
     """Whether `draw_backdrop` draws something."""
 

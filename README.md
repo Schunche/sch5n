@@ -108,9 +108,10 @@ Default game controls:
 | Esc | Close inventory, open settings |
 | F3 | Debug info |
 
-The map viewer pans with WASD and zooms with the wheel. With `--edit` it
-defaults to left/right mouse to place/erase, wheel to pick a tile,
-Ctrl+wheel to zoom and Ctrl+S to save. F1 opens the settings.
+The map viewer pans with WASD and zooms with the wheel. With `--edit`,
+left/right mouse place/erase, Shift+wheel or Q/E pick the tile and Ctrl+S
+saves. Viewing and editing share one set of controls. F1 opens the
+settings.
 
 ### Settings
 
@@ -123,9 +124,8 @@ per topic:
 - **Interface**: theme, menu background and GUI size. The menu background is
   either the game world (a live world behind the main menu, the paused game
   behind the in-game settings) or the theme's background.
-- **Controls**: the bindings of what you are in. The game, the map viewer
-  and the map viewer while editing each have their own (the wheel zooms
-  when viewing but picks the tile when editing), and each can only be
+- **Controls**: the bindings of what you are in. The game and the map
+  viewer (also when editing) each have their own, and each can only be
   changed from inside it. Click a slot,
   then press a key, mouse button or wheel direction, with modifiers if you
   like (Ctrl+S). Esc cancels, Backspace or right click clears. Esc itself

@@ -314,8 +314,8 @@ def test_capture_modifier_combinations(
         app, tmp_path_factory.mktemp("maps") / "m.json", editing=True
     )
     settings = SettingsScene(app, back=editor, page=Page.CONTROLS)
-    binds = app.keybinds[Context.EDITOR]
-    reset = BindRow(Context.EDITOR, Action.RESET_CAMERA)
+    binds = app.keybinds[Context.VIEWER]
+    reset = BindRow(Context.VIEWER, Action.RESET_CAMERA)
     index = show_row(settings, reset)
 
     def capture(slot: int) -> None:
@@ -386,24 +386,27 @@ def test_video_options_apply_and_save(app: App) -> None:
     assert (app.settings.window_width, app.settings.window_height) == before
 
 
-def test_editor_uses_its_own_binds(
+def test_viewer_controls_when_editing(
     app: App, tmp_path_factory: pytest.TempPathFactory
 ) -> None:
-    """The map editor and viewer use their own controls."""
+    """Viewing and editing share controls; editing ones need --edit."""
     target = tmp_path_factory.mktemp("maps") / "new.json"
     editor = MapScene(app, target, editing=True)
     editor.on_event(ScrollEvent(0, 1))
+    assert editor.camera.zoom > 1
+    assert editor.selected == 0
+    editor.on_event(ScrollEvent(0, -1, glfw.MOD_SHIFT))
     assert editor.selected == 1
-    zoom = editor.camera.zoom
-    editor.on_event(ScrollEvent(0, 1, glfw.MOD_CONTROL))
-    assert editor.camera.zoom > zoom
-    assert editor.selected == 1
+    editor.on_event(press(glfw.KEY_Q))
+    assert editor.selected == 0
     editor.on_event(press(glfw.KEY_S, glfw.MOD_CONTROL))
     assert target.exists()
 
     viewer = MapScene(app, target)
     viewer.on_event(ScrollEvent(0, 1))
     assert viewer.camera.zoom > 1
+    viewer.on_event(press(glfw.KEY_E))
+    assert viewer.selected == 0
 
     viewer.on_event(press(glfw.KEY_F1))
     assert isinstance(app.pending_scene, SettingsScene)
@@ -553,8 +556,10 @@ def test_each_program_edits_only_its_own_controls(
     target = tmp_path_factory.mktemp("maps") / "m.json"
     origins = {
         Context.GAME: [MainMenu(app), PlayScene.singleplayer(app)],
-        Context.EDITOR: [MapScene(app, target, editing=True)],
-        Context.VIEWER: [MapScene(app, target)],
+        Context.VIEWER: [
+            MapScene(app, target),
+            MapScene(app, target, editing=True),
+        ],
     }
     for context, scenes in origins.items():
         for scene in scenes:

@@ -30,15 +30,14 @@ class Context(StrEnum):
     """A program with its own set of controls."""
 
     GAME = "game"
-    EDITOR = "editor"
     VIEWER = "viewer"
+    """The map viewer, also when editing."""
 
     @property
     def label(self) -> str:
         """Name shown in the settings."""
         return {
             Context.GAME: "Game",
-            Context.EDITOR: "Map Viewer, editing",
             Context.VIEWER: "Map Viewer",
         }[self]
 
@@ -335,24 +334,18 @@ DEFAULTS: dict[Context, dict[Action, tuple[str, ...]]] = {
     | {
         Action(f"hotbar_{i + 1}"): (f"key:{d}",) for i, d in enumerate(_DIGITS)
     },
-    Context.EDITOR: {
-        **_PAN,
-        Action.PLACE_TILE: ("mouse:LEFT",),
-        Action.ERASE_TILE: ("mouse:RIGHT",),
-        Action.NEXT_TILE: ("wheel:UP",),
-        Action.PREVIOUS_TILE: ("wheel:DOWN",),
-        Action.ZOOM_IN: ("ctrl+wheel:UP",),
-        Action.ZOOM_OUT: ("ctrl+wheel:DOWN",),
-        Action.RESET_CAMERA: ("key:R",),
-        Action.SAVE: ("ctrl+key:S",),
-        Action.SETTINGS: ("key:F1",),
-    },
     Context.VIEWER: {
         **_PAN,
         Action.ZOOM_IN: ("wheel:UP",),
         Action.ZOOM_OUT: ("wheel:DOWN",),
         Action.RESET_CAMERA: ("key:R",),
         Action.SETTINGS: ("key:F1",),
+        # Only while editing.
+        Action.PLACE_TILE: ("mouse:LEFT",),
+        Action.ERASE_TILE: ("mouse:RIGHT",),
+        Action.NEXT_TILE: ("shift+wheel:DOWN", "key:E"),
+        Action.PREVIOUS_TILE: ("shift+wheel:UP", "key:Q"),
+        Action.SAVE: ("ctrl+key:S",),
     },
 }
 

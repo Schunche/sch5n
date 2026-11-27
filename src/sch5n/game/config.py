@@ -231,18 +231,22 @@ class Settings(_Model):
 
     @field_validator("keybinds", mode="before")
     @classmethod
-    def _upgrade_flat_keybinds(cls, value: object) -> object:
-        """Accept the old format without contexts as the game's binds.
+    def _upgrade_keybinds(cls, value: object) -> object:
+        """Accept older formats.
+
+        The oldest had no contexts: those are the game's binds. The map
+        editor had its own until it became part of the map viewer; those
+        are dropped, as they clash with the viewer's.
 
         Returns:
             object: Keybinds grouped by context.
 
         """
-        if isinstance(value, dict) and any(
-            isinstance(v, list | tuple) for v in value.values()
-        ):
+        if not isinstance(value, dict):
+            return value
+        if any(isinstance(v, list | tuple) for v in value.values()):
             return {"game": value}
-        return value
+        return {k: v for k, v in value.items() if k != "editor"}
 
 
 class ButtonStyle(_Model):
