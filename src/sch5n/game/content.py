@@ -16,6 +16,7 @@ from sch5n.game.config import (
     UiConfig,
     load_model,
 )
+from sch5n.log.logger import LOGGER
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -261,15 +262,29 @@ class Content:
         )
 
 
-def load_settings(data_dir: Path) -> Settings:
-    """Load `settings.json`, falling back to defaults when missing.
+def load_settings(data_dir: Path, user_file: Path | None = None) -> Settings:
+    """Load the user's settings.
+
+    `user_file` wins if it exists, otherwise the bundled `settings.json`,
+    otherwise built-in defaults. An unreadable user file is ignored.
 
     Returns:
         Settings: User settings.
 
     """
+    if user_file is not None and user_file.exists():
+        try:
+            return load_model(Settings, user_file)
+        except OSError, ValueError:
+            LOGGER.exception("Ignoring broken settings file %s", user_file)
     path = data_dir / "settings.json"
     return load_model(Settings, path) if path.exists() else Settings()
+
+
+def save_settings(settings: Settings, user_file: Path) -> None:
+    """Write the user's settings, creating parent directories."""
+    user_file.parent.mkdir(parents=True, exist_ok=True)
+    user_file.write_text(settings.model_dump_json(indent=4), encoding="utf-8")
 
 
 def load_ui(data_dir: Path) -> UiConfig:

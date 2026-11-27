@@ -11,11 +11,19 @@ lazy from pathlib import Path
 import moderngl
 
 from sch5n.client.assets import ClientAssets
+from sch5n.client.keybinds import Keybinds
 from sch5n.client.render.atlas import create_texture
 from sch5n.client.render.batch import SpriteBatch, rgba
 from sch5n.client.render.text import TextRenderer
 from sch5n.client.window import ResizeEvent, Window
-from sch5n.game.content import Content, load_animations, load_settings, load_ui
+from sch5n.game.config import Settings
+from sch5n.game.content import (
+    Content,
+    load_animations,
+    load_settings,
+    load_ui,
+    save_settings,
+)
 from sch5n.log.logger import LOGGER
 from sch5n.utility import path
 
@@ -42,6 +50,9 @@ class Options:
     """Stop after this many frames. For automated runs."""
     hidden: bool = False
     """Do not show the window. For automated runs."""
+    settings_file: Path | None = None
+    """Where user settings are read and saved. Defaults to the per-user
+    config directory."""
 
 
 class App:
@@ -51,7 +62,11 @@ class App:
         """Load data, open the window and build GPU resources."""
         self.options = options or Options()
         self.content = Content.load(path.DATA_DIR)
-        self.settings = load_settings(path.DATA_DIR)
+        self.settings_file = (
+            self.options.settings_file or path.user_settings_file()
+        )
+        self.settings = load_settings(path.DATA_DIR, self.settings_file)
+        self.keybinds = Keybinds(self.settings.keybinds)
         self.ui = load_ui(path.DATA_DIR)
         self.animations = load_animations(path.DATA_DIR)
 
@@ -108,6 +123,15 @@ class App:
                 self.ctx, self.assets.load_image(image, size)
             )
         return texture
+
+    def save_settings(self) -> None:
+        """Store the current keybinds in the user's settings file."""
+        self.settings = Settings.model_validate({
+            **self.settings.model_dump(),
+            "keybinds": self.keybinds.to_config(),
+        })
+        save_settings(self.settings, self.settings_file)
+        LOGGER.info("Saved settings to %s", self.settings_file)
 
     def switch(self, scene: Scene) -> None:
         """Make `scene` active at the end of the current frame."""

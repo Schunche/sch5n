@@ -129,6 +129,9 @@ class Settings(_Model):
     fps_limit: int = 0
     """Frame cap when vsync is off. 0 means unlimited."""
     gui_size: int = 24
+    keybinds: dict[str, tuple[str, ...]] = Field(default_factory=dict)
+    """Action name to bindings like `key:SPACE`. Missing actions use the
+    defaults."""
 
 
 class ButtonStyle(_Model):

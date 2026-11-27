@@ -130,9 +130,7 @@ class Map:  # ruff: ignore[undocumented-public-class]
     def save(self, path: Path) -> None:  # ruff: ignore[undocumented-public-method]
         json_data = {  # pyright: ignore[reportUnknownVariableType]
             "size": self._size,
-            "data": {
-                pickle.dumps(k): v for k, v in self._tiles.items()
-            },
+            "data": {pickle.dumps(k): v for k, v in self._tiles.items()},
         }
 
         json_bytes = json.dumps(json_data).encode(encoding="utf-8")

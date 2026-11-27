@@ -23,6 +23,7 @@ class Anchor(StrEnum):
     """Which point of the text box the position refers to."""
 
     TOP_LEFT = "top_left"
+    MIDDLE_LEFT = "middle_left"
     CENTER = "center"
     BOTTOM_RIGHT = "bottom_right"
     BOTTOM_CENTER = "bottom_center"
@@ -42,6 +43,8 @@ def anchored(
     match anchor:
         case Anchor.TOP_LEFT:
             pass
+        case Anchor.MIDDLE_LEFT:
+            y -= h / 2
         case Anchor.CENTER:
             x, y = x - w / 2, y - h / 2
         case Anchor.BOTTOM_RIGHT:

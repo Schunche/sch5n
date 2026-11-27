@@ -21,12 +21,13 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture(scope="module")
-def app() -> Iterator[App]:
+def app(tmp_path_factory: pytest.TempPathFactory) -> Iterator[App]:
     from sch5n.client.app import App, Options
     from sch5n.client.window import WindowError
 
+    settings = tmp_path_factory.mktemp("user") / "settings.json"
     try:
-        application = App(Options(hidden=True, seed=0))
+        application = App(Options(hidden=True, seed=0, settings_file=settings))
     except WindowError as e:
         pytest.skip(str(e))
     yield application
@@ -114,3 +115,55 @@ def test_play_scene_input(app: App) -> None:
     assert not play.inventory_open
     assert inventory.cursor is None
     assert inventory[0] is not None
+
+
+def test_rebind_in_settings_and_play(app: App) -> None:
+    import json
+
+    import glfw
+
+    from sch5n.client.keybinds import Action, Binding
+    from sch5n.client.scenes.menu import SettingsScene
+    from sch5n.client.scenes.play import PlayScene
+    from sch5n.client.window import KeyEvent, MouseButtonEvent
+
+    play = PlayScene(app)
+    settings = SettingsScene(app, back=play, in_game=True)
+    row = settings.actions.index(Action.JUMP)
+    cell = settings.table.cell_rect(row, 0, settings.scroll).center
+
+    def press(key: int) -> KeyEvent:
+        return KeyEvent(key, glfw.PRESS, 0)
+
+    click = MouseButtonEvent(glfw.MOUSE_BUTTON_LEFT, glfw.PRESS, 0, cell)
+
+    # Escape cancels without changing anything.
+    settings.on_event(click)
+    assert settings.capturing == (Action.JUMP, 0)
+    settings.on_event(press(glfw.KEY_ESCAPE))
+    assert settings.capturing is None
+    assert app.keybinds.slots(Action.JUMP)[0] == Binding.key(glfw.KEY_SPACE)
+
+    # Rebind jump to K.
+    settings.on_event(click)
+    settings.on_event(press(glfw.KEY_K))
+    assert app.keybinds.action_for(Binding.key(glfw.KEY_K)) is Action.JUMP
+    saved = json.loads(app.settings_file.read_text(encoding="utf-8"))
+    assert saved["keybinds"]["jump"] == ["key:K"]
+    pixels = draw(app, settings)
+    assert pixels.any()
+
+    # The game uses the new binding right away.
+    play.on_event(press(glfw.KEY_SPACE))
+    assert not play._jump_requested
+    play.on_event(press(glfw.KEY_K))
+    assert play._jump_requested
+
+    # Reset restores the defaults.
+    reset = next(b for b in settings.buttons if b.id == "reset")
+    settings.on_event(
+        MouseButtonEvent(
+            glfw.MOUSE_BUTTON_LEFT, glfw.PRESS, 0, reset.rect.center
+        )
+    )
+    assert app.keybinds.action_for(Binding.key(glfw.KEY_SPACE)) is Action.JUMP

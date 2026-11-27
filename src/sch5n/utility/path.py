@@ -69,3 +69,13 @@ TEXTURES_DIR = BASE_DIR / "textures"
 MAPS_DIR = BASE_DIR / "maps"
 CONFIG_DIR = BASE_DIR / "config"
 SHADER_DIR = ASSETS_DIR / "shader"
+
+
+def user_settings_file() -> Path:
+    """Where the user's own settings are saved.
+
+    Returns:
+        Path: A file in the per-user config directory.
+
+    """
+    return get_platformdirs().user_config_path / "settings.json"

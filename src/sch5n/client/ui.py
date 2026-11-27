@@ -238,3 +238,136 @@ class InventoryLayout:
             right.right - first.x + 2 * self.border,
             last.bottom - first.y + 2 * self.border,
         )
+
+
+@dataclass(frozen=True, slots=True)
+class TableLayout:
+    """A vertically scrolling table: a label column and button columns.
+
+    Only rows lying completely inside `area` are visible.
+    """
+
+    rows: int
+    area: Rect
+    """Visible part of the table on screen."""
+    row_height: float
+    label_width: float
+    cell_width: float
+    columns: int = 2
+    gap: float = 12
+    padding: float = 3
+    """Vertical space between a row's edge and its buttons."""
+
+    @classmethod
+    def centered(  # ruff: ignore[too-many-arguments]
+        cls,
+        rows: int,
+        screen: tuple[float, float],
+        top: float,
+        bottom: float,
+        *,
+        row_height: float = 32,
+        label_width: float = 200,
+        cell_width: float = 160,
+    ) -> TableLayout:
+        """Table centered horizontally between `top` and `bottom`.
+
+        Returns:
+            TableLayout: The layout.
+
+        """
+        width = label_width + 2 * (cell_width + 12)
+        return cls(
+            rows=rows,
+            area=Rect(
+                (screen[0] - width) / 2, top, width, max(bottom - top, 0)
+            ),
+            row_height=row_height,
+            label_width=label_width,
+            cell_width=cell_width,
+        )
+
+    @property
+    def max_scroll(self) -> float:
+        """Largest useful scroll offset."""
+        return max(0.0, self.rows * self.row_height - self.area.h)
+
+    def clamp_scroll(self, scroll: float) -> float:
+        """Limit a scroll offset to the content.
+
+        Returns:
+            float: Offset in [0, max_scroll].
+
+        """
+        return min(max(scroll, 0.0), self.max_scroll)
+
+    def row_top(self, row: int, scroll: float) -> float:
+        """Screen y of a row's top edge.
+
+        Returns:
+            float: Screen y.
+
+        """
+        return self.area.y + row * self.row_height - scroll
+
+    def is_visible(self, row: int, scroll: float) -> bool:
+        """Whether a row is completely inside the visible area.
+
+        Returns:
+            bool: True if it is drawn.
+
+        """
+        top = self.row_top(row, scroll)
+        return (
+            0 <= row < self.rows
+            and top >= self.area.top
+            and top + self.row_height <= self.area.bottom + 1e-6
+        )
+
+    def label_anchor(self, row: int, scroll: float) -> tuple[float, float]:
+        """Left middle point of a row's label.
+
+        Returns:
+            tuple[float, float]: Screen position.
+
+        """
+        return (self.area.x, self.row_top(row, scroll) + self.row_height / 2)
+
+    def cell_rect(self, row: int, column: int, scroll: float) -> Rect:
+        """Button rectangle of a cell.
+
+        Returns:
+            Rect: Screen rectangle.
+
+        """
+        x = (
+            self.area.x
+            + self.label_width
+            + column * (self.cell_width + self.gap)
+            + self.gap
+        )
+        return Rect(
+            x,
+            self.row_top(row, scroll) + self.padding,
+            self.cell_width,
+            self.row_height - 2 * self.padding,
+        )
+
+    def cell_at(
+        self, pos: tuple[float, float], scroll: float
+    ) -> tuple[int, int] | None:
+        """Visible cell under a screen position.
+
+        Returns:
+            tuple[int, int] | None: `(row, column)`, if any.
+
+        """
+        if not self.area.contains_point(*pos):
+            return None
+        row = int((pos[1] - self.area.y + scroll) // self.row_height)
+        if not self.is_visible(row, scroll):
+            return None
+        for column in range(self.columns):
+            if self.cell_rect(row, column, scroll).contains_point(*pos):
+                return (row, column)
+        return None

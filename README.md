@@ -36,6 +36,13 @@ Prefix with `uv run` when the virtual environment is not activated.
 | Esc | Close inventory, open settings |
 | F3 | Debug info |
 
+These are the defaults. Every control except Esc can be rebound in
+Settings: click a binding, then press a key or mouse button (Esc cancels,
+Backspace clears). Each action has two slots. Changes are saved to
+`settings.json` in your user config directory (e.g.
+`~/.config/sch5n/settings.json` on Linux), which overrides
+`assets/base/data/settings.json`.
+
 ## Dependencies
 
 - [Python 3.15](https://www.python.org/)

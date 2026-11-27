@@ -10,6 +10,7 @@ import glfw
 
 from sch5n.client.camera import Camera
 from sch5n.client.hud import Hud
+from sch5n.client.keybinds import Action
 from sch5n.client.render.batch import rgba
 from sch5n.client.scenes.base import Scene
 from sch5n.client.scenes.menu import SettingsScene
@@ -38,9 +39,6 @@ if TYPE_CHECKING:
     from sch5n.world.tilemap import TileMap
 
 DEFAULT_MAP = "map1"
-HOTBAR_KEYS = {glfw.KEY_1 + i: i for i in range(9)} | {glfw.KEY_0: 9}
-LEFT_KEYS = (glfw.KEY_A, glfw.KEY_LEFT)
-RIGHT_KEYS = (glfw.KEY_D, glfw.KEY_RIGHT)
 
 
 def load_world(app: App) -> TileMap:
@@ -122,31 +120,26 @@ class PlayScene(Scene):
                     ),
                 )
 
-    def _on_key(self, event: KeyEvent) -> None:
-        if not event.pressed:
-            return
-        match event.key:
-            case glfw.KEY_ESCAPE:
-                if self.inventory_open:
-                    self._toggle_inventory()
-                else:
-                    self.app.switch(
-                        SettingsScene(self.app, back=self, in_game=True)
-                    )
-            case glfw.KEY_TAB:
+    def _on_action(self, action: Action) -> None:
+        match action:
+            case Action.INVENTORY:
                 self._toggle_inventory()
-            case glfw.KEY_SPACE:
+            case Action.JUMP:
                 self._jump_requested = True
-            case glfw.KEY_F3:
+            case Action.DEBUG:
                 self.debug = not self.debug
-            case key if key in HOTBAR_KEYS:
-                self.game.inventory.select(HOTBAR_KEYS[key])
+            case _ if action.hotbar_slot is not None:
+                self.game.inventory.select(action.hotbar_slot)
             case _:
                 pass
 
-    def _on_click(self, event: MouseButtonEvent) -> None:
-        if not event.pressed:
-            return
+    def _on_gui_click(self, event: MouseButtonEvent) -> bool:
+        """Handle a click on the inventory GUI.
+
+        Returns:
+            bool: Whether the click hit the GUI.
+
+        """
         inventory = self.game.inventory
         slot = self.layout.slot_at(
             event.pos, hotbar_only=not self.inventory_open
@@ -156,10 +149,9 @@ class PlayScene(Scene):
                 self.inventory_open
                 and hit_button(self.buttons, event.pos) == "settings"
             ):
-                self.app.switch(
-                    SettingsScene(self.app, back=self, in_game=True)
-                )
-            return
+                self._open_settings()
+                return True
+            return False
         if not self.inventory_open:
             if event.button == glfw.MOUSE_BUTTON_LEFT and slot < HOTBAR_SIZE:
                 inventory.select(slot)
@@ -167,20 +159,35 @@ class PlayScene(Scene):
             inventory.left_click(slot)
         elif event.button == glfw.MOUSE_BUTTON_RIGHT:
             inventory.right_click(slot)
+        return True
+
+    def _open_settings(self) -> None:
+        self.app.switch(SettingsScene(self.app, back=self, in_game=True))
 
     def on_event(self, event: Event) -> None:
         """Handle input."""
         match event:
             case ResizeEvent():
                 self._place_layout()
-            case KeyEvent():
-                self._on_key(event)
-            case MouseButtonEvent():
-                self._on_click(event)
+                return
+            case KeyEvent(key=glfw.KEY_ESCAPE) if event.pressed:
+                if self.inventory_open:
+                    self._toggle_inventory()
+                else:
+                    self._open_settings()
+                return
+            case MouseButtonEvent() if event.pressed and self._on_gui_click(
+                event
+            ):
+                return
             case ScrollEvent(dy=dy) if dy and not self.inventory_open:
                 self.game.inventory.scroll(-int(math.copysign(1, dy)))
+                return
             case _:
                 pass
+        action = self.app.keybinds.pressed(event)
+        if action is not None:
+            self._on_action(action)
 
     def tick(self) -> None:
         """Advance the game by one tick."""
@@ -197,15 +204,16 @@ class PlayScene(Scene):
                 math.floor(world_y / self.tile_size),
             )
         )
-        move_x = int(any(window.is_key_down(k) for k in RIGHT_KEYS)) - int(
-            any(window.is_key_down(k) for k in LEFT_KEYS)
+        keys = app.keybinds
+        move_x = int(keys.is_held(Action.MOVE_RIGHT, window)) - int(
+            keys.is_held(Action.MOVE_LEFT, window)
         )
         self.game.tick(
             TickInput(
                 move_x=move_x,
                 jump=self._jump_requested,
-                use=window.is_mouse_down(glfw.MOUSE_BUTTON_LEFT),
-                place=window.is_mouse_down(glfw.MOUSE_BUTTON_RIGHT),
+                use=keys.is_held(Action.USE_ITEM, window),
+                place=keys.is_held(Action.PLACE_BLOCK, window),
                 target=target,
                 view=self.camera.view(app.screen),
             )
