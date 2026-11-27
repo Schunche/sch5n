@@ -93,7 +93,12 @@ class App:
         self.batch = SpriteBatch(self.ctx, path.SHADER_DIR)
         self.background = BackgroundRenderer(self.ctx, path.SHADER_DIR)
         self.sky = SkyRenderer(self.ctx, path.SHADER_DIR)
-        self.text = TextRenderer(self.ctx)
+        self.text = TextRenderer(
+            self.ctx,
+            str(path.FONT_FILE),
+            pixelated=True,
+            pixel_grid=path.FONT_PIXEL_GRID,
+        )
         self.assets = ClientAssets(
             self.ctx, path.TEXTURES_DIR, self.content, self.animations
         )

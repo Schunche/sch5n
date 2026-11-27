@@ -161,12 +161,18 @@ own by copying an entry.
     - [numpy](https://numpy.org/), [pydantic](https://docs.pydantic.dev/)
     - [zeroconf](https://pypi.org/project/zeroconf/): finding games on the
       local network
+- [Pixelify Sans](https://fonts.google.com/specimen/Pixelify+Sans) by
+  Stefie Justprince, the game's font, under the SIL Open Font License 1.1
+  (`assets/fonts/PixelifySans-OFL.txt`, which must ship with the font). It
+  is drawn with hard pixel edges, at multiples of 10 px, where each of its
+  pixels is a whole number of screen pixels.
 
 ## Layout
 
     assets/              what draws the game
         textures/        images
         shaders/         GLSL shaders
+        fonts/           Pixelify Sans and its license
     data/                what defines the game: rules, blocks, items, animations, UI style, default settings (JSON)
         maps/            bundled maps, and the ones made with the editor
     dev/                 ignored by git: everything the game writes while developing

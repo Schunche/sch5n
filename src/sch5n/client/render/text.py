@@ -84,12 +84,23 @@ class TextRenderer:
         ctx: moderngl.Context,
         font_path: str | None = None,
         max_cached: int = 512,
+        *,
+        pixelated: bool = False,
+        pixel_grid: int = 1,
     ) -> None:
-        """Create a renderer. `font_path=None` uses pygame's default font."""
+        """Create a renderer. `font_path=None` uses pygame's default font.
+
+        `pixelated` keeps hard pixel edges, for pixel fonts: no smoothing
+        when rendering or scaling. Sizes are then rounded to a multiple of
+        `pixel_grid`, the size at which one pixel of the font is one screen
+        pixel, so every font pixel is whole screen pixels.
+        """
         if not pygame.font.get_init():
             pygame.font.init()
         self.ctx = ctx
         self.font_path = font_path
+        self.pixelated = pixelated
+        self.pixel_grid = pixel_grid if pixelated else 1
         self.max_cached = max_cached
         self._fonts: dict[int, pygame.font.Font] = {}
         self._cache: OrderedDict[
@@ -105,8 +116,12 @@ class TextRenderer:
         """
         font = self._fonts.get(size)
         if font is None:
-            # pygame's default font renders small, scale it up a bit.
-            scaled = round(size * 4 / 3) if self.font_path is None else size
+            if self.font_path is None:
+                # pygame's default font renders small, scale it up a bit.
+                scaled = round(size * 4 / 3)
+            else:
+                grid = self.pixel_grid
+                scaled = max(grid, round(size / grid) * grid)
             font = self._fonts[size] = pygame.font.Font(self.font_path, scaled)
         return font
 
@@ -134,10 +149,10 @@ class TextRenderer:
             return cached
 
         surface = self.font(size).render(
-            text, antialias=True, color=(255, 255, 255)
+            text, antialias=not self.pixelated, color=(255, 255, 255)
         )
         texture = create_texture(
-            self.ctx, surface_to_rgba(surface), smooth=True
+            self.ctx, surface_to_rgba(surface), smooth=not self.pixelated
         )
         entry = (texture, surface.get_size())
         self._cache[key] = entry

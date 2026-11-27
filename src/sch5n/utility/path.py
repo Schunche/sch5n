@@ -46,6 +46,11 @@ ASSETS_DIR = find_assets_dir()
 """Pictures and shaders: what draws the game."""
 TEXTURES_DIR = ASSETS_DIR / "textures"
 SHADER_DIR = ASSETS_DIR / "shaders"
+FONTS_DIR = ASSETS_DIR / "fonts"
+FONT_FILE = FONTS_DIR / "PixelifySans.ttf"
+"""Pixelify Sans by Stefie Justprince, SIL Open Font License 1.1."""
+FONT_PIXEL_GRID = 10
+"""Font size at which one pixel of Pixelify Sans is one screen pixel."""
 DATA_DIR = Path(getenv(DATA_ENV_VAR) or ASSETS_DIR.parent / "data")
 """Game rules, blocks, items, UI and default settings: what defines the
 game. Next to `assets`."""
