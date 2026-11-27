@@ -124,7 +124,13 @@ class ClientAssets:
             for name, (clip, keys) in particle_keys.items()
         }
         self.breakage = tuple(regions[k] for k in breakage_keys)
-        self.clouds = tuple(regions[k] for k in cloud_keys)
+        self.clouds = tuple(
+            sorted(
+                (regions[k] for k in cloud_keys),
+                key=lambda r: r.width * r.height,
+            )
+        )
+        """Cloud images, smallest first."""
         self.cursor = regions[cursor_key]
 
         variants = max((len(v) for v in self.blocks.values()), default=1)

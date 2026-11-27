@@ -53,8 +53,6 @@ class GameSetup:
     spawn: tuple[float, float] = (640.0, 360.0)
     """Preferred spawn position in pixels. The player is dropped onto the
     ground below it."""
-    cloud_variants: int = 1
-    """Number of distinct cloud images."""
 
 
 DEFAULT_SETUP = GameSetup()
@@ -98,12 +96,10 @@ class Game:
             setup.mode,
         )
         self.floating_items: list[FloatingItem] = []
-        self.ambience = Ambience(
-            self.config.particles,
-            self.config.clouds.count,
-            setup.cloud_variants,
-            self.rng,
-        )
+        self.ambience = Ambience(self.config, self.rng)
+        bounds = tilemap.bounds()
+        self.horizon = (bounds[1] if bounds else 0) * self.config.tile_size
+        """World y of the top of the world, where the sky begins."""
 
     def _spawn_point(
         self, preferred: tuple[float, float]

@@ -1,5 +1,5 @@
 # Copyright (c) 2026 Schunche
-"""Purely cosmetic simulation: particles, clouds and wind."""
+"""Purely cosmetic simulation: wind, clouds, wind streaks and particles."""
 
 from __future__ import annotations
 
@@ -10,9 +10,22 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 if TYPE_CHECKING:
-    from sch5n.game.config import ParticleConfig
+    from sch5n.game.config import (
+        CloudConfig,
+        GameConfig,
+        ParticleConfig,
+        WindConfig,
+        WindStreakConfig,
+    )
     from sch5n.math.rect import Rect
     from sch5n.world.tilemap import TileMap
+
+REFERENCE_VIEW_WIDTH = 1280
+"""View width the streak rate is given for."""
+WIND_STEER = 0.02
+"""How quickly wind blown particles adapt to the current wind, per tick."""
+SIZE_JITTER = 0.3
+"""Randomness of cloud size around what their depth suggests."""
 
 
 @dataclass(slots=True)
@@ -29,46 +42,124 @@ class Particle:
 
 @dataclass(slots=True)
 class Cloud:
-    """A background cloud. Positions wrap around the screen."""
+    """A background cloud.
+
+    `x` is in its parallax layer and wraps around the screen. `altitude` is
+    the height above the horizon of the nearest layer; renderers lower it
+    for distant clouds.
+    """
 
     x: float
-    y: float
+    altitude: float
     depth: float
     """Parallax factor in (0, 1): smaller is further away."""
     speed: float
-    variant: int
+    """Pixels per tick at wind strength 1."""
+    size: float
+    """Which cloud image to use, 0 the smallest and 1 the largest."""
+
+
+@dataclass(slots=True)
+class WindStreak:
+    """A faint line in the air, blown along by the wind. World pixels."""
+
+    x: float
+    y: float
+    vx: float
+    length: float
+    lifetime: int
+    phase: float
+    """Offset of its up and down wobble."""
+    age: int = 0
+
+    @property
+    def opacity(self) -> float:
+        """Fades in, then out, over its life. In [0, 1]."""
+        return math.sin(math.pi * min(self.age / self.lifetime, 1.0))
+
+
+class Wind:
+    """Wind strength (negative blows left) that changes in gusts.
+
+    Every session has a prevailing wind; gusts pull the wind towards a
+    nearby strength for a while, then pick another.
+    """
+
+    def __init__(self, config: WindConfig, rng: np.random.Generator) -> None:
+        """Roll the prevailing wind."""
+        self.config = config
+        self.rng = rng
+        self.prevailing = float(rng.uniform(-1, 1))
+        self.strength = self.prevailing
+        self.target = self.prevailing
+        self._next_gust = 0
+
+    def _roll_gust(self) -> None:
+        config = self.config
+        self.target = float(
+            np.clip(
+                self.prevailing
+                + self.rng.uniform(
+                    -config.gust_strength, config.gust_strength
+                ),
+                -config.max,
+                config.max,
+            )
+        )
+        low, high = config.gust_interval
+        self._next_gust = int(self.rng.integers(low, high + 1))
+
+    def tick(self) -> None:
+        """Turn towards the current gust; start a new gust when due."""
+        if self._next_gust <= 0:
+            self._roll_gust()
+        self._next_gust -= 1
+        step = self.config.change_rate
+        delta = self.target - self.strength
+        self.strength += max(-step, min(step, delta))
 
 
 class Ambience:
-    """Wind, clouds and particles emitted by blocks."""
+    """Wind, clouds, wind streaks and particles emitted by blocks."""
 
-    def __init__(
-        self,
-        particles: dict[str, ParticleConfig],
-        cloud_count: int,
-        cloud_variants: int,
-        rng: np.random.Generator,
-    ) -> None:
+    def __init__(self, config: GameConfig, rng: np.random.Generator) -> None:
         """Roll the wind and scatter clouds."""
-        self.config = particles
+        self.particle_config: dict[str, ParticleConfig] = config.particles
+        self.streak_config: WindStreakConfig = config.wind_streaks
         self.rng = rng
-        self.wind = float(rng.uniform(-1, 1))
+        self.wind = Wind(config.wind, rng)
         self.particles: list[Particle] = []
-        self.clouds = sorted(
-            (
+        self.streaks: list[WindStreak] = []
+        self.clouds = self._scatter_clouds(config.clouds)
+
+    def _scatter_clouds(self, config: CloudConfig) -> list[Cloud]:
+        rng = self.rng
+        low, high = config.altitude
+        clouds = []
+        for _ in range(config.count):
+            depth = float(rng.uniform(0.2, 0.9))
+            nearness = (depth - 0.2) / 0.7
+            clouds.append(
                 Cloud(
                     x=float(rng.random() * 99999),
-                    y=float(rng.random() * 99999),
-                    depth=(depth := float(rng.uniform(0.2, 0.8))),
-                    speed=depth / (float(rng.uniform(0.05, 0.1)) * 64),
-                    variant=int(rng.integers(max(cloud_variants, 1))),
+                    altitude=float(rng.uniform(low, high)),
+                    depth=depth,
+                    speed=config.speed * depth * float(rng.uniform(0.7, 1.3)),
+                    size=float(
+                        np.clip(
+                            nearness + rng.uniform(-SIZE_JITTER, SIZE_JITTER),
+                            0,
+                            1,
+                        )
+                    ),
                 )
-                for _ in range(cloud_count)
-            ),
-            key=lambda c: c.depth,
-        )
+            )
+        # Far clouds first, so near ones are drawn over them.
+        return sorted(clouds, key=lambda c: c.depth)
 
-    def _spawn(self, tilemap: TileMap, view: Rect, tile_size: int) -> None:
+    def _spawn_particles(
+        self, tilemap: TileMap, view: Rect, tile_size: int
+    ) -> None:
         x0 = math.floor(view.left / tile_size)
         y0 = math.floor(view.top / tile_size)
         x1 = math.ceil(view.right / tile_size)
@@ -83,7 +174,7 @@ class Ambience:
             if block is None or block.spec.particle is None:
                 continue
             kind = block.spec.particle
-            config = self.config.get(kind)
+            config = self.particle_config.get(kind)
             if config is None:
                 continue
             mask = region[ys, xs] == block_id
@@ -92,29 +183,57 @@ class Ambience:
                 xs[mask][rolls].tolist(), ys[mask][rolls].tolist(), strict=True
             ):
                 drift_x, drift_y = config.drift
-                vx = self.wind if config.follows_wind else self.rng.random()
+                push = (
+                    self.wind.strength
+                    if config.follows_wind
+                    else self.rng.random()
+                )
                 self.particles.append(
                     Particle(
                         kind=kind,
                         x=(x0 + tx + self.rng.random()) * tile_size,
                         y=(y0 + ty + self.rng.random()) * tile_size,
-                        vx=vx * drift_x,
+                        vx=push * drift_x,
                         vy=float(self.rng.random()) * drift_y,
                     )
                 )
 
-    def tick(
-        self, tilemap: TileMap, view: Rect | None, tile_size: int
+    def _spawn_streaks(
+        self, tilemap: TileMap, view: Rect, tile_size: int
     ) -> None:
-        """Move clouds, age particles and spawn new ones inside `view`."""
-        for cloud in self.clouds:
-            cloud.x += cloud.speed * self.wind
+        config = self.streak_config
+        wind = self.wind.strength
+        if abs(wind) < config.min_wind:
+            return
+        expected = config.rate * abs(wind) * view.w / REFERENCE_VIEW_WIDTH
+        count = int(self.rng.poisson(expected))
+        for _ in range(count):
+            x = view.x + float(self.rng.random()) * view.w
+            y = view.y + float(self.rng.random()) * view.h
+            if tilemap.is_solid(
+                math.floor(x / tile_size), math.floor(y / tile_size)
+            ):
+                continue
+            self.streaks.append(
+                WindStreak(
+                    x=x,
+                    y=y,
+                    vx=wind * config.speed * float(self.rng.uniform(0.8, 1.2)),
+                    length=float(self.rng.uniform(*config.length)),
+                    lifetime=config.lifetime,
+                    phase=float(self.rng.uniform(0, math.tau)),
+                )
+            )
 
+    def _tick_particles(self) -> None:
         alive: list[Particle] = []
         for particle in self.particles:
-            config = self.config.get(particle.kind)
+            config = self.particle_config.get(particle.kind)
             if config is None or particle.age >= config.lifetime:
                 continue
+            if config.follows_wind:
+                target = self.wind.strength * config.drift[0]
+                particle.vx += (target - particle.vx) * WIND_STEER
             particle.age += 1
             particle.x += particle.vx + config.sway_amplitude * math.sin(
                 particle.age * config.sway_frequency
@@ -123,5 +242,28 @@ class Ambience:
             alive.append(particle)
         self.particles = alive
 
+    def _tick_streaks(self) -> None:
+        alive: list[WindStreak] = []
+        for streak in self.streaks:
+            streak.age += 1
+            if streak.age >= streak.lifetime:
+                continue
+            streak.x += streak.vx
+            alive.append(streak)
+        self.streaks = alive
+
+    def tick(
+        self, tilemap: TileMap, view: Rect | None, tile_size: int
+    ) -> None:
+        """Advance the wind and everything it moves.
+
+        New particles and streaks only appear inside `view`.
+        """
+        self.wind.tick()
+        for cloud in self.clouds:
+            cloud.x += cloud.speed * self.wind.strength
+        self._tick_particles()
+        self._tick_streaks()
         if view is not None:
-            self._spawn(tilemap, view, tile_size)
+            self._spawn_particles(tilemap, view, tile_size)
+            self._spawn_streaks(tilemap, view, tile_size)

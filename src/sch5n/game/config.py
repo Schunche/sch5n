@@ -116,7 +116,38 @@ class ParticleConfig(_Model):
 class CloudConfig(_Model):
     """Background clouds."""
 
-    count: int = 16
+    count: int = 24
+    altitude: tuple[float, float] = (80.0, 520.0)
+    """Height above the horizon in pixels, for the nearest clouds."""
+    speed: float = 0.5
+    """Pixels per tick of the nearest clouds at wind strength 1."""
+
+
+class WindConfig(_Model):
+    """Wind that blows in gusts."""
+
+    max: float = 1.5
+    """Strongest wind, either way."""
+    gust_strength: float = 0.6
+    """How far a gust may stray from the session's prevailing wind."""
+    gust_interval: tuple[int, int] = (240, 900)
+    """Ticks between gusts."""
+    change_rate: float = 0.0015
+    """How fast the wind turns towards a gust, per tick."""
+
+
+class WindStreakConfig(_Model):
+    """Faint lines in the air that show the wind."""
+
+    rate: float = 0.1
+    """Expected new streaks per tick at wind strength 1, for a 1280 pixel
+    wide view."""
+    min_wind: float = 0.25
+    """No streaks in a calmer wind."""
+    lifetime: int = 100
+    length: tuple[float, float] = (40.0, 140.0)
+    speed: float = 3.0
+    """Pixels per tick at wind strength 1."""
 
 
 class GameConfig(_Model):
@@ -133,6 +164,8 @@ class GameConfig(_Model):
     inventory: InventoryConfig = InventoryConfig()
     particles: dict[str, ParticleConfig] = Field(default_factory=dict)
     clouds: CloudConfig = CloudConfig()
+    wind: WindConfig = WindConfig()
+    wind_streaks: WindStreakConfig = WindStreakConfig()
 
 
 class Settings(_Model):

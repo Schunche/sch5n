@@ -71,7 +71,7 @@ class MenuWorld:
         self.game = Game(
             app.content,
             load_world(app),
-            GameSetup(cloud_variants=len(app.assets.clouds)),
+            GameSetup(),
         )
         bounds = self.game.tilemap.bounds() or (0, 0, 1, 1)
         size = app.content.game.tile_size

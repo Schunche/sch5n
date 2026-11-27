@@ -14,15 +14,24 @@ from sch5n.utility import path
 from sch5n.world.io import load_tilemap
 from sch5n.world.tilemap import CHUNK_SHIFT, CHUNK_SIZE
 
+STREAK_THICKNESS = 2
+STREAK_OPACITY = 0.55
+STREAK_WOBBLE = 3.0
+"""Pixels a wind streak moves up and down."""
+STREAK_WOBBLE_SPEED = 0.12
+
 DEFAULT_MAP = "map1"
 """Map played when none is chosen on the command line."""
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from sch5n.client.app import App
     from sch5n.client.assets import ClientAssets
     from sch5n.client.camera import Camera
+    from sch5n.client.render.atlas import Region
     from sch5n.client.render.batch import RGBA, SpriteBatch
-    from sch5n.game.ambient import Ambience
+    from sch5n.game.ambient import Ambience, Cloud
     from sch5n.game.floating_item import FloatingItem
     from sch5n.game.player import Player
     from sch5n.game.session import Game
@@ -162,23 +171,89 @@ def draw_particles(
     batch.extend(assets.atlas, rows)
 
 
+def cloud_scale(depth: float) -> int:
+    """Whole pixel scale of a cloud: near clouds are drawn bigger.
+
+    Returns:
+        int: 2 for the furthest clouds up to 4 for the nearest.
+
+    """
+    return max(1, round(1 + depth * 3))
+
+
+def cloud_image(regions: Sequence[Region], cloud: Cloud) -> Region:
+    """Pick the image for a cloud: small images for small clouds.
+
+    Returns:
+        Region: One of `regions`, which are ordered smallest first.
+
+    """
+    return regions[round(cloud.size * (len(regions) - 1))]
+
+
+def place_cloud(
+    cloud: Cloud,
+    image: Region,
+    camera_center: tuple[float, float],
+    horizon: float,
+    screen: tuple[float, float],
+) -> tuple[tuple[float, float, float, float], float] | None:
+    """Where a cloud appears on screen, and how opaque it is.
+
+    Clouds float above the horizon with parallax: distant ones move less
+    with the camera, sit lower, look smaller and fade into the sky.
+    Horizontally they wrap around the screen.
+
+    Returns:
+        tuple[tuple[float, float, float, float], float] | None: Screen
+        rectangle and opacity, or `None` when off screen.
+
+    """
+    width, height = screen
+    scale = cloud_scale(cloud.depth)
+    w, h = image.width * scale, image.height * scale
+    x = (cloud.x - camera_center[0] * cloud.depth) % (width + w) - w
+    horizon_on_screen = height / 2 + (horizon - camera_center[1]) * cloud.depth
+    lift = cloud.altitude * (0.4 + 0.6 * cloud.depth)
+    y = horizon_on_screen - lift - h
+    if y > height or y + h < 0:
+        return None
+    opacity = 0.35 + 0.65 * cloud.depth
+    return (round(x), round(y), w, h), opacity
+
+
 def draw_clouds(
     batch: SpriteBatch,
     assets: ClientAssets,
-    ambience: Ambience,
-    camera_offset: tuple[float, float],
+    game: Game,
+    camera_center: tuple[float, float],
     screen: tuple[float, float],
 ) -> None:
-    """Queue clouds in screen space, with parallax and wrap around."""
+    """Queue clouds in screen space, far ones first."""
     if not assets.clouds:
         return
-    width, height = screen
-    for cloud in ambience.clouds:
-        region = assets.clouds[cloud.variant % len(assets.clouds)]
-        w, h = region.width, region.height
-        x = (cloud.x - camera_offset[0] * cloud.depth) % (width + w) - w
-        y = (cloud.y - camera_offset[1] * cloud.depth) % (height + h) - h
-        batch.sprite(assets.atlas, (round(x), round(y), w, h), region)
+    for cloud in game.ambience.clouds:
+        image = cloud_image(assets.clouds, cloud)
+        placed = place_cloud(cloud, image, camera_center, game.horizon, screen)
+        if placed is not None:
+            rect, opacity = placed
+            batch.sprite(assets.atlas, rect, image, (1.0, 1.0, 1.0, opacity))
+
+
+def draw_wind_streaks(batch: SpriteBatch, ambience: Ambience) -> None:
+    """Queue faint, wobbling lines where the wind blows. World space."""
+    for streak in ambience.streaks:
+        wobble = math.sin(streak.age * STREAK_WOBBLE_SPEED + streak.phase)
+        batch.shape(
+            (
+                streak.x - streak.length / 2,
+                streak.y + wobble * STREAK_WOBBLE,
+                streak.length,
+                STREAK_THICKNESS,
+            ),
+            (1.0, 1.0, 1.0, STREAK_OPACITY * streak.opacity),
+            radius=STREAK_THICKNESS / 2,
+        )
 
 
 class WorldRenderer:
@@ -199,13 +274,15 @@ class WorldRenderer:
 
         app.clear(app.content.game.sky_color)
         batch.begin(app.screen)
-        draw_clouds(batch, app.assets, game.ambience, offset, app.screen)
+        view = camera.view(app.screen)
+        draw_clouds(batch, app.assets, game, view.center, app.screen)
 
         batch.begin(app.screen, offset, camera.zoom)
         self.tiles.draw(batch, game.tilemap, camera.view(app.screen))
         if show_player:
             draw_player(batch, app.assets, game.player)
         draw_particles(batch, app.assets, game.ambience)
+        draw_wind_streaks(batch, game.ambience)
         draw_floating_items(batch, app.assets, game.floating_items)
 
 

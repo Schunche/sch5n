@@ -46,7 +46,6 @@ class PlayScene(Scene):
             GameSetup(
                 mode=app.options.game_mode,
                 seed=app.options.seed,
-                cloud_variants=len(app.assets.clouds),
             ),
         )
         self.tile_size = content.game.tile_size
@@ -257,7 +256,7 @@ class PlayScene(Scene):
                 f"{len(game.tilemap)} tiles, {len(game.ambience.particles)} "
                 f"particles, {len(game.floating_items)} items"
             ),
-            f"wind {game.ambience.wind:+.2f}",
+            f"wind {game.ambience.wind.strength:+.2f}",
         ]
         x, y = app.screen[0] - 8, 8
         color = rgba(app.ui.color("text"))

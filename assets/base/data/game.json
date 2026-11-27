@@ -48,6 +48,21 @@
         }
     },
     "clouds": {
-        "count": 16
+        "count": 24,
+        "altitude": [80, 520],
+        "speed": 0.5
+    },
+    "wind": {
+        "max": 1.5,
+        "gust_strength": 0.6,
+        "gust_interval": [240, 900],
+        "change_rate": 0.0015
+    },
+    "wind_streaks": {
+        "rate": 0.1,
+        "min_wind": 0.25,
+        "lifetime": 100,
+        "length": [40, 140],
+        "speed": 3.0
     }
 }
