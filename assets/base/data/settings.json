@@ -1,0 +1,7 @@
+{
+    "window_width": 1280,
+    "window_height": 720,
+    "vsync": true,
+    "fps_limit": 0,
+    "gui_size": 24
+}

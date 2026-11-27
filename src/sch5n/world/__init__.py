@@ -1,2 +1,2 @@
 # Copyright (c) 2026 Schunche
-"""Experimental software."""
+"""The tile world: storage, persistence and generation."""

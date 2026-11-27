@@ -1,0 +1,28 @@
+{
+    "colors": {
+        "main_theme": [7, 7, 7],
+        "button_inner": [15, 15, 15],
+        "button_border": [31, 31, 31],
+        "button_hover": [63, 63, 63],
+        "text": [235, 205, 200],
+        "hotbar_selected_border": [255, 255, 0]
+    },
+    "outer_padding": 16,
+    "button": {
+        "width": 128,
+        "height": 32,
+        "border_width": 4,
+        "border_radius": 4,
+        "font_size": 16
+    },
+    "slot": {
+        "border_width": 4,
+        "padding": 12,
+        "alpha": 159,
+        "amount_font_size": 12
+    },
+    "main_menu": {
+        "background": "icon/lolBG",
+        "button_spacing": 64
+    }
+}

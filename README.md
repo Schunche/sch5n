@@ -10,7 +10,7 @@ Experimental software
 
     uv venv .venv
     source .venv/bin/activate
-    pytohn -m pip install uv
+    python -m pip install uv
     uv pip install -e .
 
 #### Windows
@@ -19,13 +19,66 @@ https://www.python.org/downloads/release/pymanager-264/
 
     py -m venv .venv
     (Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; .\.venv\Scripts\Activate.ps1
-    pytohn -m pip install uv
+    python -m pip install uv
     python -m pip install -e .
+
+## Usage
+
+    sch5n                       # play (same as `sch5n client`)
+    sch5n client --map procedural --game-mode survival --seed 1
+    sch5n view procedural       # fly over a map: WASD, wheel zooms, R resets
+    sch5n edit map1             # edit a map: LMB place, RMB erase, wheel picks tile, Ctrl+S saves
+    sch5n generate mymap --seed 42 --width 300 --height 160
+
+Without installing, run from the repository root with `PYTHONPATH=src python -m sch5n`.
+
+### Controls
+
+| Key | Action |
+| --- | --- |
+| A / D | Move |
+| Space | Jump (wall jump while sliding on a wall) |
+| Left mouse | Use the held item: mine with pickaxe or axe |
+| Right mouse | Place the held block |
+| Wheel, 1-0 | Select hotbar slot |
+| Tab | Inventory: left click picks up / swaps / merges, right click splits / places one |
+| Esc | Close inventory, open settings |
+| F3 | Debug info |
 
 ## Dependencies
 
-- [Python](https://www.python.org/)
-    - [PyGame-CE](https://www.pyga.me)
+- [Python 3.15](https://www.python.org/)
+    - [glfw](https://pypi.org/project/glfw/): window and input
+    - [moderngl](https://moderngl.readthedocs.io/): rendering
+    - [pygame-ce](https://www.pyga.me): image loading and text rendering
+    - [numpy](https://numpy.org/), [pydantic](https://docs.pydantic.dev/)
+
+## Layout
+
+    assets/
+        base/
+            config/      logging configuration
+            data/        game rules, blocks, items, animations, UI style, user settings (JSON)
+            maps/        bundled maps
+            textures/    images
+        shader/          GLSL shaders
+    src/sch5n/           source code only
+        game/            game rules: player, inventory, mining, items, particles (no GL, no window)
+        world/           chunked tilemap, map files, world generator
+        client/          glfw window, scenes, HUD
+            render/      texture atlas, instanced sprite batch, text
+        math/, log/, utility/, ...
+    tests/
+
+The game logic runs at a fixed tick rate and never touches the window or
+OpenGL, so it can be tested directly. Rendering packs every texture into one
+atlas and draws all sprites with instancing; tiles are cached per chunk, so a
+frame is a handful of draw calls.
+
+## Tests
+
+    pytest                 # logic tests; rendering tests are skipped without a display
+    xvfb-run -a pytest     # everything, headless
 
 ## Development
 

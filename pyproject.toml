@@ -12,33 +12,38 @@ authors = [{name = "Schunche", email = "schunche.w@gmail.com"}]
 maintainers = [{name = "Schunche", email = "schunche.w@gmail.com"}]
 description = "Experimental software. Use at your own risk."
 readme = "README.md"
-license = { file = "LICENCE.txt" }
+license = { file = "LICENCE" }
 
 dependencies = [
     "fastapi",
     "glfw",
     "moderngl",
-    "mypy",
     "numba",
     "numpy",
     "pillow",
     "platformdirs",
     "psutil",
     "pygame-ce",
-    "pyright",
     "pydantic",
-    "pytest",
-    "pytest-cov",
     "python-dotenv",
     "python-steam-api",
     "PyOpenAl",
-    "ruff>=0.15.22",
     "sounddevice",
     "steamworkspy",
-    "uv",
     "zeroconf",
     "jmespath",
     "moderngl-window>=3.1.1",
+]
+
+[dependency-groups]
+
+dev = [
+    "mypy",
+    "pyright",
+    "pytest",
+    "pytest-cov",
+    "ruff>=0.15.22",
+    "uv",
 ]
 
 [project.scripts]
@@ -60,6 +65,7 @@ pretty = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src", "."]
 norecursedirs = ["venv", "build", "__pycache__"]
 addopts = "-q"
 
@@ -101,5 +107,12 @@ deprecated = "ignore"
 [tool.ty.project-manager]
 script = "uv"
 
-[[tool.ty.overrides]]
-exclude = ["src/sch5n/deprecated/**"]
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "S101",  # Tests assert
+    "D",  # Test names are the documentation
+    "DOC",
+    "PLR2004",  # Expected values are literals
+    "PLC0415",  # Window dependent imports stay inside tests
+    "SLF001",
+]
