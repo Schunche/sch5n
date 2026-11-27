@@ -38,6 +38,7 @@ class ViewerScene(Scene):
     """Fly over a map. Uses the map viewer key bindings."""
 
     title = "Map Viewer"
+    has_backdrop = True
     context = Context.VIEWER
 
     def __init__(self, app: App, map_path: Path) -> None:
@@ -136,8 +137,8 @@ class ViewerScene(Scene):
     def draw_overlay(self) -> None:
         """Draw tool specific things in world space."""
 
-    def render(self) -> None:
-        """Draw the map."""
+    def draw_backdrop(self) -> None:
+        """Draw the map without the tool's overlays."""
         app = self.app
         app.clear(BACKGROUND)
         app.batch.begin(app.screen, self.camera.offset(), self.camera.zoom)
@@ -147,6 +148,11 @@ class ViewerScene(Scene):
             self.camera.view(app.screen),
             breakage=False,
         )
+
+    def render(self) -> None:
+        """Draw the map."""
+        app = self.app
+        self.draw_backdrop()
         self.draw_overlay()
 
         app.batch.begin(app.screen)

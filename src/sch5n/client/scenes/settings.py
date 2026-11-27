@@ -28,9 +28,9 @@ from sch5n.client.window import (
     ResizeEvent,
     ScrollEvent,
 )
-from sch5n.game.config import Settings
+from sch5n.game.config import MenuBackground, Settings
 from sch5n.math.rect import Rect
-lazy from sch5n.client.scenes.menu import MainMenu
+lazy from sch5n.client.scenes.menu import MainMenu, draw_menu_background
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -39,6 +39,10 @@ if TYPE_CHECKING:
     from sch5n.client.window import Event
 
 GUI_SIZES = (16, 20, 24, 28, 32)
+MENU_BACKGROUND_LABELS = {
+    MenuBackground.WORLD: "Game world",
+    MenuBackground.THEME: "Theme",
+}
 VOLUME_STEP = 5
 MAX_VOLUME = 100
 
@@ -53,6 +57,8 @@ MESSAGE_HEIGHT = 28
 ROW_HEIGHT = 32
 FOOTER_BUTTON_WIDTH = 160
 FOOTER_GAP = 16
+BACKDROP_DIM = 0.55
+"""Opacity of the theme color over the backdrop."""
 SLIDER_HEIGHT = 8
 SLIDER_LABEL_WIDTH = 56
 """Room right of a slider for its value."""
@@ -89,6 +95,7 @@ class Option(StrEnum):
     MUSIC_VOLUME = "Music volume"
     EFFECTS_VOLUME = "Effects volume"
     THEME = "Theme"
+    MENU_BACKGROUND = "Menu background"
     GUI_SIZE = "GUI size"
 
 
@@ -104,7 +111,7 @@ PAGE_OPTIONS: dict[Page, tuple[Option, ...]] = {
         Option.MUSIC_VOLUME,
         Option.EFFECTS_VOLUME,
     ),
-    Page.INTERFACE: (Option.THEME, Option.GUI_SIZE),
+    Page.INTERFACE: (Option.THEME, Option.MENU_BACKGROUND, Option.GUI_SIZE),
 }
 
 OPTION_FIELDS: dict[Option, tuple[str, ...]] = {
@@ -116,6 +123,7 @@ OPTION_FIELDS: dict[Option, tuple[str, ...]] = {
     Option.MUSIC_VOLUME: ("music_volume",),
     Option.EFFECTS_VOLUME: ("effects_volume",),
     Option.THEME: ("theme",),
+    Option.MENU_BACKGROUND: ("menu_background",),
     Option.GUI_SIZE: ("gui_size",),
 }
 """Settings fields behind each option."""
@@ -181,6 +189,9 @@ _VALUE_TEXT: dict[Option, Callable[[App], str]] = {
     Option.VSYNC: lambda app: "On" if app.settings.vsync else "Off",
     Option.FPS_LIMIT: lambda app: _fps_text(app.settings),
     Option.THEME: lambda app: app.ui.theme.label,
+    Option.MENU_BACKGROUND: lambda app: MENU_BACKGROUND_LABELS[
+        app.settings.menu_background
+    ],
     Option.GUI_SIZE: lambda app: f"{app.settings.gui_size} px",
 } | {
     option: lambda app, field=field: f"{getattr(app.settings, field)} %"
@@ -216,6 +227,11 @@ def change_option(app: App, option: Option, step: int) -> None:
         case Option.THEME:
             names = app.ui.theme_names
             app.update_settings(theme=cycle(names, app.ui.theme_name, step))
+        case Option.MENU_BACKGROUND:
+            choices = list(MenuBackground)
+            app.update_settings(
+                menu_background=cycle(choices, s.menu_background, step)
+            )
         case Option.GUI_SIZE:
             app.update_settings(gui_size=cycle(GUI_SIZES, s.gui_size, step))
         case _:
@@ -485,6 +501,10 @@ class SettingsScene(Scene):
             case _:
                 pass
 
+    def tick(self) -> None:
+        """Let the scene behind the settings keep moving, if it wants to."""
+        self.back.tick_backdrop()
+
     # Drawing
 
     def _text(
@@ -594,7 +614,7 @@ class SettingsScene(Scene):
         w = app.screen[0]
         mouse = app.window.mouse_pos
 
-        app.draw_background()
+        draw_menu_background(app, self.back, BACKDROP_DIM)
         self._text(
             "Settings",
             (w / 2, TITLE_Y),

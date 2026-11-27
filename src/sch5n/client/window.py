@@ -69,6 +69,46 @@ _MODIFIERS = (
 type Event = KeyEvent | MouseButtonEvent | ScrollEvent | ResizeEvent
 
 
+class Cursor:
+    """The OS mouse cursor over a window."""
+
+    def __init__(self, window: object) -> None:
+        """Control the cursor of a glfw window handle."""
+        self._window = window
+        self._image: object | None = None
+        """glfw cursor handle made by `set_image`."""
+
+    def hide(self) -> None:
+        """Hide the OS cursor while it is over the window."""
+        glfw.set_input_mode(self._window, glfw.CURSOR, glfw.CURSOR_HIDDEN)
+
+    def set_image(
+        self, pixels: np.ndarray, hotspot: tuple[int, int] = (0, 0)
+    ) -> None:
+        """Show the OS cursor, looking like an RGBA image.
+
+        The operating system draws it, so it never lags behind the mouse.
+        """
+        height, width = pixels.shape[:2]
+        image = glfw.create_cursor((width, height, pixels), *hotspot)
+        glfw.set_cursor(self._window, image)
+        self.release()
+        self._image = image
+        glfw.set_input_mode(self._window, glfw.CURSOR, glfw.CURSOR_NORMAL)
+
+    @property
+    def visible(self) -> bool:
+        """Whether the OS cursor is shown over the window."""
+        mode = glfw.get_input_mode(self._window, glfw.CURSOR)
+        return mode == glfw.CURSOR_NORMAL
+
+    def release(self) -> None:
+        """Free the cursor image."""
+        if self._image is not None:
+            glfw.destroy_cursor(self._image)
+            self._image = None
+
+
 class WindowError(RuntimeError):
     """The window or its OpenGL context could not be created."""
 
@@ -111,6 +151,7 @@ class Window:
         glfw.swap_interval(1 if vsync else 0)
 
         self._events: list[Event] = []
+        self.cursor = Cursor(self.handle)
         glfw.set_key_callback(self.handle, self._on_key)
         glfw.set_mouse_button_callback(self.handle, self._on_mouse_button)
         glfw.set_scroll_callback(self.handle, self._on_scroll)
@@ -245,10 +286,6 @@ class Window:
         """Wait for the display refresh when presenting frames."""
         glfw.swap_interval(1 if vsync else 0)
 
-    def hide_cursor(self) -> None:
-        """Hide the OS cursor while it is over the window."""
-        glfw.set_input_mode(self.handle, glfw.CURSOR, glfw.CURSOR_HIDDEN)
-
     def close(self) -> None:
         """Request the window to close."""
         glfw.set_window_should_close(self.handle, glfw.TRUE)
@@ -259,6 +296,7 @@ class Window:
 
     def destroy(self) -> None:
         """Destroy the window and shut glfw down."""
+        self.cursor.release()
         glfw.destroy_window(self.handle)
         glfw.terminate()
 

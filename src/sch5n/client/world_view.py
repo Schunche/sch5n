@@ -10,14 +10,22 @@ import numpy as np
 
 from sch5n.client.render.batch import INSTANCE_FLOATS, WHITE, sprite_instances
 from sch5n.game.mining import durability_fraction
+from sch5n.utility import path
+from sch5n.world.io import load_tilemap
 from sch5n.world.tilemap import CHUNK_SHIFT, CHUNK_SIZE
 
+DEFAULT_MAP = "map1"
+"""Map played when none is chosen on the command line."""
+
 if TYPE_CHECKING:
+    from sch5n.client.app import App
     from sch5n.client.assets import ClientAssets
+    from sch5n.client.camera import Camera
     from sch5n.client.render.batch import RGBA, SpriteBatch
     from sch5n.game.ambient import Ambience
     from sch5n.game.floating_item import FloatingItem
     from sch5n.game.player import Player
+    from sch5n.game.session import Game
     from sch5n.math.rect import Rect
     from sch5n.math.vector import IntTuple2
     from sch5n.world.tilemap import Chunk, TileMap
@@ -171,3 +179,42 @@ def draw_clouds(
         x = (cloud.x - camera_offset[0] * cloud.depth) % (width + w) - w
         y = (cloud.y - camera_offset[1] * cloud.depth) % (height + h) - h
         batch.sprite(assets.atlas, (round(x), round(y), w, h), region)
+
+
+class WorldRenderer:
+    """Draws a game session as the player sees it: sky, clouds, world."""
+
+    def __init__(self, app: App) -> None:
+        """Create the renderer."""
+        self.app = app
+        self.tiles = TileRenderer(app.assets, app.content.game.tile_size)
+
+    def draw(
+        self, game: Game, camera: Camera, *, show_player: bool = True
+    ) -> None:
+        """Draw everything but the HUD. Leaves a world space batch open."""
+        app = self.app
+        batch = app.batch
+        offset = camera.offset()
+
+        app.clear(app.content.game.sky_color)
+        batch.begin(app.screen)
+        draw_clouds(batch, app.assets, game.ambience, offset, app.screen)
+
+        batch.begin(app.screen, offset, camera.zoom)
+        self.tiles.draw(batch, game.tilemap, camera.view(app.screen))
+        if show_player:
+            draw_player(batch, app.assets, game.player)
+        draw_particles(batch, app.assets, game.ambience)
+        draw_floating_items(batch, app.assets, game.floating_items)
+
+
+def load_world(app: App) -> TileMap:
+    """Load the map chosen on the command line, or the default one.
+
+    Returns:
+        TileMap: The map.
+
+    """
+    map_path = app.options.map_path or path.MAPS_DIR / f"{DEFAULT_MAP}.json"
+    return load_tilemap(map_path, app.content.blocks)

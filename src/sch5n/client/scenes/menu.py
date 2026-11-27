@@ -1,18 +1,23 @@
 # Copyright (c) 2026 Schunche
-"""The title screen."""
+"""The title screen, with the game running behind it."""
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING
 
 import glfw
 
 from sch5n.about import __version__
+from sch5n.client.camera import Camera
 from sch5n.client.render.batch import rgba
 from sch5n.client.render.text import Anchor, TextStyle
 from sch5n.client.scenes.base import Scene
 from sch5n.client.ui import Button, aligned_rect, draw_panel, hit_button
 from sch5n.client.window import KeyEvent, MouseButtonEvent, ResizeEvent
+from sch5n.client.world_view import WorldRenderer, load_world
+from sch5n.game.config import MenuBackground
+from sch5n.game.session import Game, GameSetup, TickInput
 from sch5n.math.rect import Rect
 lazy from sch5n.client.scenes.play import PlayScene
 lazy from sch5n.client.scenes.settings import SettingsScene
@@ -26,13 +31,91 @@ TITLE_SIZE = 56
 PANEL_PADDING = 24
 ENTRIES = (("play", "Play"), ("settings", "Settings"), ("exit", "Exit"))
 
+DRIFT_PERIOD = (2400, 3700)
+"""Ticks for one camera sway, horizontally and vertically."""
+DRIFT_RANGE = (0.15, 0.06)
+"""How far the camera sways, as a fraction of the screen."""
+CAMERA_SMOOTHING = 0.02
+DIM = 0.35
+"""Opacity of the theme color over the world, for readability."""
+
+
+def dim_screen(app: App, alpha: float) -> None:
+    """Darken the whole screen with the theme's background color."""
+    app.batch.begin(app.screen)
+    app.batch.shape(
+        (0, 0, *app.screen), rgba(app.ui.color("background"), alpha)
+    )
+
+
+def draw_menu_background(app: App, scene: Scene, dim: float) -> None:
+    """Draw `scene`'s backdrop dimmed, or the theme background.
+
+    The user's menu background setting decides, and scenes without a
+    backdrop always get the theme background.
+    """
+    wants_world = app.settings.menu_background is MenuBackground.WORLD
+    if wants_world and scene.has_backdrop:
+        scene.draw_backdrop()
+        dim_screen(app, dim)
+    else:
+        app.draw_background()
+
+
+class MenuWorld:
+    """A game session shown behind the menus, with a drifting camera."""
+
+    def __init__(self, app: App) -> None:
+        """Load the map Play would load and start it."""
+        self.app = app
+        self.game = Game(
+            app.content,
+            load_world(app),
+            GameSetup(cloud_variants=len(app.assets.clouds)),
+        )
+        bounds = self.game.tilemap.bounds() or (0, 0, 1, 1)
+        size = app.content.game.tile_size
+        self.center = (
+            (bounds[0] + bounds[2]) / 2 * size,
+            (bounds[1] + bounds[3]) / 2 * size,
+        )
+        self.camera = Camera()
+        self.camera.center_on(self._target(), app.screen)
+        self.renderer = WorldRenderer(app)
+
+    def _target(self) -> tuple[float, float]:
+        ticks = self.game.ticks
+        w, h = self.app.screen
+        return (
+            self.center[0]
+            + math.sin(ticks * math.tau / DRIFT_PERIOD[0])
+            * w
+            * DRIFT_RANGE[0],
+            self.center[1]
+            + math.sin(ticks * math.tau / DRIFT_PERIOD[1])
+            * h
+            * DRIFT_RANGE[1],
+        )
+
+    def tick(self) -> None:
+        """Advance the world and move the camera."""
+        self.game.tick(TickInput(view=self.camera.view(self.app.screen)))
+        self.camera.follow(self._target(), self.app.screen, CAMERA_SMOOTHING)
+
+    def draw(self) -> None:
+        """Draw the world."""
+        self.renderer.draw(self.game, self.camera, show_player=False)
+
 
 class MainMenu(Scene):
     """Title, play, settings and exit."""
 
+    has_backdrop = True
+
     def __init__(self, app: App) -> None:
-        """Create the screen."""
+        """Create the screen and start the background world."""
         super().__init__(app)
+        self.world = MenuWorld(app)
         self.buttons: list[Button] = []
         self.panel = Rect(0, 0, 0, 0)
         self.layout()
@@ -88,12 +171,24 @@ class MainMenu(Scene):
             case _:
                 pass
 
+    def tick(self) -> None:
+        """Keep the background world running."""
+        self.world.tick()
+
+    def tick_backdrop(self) -> None:
+        """Keep the world running behind the settings too."""
+        self.world.tick()
+
+    def draw_backdrop(self) -> None:
+        """Draw the running world."""
+        self.world.draw()
+
     def render(self) -> None:
         """Draw the screen."""
         app = self.app
         style = app.ui
         w, h = app.screen
-        app.draw_background()
+        draw_menu_background(app, self, DIM)
 
         title = app.content.game.title
         shadow = TextStyle(TITLE_SIZE, (0.0, 0.0, 0.0, 0.5), Anchor.CENTER)
@@ -114,6 +209,6 @@ class MainMenu(Scene):
             app.batch,
             f"v{__version__}",
             (w - style.outer_padding, h - style.outer_padding),
-            TextStyle(14, rgba(style.color("text_dim")), Anchor.BOTTOM_RIGHT),
+            TextStyle(14, rgba(style.color("text")), Anchor.BOTTOM_RIGHT),
         )
         app.draw_cursor()

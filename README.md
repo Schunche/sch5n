@@ -51,7 +51,9 @@ per topic:
 - **Video**: windowed or fullscreen, window size, VSync, frame rate limit.
 - **Audio**: master, music and effects volume. There is no sound yet; the
   values are stored for later.
-- **Interface**: theme and GUI size.
+- **Interface**: theme, menu background and GUI size. The menu background is
+  either the game world (a live world behind the main menu, the paused game
+  behind the in-game settings) or the theme's background.
 - **Game / Editor / Viewer Controls**: each program's bindings. Click a slot,
   then press a key, mouse button or wheel direction, with modifiers if you
   like (Ctrl+S). Esc cancels, Backspace or right click clears. Esc itself
@@ -64,6 +66,11 @@ Every program uses the same settings. They are saved immediately to
 `settings.json` in your user config directory (e.g.
 `~/.config/sch5n/settings.json` on Linux), which overrides
 `assets/base/data/settings.json`.
+
+The mouse cursor is the operating system cursor showing
+`textures/icon/cursor.png`, so it never lags. Setting `cursor_color` in
+`settings.json` (e.g. `[255, 120, 120]`) hides it and has the game draw the
+image tinted with that color instead.
 
 ### Themes
 

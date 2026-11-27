@@ -413,3 +413,62 @@ def test_gui_size_applies_when_returning_to_game(app: App) -> None:
     play.on_enter()
     assert play.layout.slot_size == pytest.approx(app.settings.gui_size * 1.5)
     app.update_settings(gui_size=Settings().gui_size)
+
+
+def test_main_menu_runs_the_world(app: App) -> None:
+    """The main menu shows a live world that keeps running."""
+    menu = MainMenu(app)
+    start = (menu.world.camera.x, menu.world.camera.y)
+    for _ in range(WARMUP_TICKS):
+        menu.tick()
+    assert menu.world.game.ticks == WARMUP_TICKS
+    assert (menu.world.camera.x, menu.world.camera.y) != start
+    assert draw(app, menu).std() > MIN_BACKGROUND_STD
+
+    # It keeps running behind the settings.
+    settings = SettingsScene(app, back=menu)
+    settings.tick()
+    assert menu.world.game.ticks == WARMUP_TICKS + 1
+
+
+def test_menu_background_setting(app: App) -> None:
+    """Menus show the world behind them, or the theme if chosen."""
+    menu = MainMenu(app)
+    settings = SettingsScene(app, back=menu, page=Page.INTERFACE)
+    with_world = draw(app, settings)
+    click_value(settings, Option.MENU_BACKGROUND)
+    assert app.settings.menu_background is not Settings().menu_background
+    with_theme = draw(app, settings)
+    assert (with_world != with_theme).any()
+    click_value(settings, Option.MENU_BACKGROUND)
+    assert app.settings.menu_background is Settings().menu_background
+
+
+def cursor_pixels(app: App) -> np.ndarray:
+    """Draw only the game's own cursor, at a known place.
+
+    Returns:
+        np.ndarray: The pixels around the cursor.
+
+    """
+    app.clear((0, 0, 0))
+    app.batch.begin(app.screen)
+    app.draw_cursor((40, 40))
+    app.batch.flush()
+    return read_pixels(app)[40:72, 40:72]
+
+
+def test_uncolored_cursor_is_the_system_cursor(app: App) -> None:
+    """Without a color the OS draws the cursor; with one the game does."""
+    assert app.settings.cursor_color is None
+    assert app.window.cursor.visible
+    assert not cursor_pixels(app).any()
+
+    app.update_settings(cursor_color=(255, 0, 0))
+    assert not app.window.cursor.visible
+    drawn = cursor_pixels(app)
+    assert drawn.any()
+    assert not drawn[..., 1:].any()  # Tinted red: no green or blue left.
+
+    app.update_settings(cursor_color=None)
+    assert app.window.cursor.visible

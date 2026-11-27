@@ -29,6 +29,15 @@ class GameMode(StrEnum):
     ADMIN = "admin"
 
 
+class MenuBackground(StrEnum):
+    """What menus show behind them."""
+
+    WORLD = "world"
+    """The world: a live one on the main menu, the paused game in game."""
+    THEME = "theme"
+    """The theme's background."""
+
+
 class PhysicsConfig(_Model):
     """World physics. Units are pixels and ticks."""
 
@@ -138,6 +147,10 @@ class Settings(_Model):
     gui_size: int = 24
     theme: str = "dusk"
     """Name of a theme in `ui.json`."""
+    menu_background: MenuBackground = MenuBackground.WORLD
+    cursor_color: Color | None = None
+    """`None` uses the operating system cursor with the cursor image. A
+    color hides it and draws the cursor image tinted with this color."""
     master_volume: int = Field(default=100, ge=0, le=100)
     music_volume: int = Field(default=70, ge=0, le=100)
     effects_volume: int = Field(default=80, ge=0, le=100)

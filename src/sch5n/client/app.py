@@ -94,7 +94,7 @@ class App:
                 (WINDOW_ICON_SIZE, WINDOW_ICON_SIZE),
             )
         )
-        self.window.hide_cursor()
+        self._apply_cursor(None)
         self._apply_video(None)
         self._textures: dict[str, moderngl.Texture] = {}
 
@@ -140,6 +140,7 @@ class App:
         })
         self._apply_video(previous)
         self.ui.set_theme(self.settings.theme)
+        self._apply_cursor(previous)
         save_settings(self.settings, self.settings_file)
         LOGGER.info("Saved settings to %s", self.settings_file)
 
@@ -190,14 +191,38 @@ class App:
         upcoming.on_enter()
         return upcoming
 
-    def draw_cursor(self) -> None:
-        """Draw the custom mouse cursor in screen space."""
+    def _apply_cursor(self, previous: Settings | None) -> None:
+        """Use the OS cursor, unless the cursor is colored.
+
+        A colored cursor is drawn by `draw_cursor` instead, since the OS
+        cursor cannot be tinted.
+        """
+        color = self.settings.cursor_color
+        if previous is not None and previous.cursor_color == color:
+            return
+        if color is None:
+            self.window.cursor.set_image(
+                self.assets.load_image(self.animations.cursor)
+            )
+        else:
+            self.window.cursor.hide()
+
+    def draw_cursor(self, pos: tuple[float, float] | None = None) -> None:
+        """Draw the mouse cursor in screen space, if it is colored.
+
+        An uncolored cursor is the OS cursor, which needs no drawing.
+        `pos` defaults to the mouse position.
+        """
+        color = self.settings.cursor_color
+        if color is None:
+            return
         region = self.assets.cursor
-        x, y = self.window.mouse_pos
+        x, y = self.window.mouse_pos if pos is None else pos
         self.batch.sprite(
             self.assets.atlas,
             (round(x), round(y), region.width, region.height),
             region,
+            rgba(color),
         )
 
     def draw_background(self) -> None:

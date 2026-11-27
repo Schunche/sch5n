@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from sch5n.client.app import App
@@ -15,6 +15,9 @@ class Scene:
 
     `tick` runs at the fixed game tick rate, `render` once per frame.
     """
+
+    has_backdrop: ClassVar[bool] = False
+    """Whether `draw_backdrop` draws something."""
 
     def __init__(self, app: App) -> None:
         """Create the scene."""
@@ -34,3 +37,12 @@ class Scene:
 
     def render(self) -> None:
         """Draw a frame."""
+
+    def tick_backdrop(self) -> None:
+        """Advance while a menu opened from this scene is shown."""
+
+    def draw_backdrop(self) -> None:
+        """Draw what this scene shows behind menus opened from it.
+
+        Only called when `has_backdrop` is set.
+        """

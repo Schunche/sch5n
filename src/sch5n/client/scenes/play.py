@@ -21,39 +21,20 @@ from sch5n.client.window import (
     MouseButtonEvent,
     ResizeEvent,
 )
-from sch5n.client.world_view import (
-    TileRenderer,
-    draw_clouds,
-    draw_floating_items,
-    draw_particles,
-    draw_player,
-)
+from sch5n.client.world_view import WorldRenderer, load_world
 from sch5n.game.inventory import HOTBAR_SIZE
 from sch5n.game.session import Game, GameSetup, TickInput
-from sch5n.utility import path
-from sch5n.world.io import load_tilemap
 
 if TYPE_CHECKING:
     from sch5n.client.app import App
     from sch5n.client.window import Event
     from sch5n.world.tilemap import TileMap
 
-DEFAULT_MAP = "map1"
-
-
-def load_world(app: App) -> TileMap:
-    """Load the map chosen on the command line, or the default one.
-
-    Returns:
-        TileMap: The map.
-
-    """
-    map_path = app.options.map_path or path.MAPS_DIR / f"{DEFAULT_MAP}.json"
-    return load_tilemap(map_path, app.content.blocks)
-
 
 class PlayScene(Scene):
     """Plays a map."""
+
+    has_backdrop = True
 
     def __init__(self, app: App, tilemap: TileMap | None = None) -> None:
         """Start a game session."""
@@ -71,7 +52,7 @@ class PlayScene(Scene):
         self.tile_size = content.game.tile_size
         self.camera = Camera()
         self.camera.center_on(self.game.player.body.center, app.screen)
-        self.tiles = TileRenderer(app.assets, self.tile_size)
+        self.world = WorldRenderer(app)
         self._build_hud()
         self.inventory_open = False
         self.debug = False
@@ -241,23 +222,16 @@ class PlayScene(Scene):
             app.content.game.camera.smoothing / app.tick_rate,
         )
 
+    def draw_backdrop(self) -> None:
+        """Draw the world without the HUD."""
+        self.world.draw(self.game, self.camera)
+
     def render(self) -> None:
         """Draw the world and the HUD."""
         app = self.app
         batch = app.batch
         game = self.game
-        offset = self.camera.offset()
-
-        app.clear(app.content.game.sky_color)
-        batch.begin(app.screen)
-        draw_clouds(batch, app.assets, game.ambience, offset, app.screen)
-
-        batch.begin(app.screen, offset, self.camera.zoom)
-        self.tiles.draw(batch, game.tilemap, self.camera.view(app.screen))
-        draw_player(batch, app.assets, game.player)
-        draw_particles(batch, app.assets, game.ambience)
-        draw_floating_items(batch, app.assets, game.floating_items)
-
+        self.draw_backdrop()
         batch.begin(app.screen)
         mouse = app.window.mouse_pos
         self.hud.draw_inventory(
