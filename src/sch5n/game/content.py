@@ -40,6 +40,16 @@ class TreePart(StrEnum):
     """Leaves: fall with the tree."""
 
 
+class Trim(_Model):
+    """A tool that turns a block into another one instead of breaking it."""
+
+    tool: str
+    """Tool type that trims, like `lopper`."""
+    into: str
+    """Block left after trimming."""
+    durability: int = Field(default=50, gt=0)
+
+
 class BlockSpec(_Model):
     """A block as written in `blocks.json`."""
 
@@ -58,6 +68,9 @@ class BlockSpec(_Model):
     """Block left behind instead of air when broken."""
     particle: str | None = None
     """Ambient particle emitted by the block."""
+    trim: Trim | None = None
+    """Like a lopper turning a leafy log into a log: nothing drops and
+    nothing falls."""
     tree: TreePart | None = None
     """Part of a tree: breaking a trunk block fells everything above."""
     aliases: tuple[str, ...] = ()
@@ -159,6 +172,10 @@ class BlockRegistry:
             target = block.spec.transform_to
             if target is not None and target not in self._by_name:
                 msg = f"{block.name}: unknown transform_to {target!r}"
+                raise ValueError(msg)
+            trim = block.spec.trim
+            if trim is not None and trim.into not in self._by_name:
+                msg = f"{block.name}: unknown trim into {trim.into!r}"
                 raise ValueError(msg)
 
         count = len(self._blocks)

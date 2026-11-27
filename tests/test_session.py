@@ -274,3 +274,16 @@ def test_logs_take_longer_than_one_swing_a_second(content: Content) -> None:
     assert hits >= MIN_LOG_HITS
     run(game, (hits - 1) * axe.spec.use_time, use=True, target=(2, 7))
     assert game.tilemap.get(2, 7) != AIR
+
+
+def test_lopper_trims_leafy_logs(content: Content) -> None:
+    """A lopper strips a leafy log to a log: nothing drops, nothing falls."""
+    game, ids = planted(content)
+    tilemap = game.tilemap
+    game.inventory.select(3)  # The lopper.
+    run(game, 60, use=True, target=(2, 5))
+    assert tilemap.get(2, 5) == ids["oak_log"]
+    assert tilemap.get(2, 4) == ids["oak_leaf"]  # The crown stays up.
+    run(game, 120)
+    assert not game.floating_items
+    assert not any(s and s.item.name == "oak_log" for s in game.inventory)

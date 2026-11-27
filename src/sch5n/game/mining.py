@@ -22,6 +22,8 @@ class HitResult(Enum):
     WRONG_TOOL = auto()
     DAMAGED = auto()
     BROKEN = auto()
+    TRIMMED = auto()
+    """Turned into its trimmed block, like a leafy log into a log."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,7 +76,9 @@ def durability_fraction(tilemap: TileMap, x: int, y: int) -> float:
 def hit_tile(tilemap: TileMap, x: int, y: int, tool: ItemDef | None) -> Hit:
     """Hit a tile with a tool, breaking it once its durability runs out.
 
-    A broken block turns into its `transform_to` block, or air.
+    A broken block turns into its `transform_to` block, or air. A tool that
+    trims the block wears its trim durability down instead, then turns it
+    into its trimmed block.
 
     Returns:
         Hit: The outcome.
@@ -83,6 +87,16 @@ def hit_tile(tilemap: TileMap, x: int, y: int, tool: ItemDef | None) -> Hit:
     block = tilemap.blocks.get(tilemap.get(x, y))
     if block is None or tool is None or not tool.is_tool:
         return Hit(HitResult.NOTHING, block)
+
+    trim = block.spec.trim
+    if trim is not None and (power := tool.spec.tool_power.get(trim.tool, 0)):
+        remaining = tilemap.damage.get((x, y), trim.durability) - power
+        if remaining > 0:
+            tilemap.damage[x, y] = remaining
+            return Hit(HitResult.DAMAGED, block)
+        variant = tilemap.get_variant(x, y)
+        tilemap.set(x, y, tilemap.blocks.id_of(trim.into), variant)
+        return Hit(HitResult.TRIMMED, block)
 
     power = tool_power(tool, block)
     if power <= 0:
