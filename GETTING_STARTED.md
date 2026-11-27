@@ -145,32 +145,33 @@ up its manual.
 
 ## The map tools
 
-The game comes with two tools for its maps. Start them with a word after the
-launcher's name.
+The game comes with a map viewer that can also edit maps. Start it with
+`view` after the launcher's name, and add `--edit` to change the map.
 
-- **Map viewer:** look at a whole map. WASD to move, mouse wheel to zoom.
-- **Map editor:** change a map. WASD to move, left click places, right click
-  erases, the mouse wheel picks the block, Ctrl+S saves, Esc saves and quits.
+- **Viewing:** look at a whole map. WASD to move, mouse wheel to zoom.
+- **Editing** (`--edit`): change a map. WASD to move, left click places,
+  right click erases, the mouse wheel picks the block, Ctrl+mouse wheel
+  zooms, Ctrl+S saves, Esc saves and quits.
 
 On **Windows**, open the game folder, click the address bar at the top of the
 window, type `cmd` and press Enter. A black window opens in the game folder.
 Then type one of these and press Enter:
 
 ```bat
-play.bat view map1
-play.bat edit map1
-play.bat view procedural
+play.bat view --map map1
+play.bat view --edit --map map1
+play.bat view --map procedural
 ```
 
 On **Linux**, in the terminal:
 
 ```sh
-./play.sh view map1
-./play.sh edit map1
+./play.sh view --map map1
+./play.sh view --edit --map map1
 ```
 
 Maps are in `assets/base/maps`. Editing a map name that doesn't exist yet,
-like `play.bat edit mymap`, starts a new, empty map. To play on it, start
+like `play.bat view --edit --map mymap`, starts a new, empty map. To play on it, start
 the game with `play.bat client --map mymap` and create a new world under
 **Singleplayer**: new worlds start from that map.
 

@@ -67,3 +67,12 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: play.bat server --port 0 --no-lan --ticks 120
+
+      - name: Open the map viewer for editing with the launcher (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a ./play.sh view --edit --map map1 --frames 30 --hidden
+
+      - name: Open the map viewer for editing with the launcher (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: play.bat view --edit --map map1 --frames 30 --hidden

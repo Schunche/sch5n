@@ -1,5 +1,5 @@
 # Copyright (c) 2026 Schunche
-"""Map viewer and map editor."""
+"""The map viewer, which edits maps with `--edit`."""
 
 from __future__ import annotations
 
@@ -34,17 +34,23 @@ ZOOM_STEP = 1.25
 BACKGROUND = (0, 0, 0)
 
 
-class ViewerScene(Scene):
-    """Fly over a map. Uses the map viewer key bindings."""
+class MapScene(Scene):
+    """Fly over a map, or edit it.
 
-    title = "Map Viewer"
+    Viewing and editing have their own key bindings, as the mouse wheel
+    zooms in one and picks the tile in the other. Editing saves on Escape.
+    """
+
     has_backdrop = True
-    controls = Context.VIEWER
 
-    def __init__(self, app: App, map_path: Path) -> None:
+    def __init__(
+        self, app: App, map_path: Path, *, editing: bool = False
+    ) -> None:
         """Open `map_path`. A missing file gives an empty map."""
         super().__init__(app)
         self.map_path = map_path
+        self.editing = editing
+        self.controls = Context.EDITOR if editing else Context.VIEWER
         blocks = app.content.blocks
         if map_path.exists():
             self.tilemap = load_tilemap(map_path, blocks)
@@ -54,11 +60,18 @@ class ViewerScene(Scene):
         self.tile_size = app.content.game.tile_size
         self.camera = Camera.showing_top_left((0, 0), app.screen)
         self.tiles = TileRenderer(app.assets, self.tile_size)
-        app.window.set_title(f"{map_path.stem} - {self.title}")
+        self.palette = [
+            (block.id, variant)
+            for block in app.content.blocks
+            for variant in range(len(block.spec.textures))
+        ]
+        self.selected = 0
+        title = "Map Editor" if editing else "Map Viewer"
+        app.window.set_title(f"{map_path.stem} - {title}")
 
     @property
     def keys(self) -> ContextBinds:
-        """Bindings of this tool."""
+        """Bindings of the current mode."""
         return self.app.keybinds[self.controls]
 
     def mouse_tile(self) -> tuple[int, int]:
@@ -73,8 +86,15 @@ class ViewerScene(Scene):
         )
         return math.floor(x / self.tile_size), math.floor(y / self.tile_size)
 
+    def save(self) -> None:
+        """Write the map to disk."""
+        save_tilemap(self.map_path, self.tilemap)
+        LOGGER.info("Saved %s tiles to %s", len(self.tilemap), self.map_path)
+
     def on_escape(self) -> None:
-        """Leave the tool."""
+        """Quit, saving first when editing."""
+        if self.editing:
+            self.save()
         self.app.quit()
 
     def on_action(self, action: Action) -> None:
@@ -89,6 +109,12 @@ class ViewerScene(Scene):
                 self.camera = Camera.showing_top_left((0, 0), self.app.screen)
             case Action.SETTINGS:
                 self.app.switch(SettingsScene(self.app, back=self))
+            case Action.SAVE if self.editing:
+                self.save()
+            case Action.NEXT_TILE if self.editing:
+                self.selected = (self.selected + 1) % len(self.palette)
+            case Action.PREVIOUS_TILE if self.editing:
+                self.selected = (self.selected - 1) % len(self.palette)
             case _:
                 pass
 
@@ -106,7 +132,7 @@ class ViewerScene(Scene):
             self.on_action(action)
 
     def tick(self) -> None:
-        """Pan the camera."""
+        """Pan the camera; when editing, place and remove tiles."""
         window = self.app.window
         keys = self.keys
         dx = keys.is_held(Action.PAN_RIGHT, window) - keys.is_held(
@@ -117,6 +143,14 @@ class ViewerScene(Scene):
         )
         speed = PAN_SPEED / self.camera.zoom
         self.camera.pan(dx * speed, dy * speed)
+        if not self.editing:
+            return
+        x, y = self.mouse_tile()
+        if keys.is_held(Action.PLACE_TILE, window):
+            block, variant = self.palette[self.selected]
+            self.tilemap.set(x, y, block, variant)
+        elif keys.is_held(Action.ERASE_TILE, window):
+            self.tilemap.set(x, y, AIR)
 
     def status_lines(self) -> list[str]:
         """Text shown in the corner.
@@ -130,16 +164,16 @@ class ViewerScene(Scene):
         hint = f"{settings.label}: controls  " if settings else ""
         zoom = self.camera.zoom
         tiles = len(self.tilemap)
+        escape = "save & quit" if self.editing else "quit"
         line = f"{x}, {y}  zoom {zoom:.2f}  {tiles} tiles  "
-        return [f"{line}{hint}Esc: {self.escape_hint}"]
+        return [f"{line}{hint}Esc: {escape}"]
 
-    escape_hint = "quit"
-
-    def draw_overlay(self) -> None:
-        """Draw tool specific things in world space."""
+    def _selected_region(self) -> Region:
+        block, variant = self.palette[self.selected]
+        return self.app.assets.blocks[block][variant]
 
     def draw_backdrop(self) -> None:
-        """Draw the map without the tool's overlays."""
+        """Draw the map without the editing overlays."""
         app = self.app
         app.clear(BACKGROUND)
         app.batch.begin(
@@ -153,10 +187,11 @@ class ViewerScene(Scene):
         )
 
     def render(self) -> None:
-        """Draw the map."""
+        """Draw the map, and what editing needs."""
         app = self.app
         self.draw_backdrop()
-        self.draw_overlay()
+        if self.editing:
+            self._draw_ghost()
 
         app.batch.begin(app.screen)
         color = rgba(app.ui.color("text"))
@@ -167,72 +202,12 @@ class ViewerScene(Scene):
             app.text.draw(
                 app.batch, line, (8, y), TextStyle(size=14, color=color)
             )
-        self.draw_screen_overlay()
+        if self.editing:
+            self._draw_selected()
         app.draw_cursor()
 
-    def draw_screen_overlay(self) -> None:
-        """Draw tool specific things in screen space."""
-
-
-class EditorScene(ViewerScene):
-    """Edit a map. Uses the map editor key bindings.
-
-    Escape saves and quits.
-    """
-
-    title = "Map Editor"
-    controls = Context.EDITOR
-    escape_hint = "save & quit"
-
-    def __init__(self, app: App, map_path: Path) -> None:
-        """Open `map_path` for editing."""
-        super().__init__(app, map_path)
-        self.palette = [
-            (block.id, variant)
-            for block in app.content.blocks
-            for variant in range(len(block.spec.textures))
-        ]
-        self.selected = 0
-
-    def save(self) -> None:
-        """Write the map to disk."""
-        save_tilemap(self.map_path, self.tilemap)
-        LOGGER.info("Saved %s tiles to %s", len(self.tilemap), self.map_path)
-
-    def on_escape(self) -> None:
-        """Save, then quit."""
-        self.save()
-        super().on_escape()
-
-    def on_action(self, action: Action) -> None:
-        """Handle editor actions, then the shared ones."""
-        match action:
-            case Action.SAVE:
-                self.save()
-            case Action.NEXT_TILE:
-                self.selected = (self.selected + 1) % len(self.palette)
-            case Action.PREVIOUS_TILE:
-                self.selected = (self.selected - 1) % len(self.palette)
-            case _:
-                super().on_action(action)
-
-    def tick(self) -> None:
-        """Pan, place and remove tiles."""
-        super().tick()
-        window = self.app.window
-        x, y = self.mouse_tile()
-        if self.keys.is_held(Action.PLACE_TILE, window):
-            block, variant = self.palette[self.selected]
-            self.tilemap.set(x, y, block, variant)
-        elif self.keys.is_held(Action.ERASE_TILE, window):
-            self.tilemap.set(x, y, AIR)
-
-    def _selected_region(self) -> Region:
-        block, variant = self.palette[self.selected]
-        return self.app.assets.blocks[block][variant]
-
-    def draw_overlay(self) -> None:
-        """Ghost of the selected tile under the cursor."""
+    def _draw_ghost(self) -> None:
+        """Ghost of the selected tile under the cursor, in world space."""
         x, y = self.mouse_tile()
         size = self.tile_size
         self.app.batch.sprite(
@@ -242,7 +217,7 @@ class EditorScene(ViewerScene):
             (1.0, 1.0, 1.0, 0.5),
         )
 
-    def draw_screen_overlay(self) -> None:
+    def _draw_selected(self) -> None:
         """Preview of the selected tile in the corner."""
         app = self.app
         size = self.tile_size

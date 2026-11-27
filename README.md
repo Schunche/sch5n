@@ -8,7 +8,7 @@ double click `play.bat` (Windows) or run `./play.sh` (Linux), and play.
 ## Run
 
 The launchers `play.bat` and `play.sh` install [uv](https://docs.astral.sh/uv/)
-if needed and start the game; arguments are passed on (`./play.sh edit map1`).
+if needed and start the game; arguments are passed on (`./play.sh view --edit --map map1`).
 
 ### Python 3.15
 
@@ -26,8 +26,8 @@ For development, install [uv](https://docs.astral.sh/uv/), then:
     sch5n client --game-mode admin   # unlimited jumps; survival is the default
     sch5n client --connect 192.168.1.20  # join a server right away
     sch5n server                # dedicated server, no window (see below)
-    sch5n view procedural       # fly over a map
-    sch5n edit map1             # edit a map, Esc saves and quits
+    sch5n view --map procedural # fly over a map (default: map1)
+    sch5n view --edit --map map1  # edit a map, Esc saves and quits
     sch5n generate mymap --seed 42 --width 300 --height 160
 
 Prefix with `uv run` when the virtual environment is not activated.
@@ -105,9 +105,9 @@ Default game controls:
 | Esc | Close inventory, open settings |
 | F3 | Debug info |
 
-The map editor defaults to WASD to pan, left/right mouse to place/erase,
-wheel to pick a tile, Ctrl+wheel to zoom and Ctrl+S to save. The map viewer
-pans with WASD and zooms with the wheel. F1 opens the settings in both.
+The map viewer pans with WASD and zooms with the wheel. With `--edit` it
+defaults to left/right mouse to place/erase, wheel to pick a tile,
+Ctrl+wheel to zoom and Ctrl+S to save. F1 opens the settings.
 
 ### Settings
 
@@ -120,9 +120,10 @@ per topic:
 - **Interface**: theme, menu background and GUI size. The menu background is
   either the game world (a live world behind the main menu, the paused game
   behind the in-game settings) or the theme's background.
-- **Controls**: the bindings of the program you are in. The game, the map
-  editor and the map viewer each have their own, and each can only be
-  changed from inside that program. Click a slot,
+- **Controls**: the bindings of what you are in. The game, the map viewer
+  and the map viewer while editing each have their own (the wheel zooms
+  when viewing but picks the tile when editing), and each can only be
+  changed from inside it. Click a slot,
   then press a key, mouse button or wheel direction, with modifiers if you
   like (Ctrl+S). Esc cancels, Backspace or right click clears. Esc itself
   cannot be rebound.

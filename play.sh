@@ -2,7 +2,7 @@
 # Starts the game: ./play.sh
 # On the first run it installs uv, which downloads the right Python and
 # everything the game needs. Later runs start straight away.
-# Extra arguments are passed on, e.g. "./play.sh edit map1".
+# Extra arguments are passed on, e.g. "./play.sh view --edit --map map1".
 set -e
 cd "$(dirname "$0")"
 

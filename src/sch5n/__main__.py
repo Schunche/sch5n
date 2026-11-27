@@ -10,8 +10,8 @@ lazy import platform
 lazy import sys
 
 lazy from sch5n.about import NAME
-lazy from sch5n.client.__main__ import editor_main, viewer_main
 lazy from sch5n.client.__main__ import main as client_main
+lazy from sch5n.client.__main__ import viewer_main
 lazy from sch5n.server.__main__ import main as server_main
 lazy from sch5n.world.__main__ import main as world_generate_main
 
@@ -21,7 +21,6 @@ class Program(StrEnum):
 
     CLIENT = "client"
     SERVER = "server"
-    MAP_EDITOR = "edit"
     MAP_VIEWER = "view"
     MAP_GENERATOR = "generate"
 
@@ -60,8 +59,6 @@ def main(argv: list[str] | None = None) -> None:
             client_main(rest)
         case Program.SERVER:
             server_main(rest)
-        case Program.MAP_EDITOR:
-            editor_main(rest)
         case Program.MAP_VIEWER:
             viewer_main(rest)
         case Program.MAP_GENERATOR:

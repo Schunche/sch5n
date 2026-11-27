@@ -38,7 +38,7 @@ class Context(StrEnum):
         """Name shown in the settings."""
         return {
             Context.GAME: "Game",
-            Context.EDITOR: "Map Editor",
+            Context.EDITOR: "Map Viewer, editing",
             Context.VIEWER: "Map Viewer",
         }[self]
 

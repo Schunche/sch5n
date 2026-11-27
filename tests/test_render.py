@@ -16,7 +16,7 @@ import pytest
 from sch5n.client.app import App, Options
 from sch5n.client.keybinds import Action, Binding, Context, Mod
 from sch5n.client.render.batch import Transform
-from sch5n.client.scenes.map_tools import EditorScene, ViewerScene
+from sch5n.client.scenes.map_tools import MapScene
 from sch5n.client.scenes.menu import MainMenu
 from sch5n.client.scenes.multiplayer import MultiplayerScene
 from sch5n.client.scenes.play import PlayScene
@@ -267,7 +267,9 @@ def test_capture_modifier_combinations(
     app: App, tmp_path_factory: pytest.TempPathFactory
 ) -> None:
     """Modifier combinations, lone modifiers and the wheel can be bound."""
-    editor = EditorScene(app, tmp_path_factory.mktemp("maps") / "m.json")
+    editor = MapScene(
+        app, tmp_path_factory.mktemp("maps") / "m.json", editing=True
+    )
     settings = SettingsScene(app, back=editor, page=Page.CONTROLS)
     binds = app.keybinds[Context.EDITOR]
     reset = BindRow(Context.EDITOR, Action.RESET_CAMERA)
@@ -346,7 +348,7 @@ def test_editor_uses_its_own_binds(
 ) -> None:
     """The map editor and viewer use their own controls."""
     target = tmp_path_factory.mktemp("maps") / "new.json"
-    editor = EditorScene(app, target)
+    editor = MapScene(app, target, editing=True)
     editor.on_event(ScrollEvent(0, 1))
     assert editor.selected == 1
     zoom = editor.camera.zoom
@@ -356,7 +358,7 @@ def test_editor_uses_its_own_binds(
     editor.on_event(press(glfw.KEY_S, glfw.MOD_CONTROL))
     assert target.exists()
 
-    viewer = ViewerScene(app, target)
+    viewer = MapScene(app, target)
     viewer.on_event(ScrollEvent(0, 1))
     assert viewer.camera.zoom > 1
 
@@ -508,8 +510,8 @@ def test_each_program_edits_only_its_own_controls(
     target = tmp_path_factory.mktemp("maps") / "m.json"
     origins = {
         Context.GAME: [MainMenu(app), PlayScene.singleplayer(app)],
-        Context.EDITOR: [EditorScene(app, target)],
-        Context.VIEWER: [ViewerScene(app, target)],
+        Context.EDITOR: [MapScene(app, target, editing=True)],
+        Context.VIEWER: [MapScene(app, target)],
     }
     for context, scenes in origins.items():
         for scene in scenes:
@@ -522,7 +524,7 @@ def test_reset_controls_keeps_other_programs(
     app: App, tmp_path_factory: pytest.TempPathFactory
 ) -> None:
     """Resetting the controls page leaves other programs' bindings alone."""
-    viewer = ViewerScene(app, tmp_path_factory.mktemp("maps") / "m.json")
+    viewer = MapScene(app, tmp_path_factory.mktemp("maps") / "m.json")
     app.keybinds[Context.GAME].bind(Action.JUMP, 0, Binding.key(glfw.KEY_K))
     app.keybinds[Context.VIEWER].bind(
         Action.RESET_CAMERA, 0, Binding.key(glfw.KEY_K)

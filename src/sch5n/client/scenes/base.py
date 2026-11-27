@@ -18,8 +18,9 @@ class Scene:
     `tick` runs at the fixed game tick rate, `render` once per frame.
     """
 
-    controls: ClassVar[Context] = Context.GAME
-    """Program whose key bindings the settings opened here may change."""
+    controls: Context = Context.GAME
+    """Controls the settings opened here may change: the game's, or the
+    map viewer's for viewing or editing."""
     has_backdrop: ClassVar[bool] = False
     """Whether `draw_backdrop` draws something."""
 

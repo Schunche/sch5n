@@ -9,9 +9,9 @@ from typing import TYPE_CHECKING
 from sch5n.game.config import GameMode
 from sch5n.log.logger import init as init_logging
 from sch5n.utility import path
-from sch5n.world.io import map_file
+from sch5n.world.io import DEFAULT_MAP, map_file
 lazy from sch5n.client.app import App, Options
-lazy from sch5n.client.scenes.map_tools import EditorScene, ViewerScene
+lazy from sch5n.client.scenes.map_tools import MapScene
 lazy from sch5n.client.scenes.menu import MainMenu
 lazy from sch5n.client.scenes.multiplayer import MultiplayerScene
 
@@ -89,14 +89,20 @@ def first_scene(app: App) -> Scene:
     return scene
 
 
-def _tool_main(
-    prog: str,
-    scene: type[ViewerScene],
-    argv: Sequence[str] | None,
-) -> None:
-    parser = argparse.ArgumentParser(prog=prog)
+def viewer_main(argv: Sequence[str] | None = None) -> None:
+    """Look at a map, or edit it with `--edit`."""
+    parser = argparse.ArgumentParser(
+        prog="sch5n view",
+        description="Look at a map. With --edit, change it: Escape saves.",
+    )
     parser.add_argument(
-        "map", type=map_file, nargs="?", default=map_file("map1")
+        "--map",
+        type=map_file,
+        default=map_file(DEFAULT_MAP),
+        help="map name or file; a new name starts an empty map",
+    )
+    parser.add_argument(
+        "--edit", action="store_true", help="place and erase tiles"
     )
     add_common_arguments(parser)
     args = parser.parse_args(argv)
@@ -104,17 +110,7 @@ def _tool_main(
     _init()
     App(
         Options(map_path=args.map, max_frames=args.frames, hidden=args.hidden)
-    ).run(lambda app: scene(app, args.map))
-
-
-def editor_main(argv: Sequence[str] | None = None) -> None:
-    """Edit a map."""
-    _tool_main("sch5n edit", EditorScene, argv)
-
-
-def viewer_main(argv: Sequence[str] | None = None) -> None:
-    """Look at a map."""
-    _tool_main("sch5n view", ViewerScene, argv)
+    ).run(lambda app: MapScene(app, args.map, editing=args.edit))
 
 
 if __name__ == "__main__":
