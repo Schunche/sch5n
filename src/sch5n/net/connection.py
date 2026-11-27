@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import errno
 import socket
+import threading
+import time
 from collections import deque
 from typing import TYPE_CHECKING
 
@@ -28,6 +30,8 @@ MAX_PENDING_OUTPUT = 64 * 1024 * 1024
 """A peer that lets this much pile up is too slow and gets dropped."""
 CLOSE_FLUSH_TIMEOUT = 1.0
 """Seconds to finish sending when closing, for the goodbye message."""
+LINGER_TIMEOUT = 2.0
+"""Seconds a closed connection waits for its peer to hang up too."""
 
 
 class Connection[Out: BaseModel, In: BaseModel]:
@@ -250,7 +254,14 @@ class SocketConnection[Out: BaseModel, In: BaseModel](Connection[Out, In]):
         self.close(reason)
 
     def close(self, reason: str = "") -> None:
-        """Send what is queued (briefly waiting for it), then close."""
+        """Send what is queued, then hang up gracefully.
+
+        Only the sending half closes right away. Whatever the peer still
+        sends is read and dropped in the background until it hangs up
+        too: closing a socket with unread data makes some systems
+        (Windows) reset the connection, and a reset can destroy the
+        goodbye before the peer reads it.
+        """
         if self._sock.fileno() == -1:
             super().close(reason)
             return
@@ -262,11 +273,45 @@ class SocketConnection[Out: BaseModel, In: BaseModel](Connection[Out, In]):
                 LOGGER.debug("Could not finish sending to %s", self._address)
             self._output.clear()
         try:
-            self._sock.shutdown(socket.SHUT_RDWR)
+            self._sock.shutdown(socket.SHUT_WR)
         except OSError:
-            LOGGER.debug("%s was already disconnected", self._address)
-        self._sock.close()
+            self._sock.close()
+        else:
+            linger(self._sock)
         super().close(reason)
+
+
+_LINGERING: list[threading.Thread] = []
+"""Sockets still waiting for their peer to hang up."""
+
+
+def _drain(sock: socket.socket) -> None:
+    deadline = time.monotonic() + LINGER_TIMEOUT
+    try:
+        while (left := deadline - time.monotonic()) > 0:
+            sock.settimeout(left)
+            if not sock.recv(RECEIVE_SIZE):
+                break
+    except OSError:
+        pass
+    finally:
+        sock.close()
+
+
+def linger(sock: socket.socket) -> None:
+    """Close `sock` once its peer hangs up, without waiting for it."""
+    thread = threading.Thread(target=_drain, args=(sock,), daemon=True)
+    thread.start()
+    _LINGERING[:] = [t for t in _LINGERING if t.is_alive()]
+    _LINGERING.append(thread)
+
+
+def finish_closing(timeout: float = LINGER_TIMEOUT) -> None:
+    """Wait for closed connections to finish hanging up, before exiting."""
+    deadline = time.monotonic() + timeout
+    for thread in _LINGERING:
+        thread.join(max(0.0, deadline - time.monotonic()))
+    _LINGERING.clear()
 
 
 class Listener:

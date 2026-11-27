@@ -15,6 +15,7 @@ from sch5n.game.content import Content
 from sch5n.game.session import GameSetup
 from sch5n.log.logger import LOGGER
 from sch5n.log.logger import init as init_logging
+from sch5n.net.connection import finish_closing
 from sch5n.net.protocol import DEFAULT_PORT
 from sch5n.server.server import Server
 from sch5n.utility import path
@@ -130,6 +131,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         LOGGER.info("Stopping")
     finally:
         server.close()
+        finish_closing()
     LOGGER.info("Stopped")
 
 

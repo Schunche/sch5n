@@ -27,6 +27,7 @@ from sch5n.game.content import (
     save_settings,
 )
 from sch5n.log.logger import LOGGER
+from sch5n.net.connection import finish_closing
 from sch5n.utility import path
 
 if TYPE_CHECKING:
@@ -318,6 +319,7 @@ class App:
         for callback in list(reversed(self._exit_callbacks)):
             callback()
         self._exit_callbacks.clear()
+        finish_closing()
         for texture in self._textures.values():
             texture.release()
         self.text.release()
