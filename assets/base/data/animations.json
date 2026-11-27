@@ -4,9 +4,20 @@
             "idle": {"path": "mob/player/idle", "frame_ticks": 18, "loop": true},
             "run": {"path": "mob/player/run", "frame_ticks": 5, "loop": true},
             "jump": {"path": "mob/player/jump", "frame_ticks": 8, "loop": false},
+            "fall": {"path": "mob/player/fall", "frame_ticks": 10, "loop": true},
             "slide": {"path": "mob/player/slide", "frame_ticks": 5, "loop": false},
-            "wall_slide": {"path": "mob/player/wall_slide", "frame_ticks": 12, "loop": true}
+            "wall_slide": {"path": "mob/player/wall_slide", "frame_ticks": 12, "loop": true},
+            "land": {"path": "mob/player/land", "frame_ticks": 4, "loop": false},
+            "run_start": {"path": "mob/player/run_start", "frame_ticks": 5, "loop": false},
+            "run_stop": {"path": "mob/player/run_stop", "frame_ticks": 7, "loop": false}
         }
+    },
+    "transitions": {
+        "player": [
+            {"from": ["jump", "fall"], "to": ["idle", "run"], "play": "land"},
+            {"from": ["idle"], "to": ["run"], "play": "run_start"},
+            {"from": ["run"], "to": ["idle"], "play": "run_stop"}
+        ]
     },
     "particles": {
         "leaf": {"path": "particle/leaf", "frame_ticks": 30, "loop": false}

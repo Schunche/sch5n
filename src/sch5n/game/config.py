@@ -41,8 +41,8 @@ class MenuBackground(StrEnum):
 class PhysicsConfig(_Model):
     """World physics. Units are pixels and ticks."""
 
-    gravity: float = 0.1
-    max_fall_speed: float = 4.0
+    gravity: float = 0.4
+    max_fall_speed: float = 10.0
 
 
 class PlayerConfig(_Model):
@@ -54,9 +54,12 @@ class PlayerConfig(_Model):
     acceleration: float = 0.1
     max_speed: float = 2.0
     friction: float = 0.1
-    jump_velocity: float = 3.0
-    wall_jump_velocity: tuple[float, float] = (3.5, 2.5)
-    wall_slide_speed: float = 0.5
+    jump_velocity: float = 5.0
+    jump_hold_ticks: int = 15
+    """Ticks a held jump keeps rising at `jump_velocity`."""
+    wall_jump_velocity: tuple[float, float] = (4.5, 5.0)
+    """Push away from the wall and lift."""
+    wall_slide_speed: float = 1.5
     airborne_after_ticks: int = 4
     max_jumps: dict[GameMode, int] = Field(
         default_factory=lambda: {GameMode.SURVIVAL: 1, GameMode.ADMIN: 256}
@@ -75,9 +78,9 @@ class FloatingItemConfig(_Model):
 
     magnet_range: float = 3
     """In tiles."""
-    magnet_strength: tuple[float, float] = (0.4, 0.15)
-    terminal_velocity: float = 4.0
-    gravity: float = 0.1
+    magnet_strength: tuple[float, float] = (0.4, 0.45)
+    terminal_velocity: float = 8.0
+    gravity: float = 0.3
     air_resistance: float = 0.03
 
 
@@ -339,16 +342,53 @@ class AnimationClip(_Model):
         return min(index, frame_count - 1)
 
 
+class Transition(_Model):
+    """A clip played once when an animation changes from one to another."""
+
+    from_: tuple[str, ...] = Field(alias="from")
+    to: tuple[str, ...]
+    play: str
+    """Clip played in between; it must not loop."""
+
+
 class AnimationsConfig(_Model):
     """Which textures make up which animation, `animations.json`."""
 
     mobs: dict[str, dict[str, AnimationClip]]
+    transitions: dict[str, tuple[Transition, ...]] = Field(
+        default_factory=dict
+    )
+    """Per mob, clips that bridge changes between animations."""
     particles: dict[str, AnimationClip]
     tile_breakage: AnimationClip
     clouds: str
     cursor: str
     window_icon: str
     transparent_color: Color = (255, 0, 254)
+
+    @model_validator(mode="after")
+    def _transitions_use_known_clips(self) -> AnimationsConfig:
+        """Check that transitions name clips of their mob.
+
+        Returns:
+            AnimationsConfig: The validated config.
+
+        Raises:
+            ValueError: A transition names an unknown or looping clip.
+
+        """
+        for mob, transitions in self.transitions.items():
+            clips = self.mobs.get(mob, {})
+            for transition in transitions:
+                names = {*transition.from_, *transition.to, transition.play}
+                unknown = names - clips.keys()
+                if unknown:
+                    msg = f"{mob} transition uses unknown clips {unknown}"
+                    raise ValueError(msg)
+                if clips[transition.play].loop:
+                    msg = f"{mob} transition clip {transition.play} loops"
+                    raise ValueError(msg)
+        return self
 
 
 def load_model[M: BaseModel](model: type[M], path: Path) -> M:

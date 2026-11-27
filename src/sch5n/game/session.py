@@ -33,6 +33,8 @@ class TickInput:
     """-1 left, 0 none, 1 right."""
     jump: bool = False
     """Jump was pressed since the last tick."""
+    jump_held: bool = False
+    """Jump is held down, for higher jumps."""
     use: bool = False
     """Use the held item (break blocks)."""
     place: bool = False
@@ -217,6 +219,6 @@ class Game:
 
         self._use_held_item(inp)
         self.ambience.tick(self.tilemap, inp.view, self.config.tile_size)
-        self.player.tick(self.tilemap, inp.move_x)
+        self.player.tick(self.tilemap, inp.move_x, jump_held=inp.jump_held)
         self._tick_floating_items()
         self.ticks += 1

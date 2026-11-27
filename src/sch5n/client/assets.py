@@ -51,6 +51,11 @@ class Animation:
         """
         return self.frames[self.clip.frame_index(age, len(self.frames))]
 
+    @property
+    def duration(self) -> int:
+        """Ticks until a non looping clip reaches its last frame's end."""
+        return len(self.frames) * max(self.clip.frame_ticks, 1)
+
 
 class ClientAssets:
     """The texture atlas and lookups into it."""

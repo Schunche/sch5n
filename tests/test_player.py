@@ -88,3 +88,57 @@ def test_wall_slide_and_wall_jump(tilemap: TileMap) -> None:
     player.jump()
     assert player.body.vx < 0  # Pushed away from the wall.
     assert player.body.vy == -CONFIG.player.wall_jump_velocity[1]
+
+
+def jump_height(tilemap: TileMap, *, hold: bool) -> float:
+    """Jump from the ground and measure how high the player gets.
+
+    Returns:
+        float: Peak height in pixels.
+
+    """
+    floor(tilemap, 4, -100, 100)
+    player = make_player()
+    settle(player, tilemap)
+    ground = player.body.y
+    player.jump()
+    peak = ground
+    for _ in range(120):
+        player.tick(tilemap, 0, jump_held=hold)
+        peak = min(peak, player.body.y)
+    return ground - peak
+
+
+def test_holding_jump_jumps_higher(tilemap: TileMap) -> None:
+    """A tap is a hop; holding the key reaches several tiles."""
+    tap = jump_height(tilemap, hold=False)
+    held = jump_height(tilemap, hold=True)
+    tile = CONFIG.tile_size
+    assert tap < 1.5 * tile
+    assert held > 3 * tile
+    assert held > 2 * tap
+
+
+def test_rising_and_falling_actions(tilemap: TileMap) -> None:
+    """The action tells rising from falling, for the animations."""
+    floor(tilemap, 4, -100, 100)
+    player = make_player()
+    settle(player, tilemap)
+    player.jump()
+    seen = []
+    for _ in range(120):
+        player.tick(tilemap, 0)
+        if not seen or seen[-1] is not player.action:
+            seen.append(player.action)
+    assert seen == [Action.JUMP, Action.FALL, Action.IDLE]
+
+
+def test_gravity_is_snappy(tilemap: TileMap) -> None:
+    """Falling 5 tiles takes well under a second."""
+    floor(tilemap, 10, -100, 100)
+    player = make_player(pos=(0, 10 * 32 - CONFIG.player.size[1] - 5 * 32))
+    ticks = 0
+    while not player.body.collisions.down:
+        player.tick(tilemap, 0)
+        ticks += 1
+    assert ticks < CONFIG.tick_rate * 0.6

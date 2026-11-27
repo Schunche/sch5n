@@ -208,6 +208,7 @@ class PlayScene(Scene):
             TickInput(
                 move_x=move_x,
                 jump=self._jump_requested,
+                jump_held=keys.is_held(Action.JUMP, window),
                 use=keys.is_held(Action.USE_ITEM, window),
                 place=keys.is_held(Action.PLACE_BLOCK, window),
                 target=target,
@@ -215,6 +216,7 @@ class PlayScene(Scene):
             )
         )
         self._jump_requested = False
+        self.world.tick(self.game)
         self.camera.follow(
             self.game.player.body.center,
             app.screen,

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from sch5n.client.animation import Animator
 from sch5n.client.render.batch import INSTANCE_FLOATS, WHITE, sprite_instances
 from sch5n.game.mining import durability_fraction
 from sch5n.utility import path
@@ -123,15 +124,13 @@ class TileRenderer:
 
 
 def draw_player(
-    batch: SpriteBatch, assets: ClientAssets, player: Player
+    batch: SpriteBatch, assets: ClientAssets, player: Player, frame: Region
 ) -> None:
     """Queue the player sprite, standing on the bottom of the hitbox.
 
     Frames are drawn at their own size, centered on the hitbox, so they
     may be wider than the body for swinging arms and legs.
     """
-    animation = assets.mobs["player", player.action.value]
-    frame = animation.frame(player.action_age)
     body = player.body
     x = round(body.x + (body.w - frame.width) / 2)
     y = round(body.y + body.h - frame.height)
@@ -266,12 +265,34 @@ def draw_wind_streaks(batch: SpriteBatch, ambience: Ambience) -> None:
 
 
 class WorldRenderer:
-    """Draws a game session as the player sees it: sky, clouds, world."""
+    """Draws a game session as the player sees it: sky, clouds, world.
+
+    Also animates the player; call `tick` once per game tick.
+    """
 
     def __init__(self, app: App) -> None:
         """Create the renderer."""
         self.app = app
         self.tiles = TileRenderer(app.assets, app.content.game.tile_size)
+        self.player_animator: Animator | None = None
+
+    def _animator(self, game: Game) -> Animator:
+        if self.player_animator is None:
+            assets = self.app.assets
+            self.player_animator = Animator(
+                {
+                    action: animation
+                    for (mob, action), animation in assets.mobs.items()
+                    if mob == "player"
+                },
+                self.app.animations.transitions.get("player", ()),
+                game.player.action.value,
+            )
+        return self.player_animator
+
+    def tick(self, game: Game) -> None:
+        """Advance the player's animation by one tick."""
+        self._animator(game).update(game.player.action.value)
 
     def draw(
         self, game: Game, camera: Camera, *, show_player: bool = True
@@ -289,7 +310,8 @@ class WorldRenderer:
         batch.begin(app.screen, offset, camera.zoom)
         self.tiles.draw(batch, game.tilemap, camera.view(app.screen))
         if show_player:
-            draw_player(batch, app.assets, game.player)
+            frame = self._animator(game).frame
+            draw_player(batch, app.assets, game.player, frame)
         draw_particles(batch, app.assets, game.ambience)
         draw_wind_streaks(batch, game.ambience)
         draw_floating_items(batch, app.assets, game.floating_items)
