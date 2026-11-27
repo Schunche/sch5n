@@ -37,6 +37,7 @@ from sch5n.client.window import (
 )
 from sch5n.client.world_view import load_start_map
 from sch5n.game.config import Settings
+from sch5n.game.inventory import ItemStack
 from sch5n.net.client import ClientSession
 from sch5n.server.server import Server
 from sch5n.world.save import list_worlds, load_world
@@ -676,7 +677,8 @@ def test_worlds_are_saved_unless_asked_not_to(app: App) -> None:
     """Save & Quit keeps changes; Quit Without Saving throws them away."""
     stone = app.content.blocks.id_of("stone")
     worlds = WorldsScene(app, back=MainMenu(app))
-    worlds.name.text = ""
+    worlds.focused = worlds.world_name
+    worlds.world_name.text = ""
     for char in "Test world":
         worlds.on_event(CharEvent(char))
     worlds.on_event(press(glfw.KEY_ENTER))
@@ -709,7 +711,7 @@ def test_worlds_are_saved_unless_asked_not_to(app: App) -> None:
 
     # A name in use is refused.
     worlds = WorldsScene(app, back=MainMenu(app))
-    worlds.name.text = "Test world"
+    worlds.world_name.text = "Test world"
     worlds.create()
     assert "already exists" in worlds.message
 
@@ -750,3 +752,46 @@ def test_hovered_items_show_a_tooltip(app: App) -> None:
     play.inventory_open = False
     assert play.hovered_stack(slot) is None
     play.leave()
+
+
+def test_hosts_name_themselves(app: App) -> None:
+    """The singleplayer screen asks for a name; the world follows it."""
+    default = Settings().player_name
+    app.update_settings(player_name=default)
+    worlds = WorldsScene(app, back=MainMenu(app))
+    # While the name is the default, typing goes to the name first.
+    assert worlds.focused is worlds.player_name
+    for _ in default:
+        worlds.on_event(press(glfw.KEY_BACKSPACE))
+    worlds.create()
+    assert worlds.message == "Type your name first"
+    for char in "Ann":
+        worlds.on_event(CharEvent(char))
+    assert worlds.world_name.text.startswith("Ann's world")
+    worlds.on_event(press(glfw.KEY_ENTER))
+    play = app.pending_scene
+    assert isinstance(play, PlayScene)
+    assert app.settings.player_name == "Ann"
+    assert play.player is not None
+    assert play.player.name == "Ann"
+
+    # Ann keeps her inventory after renaming herself.
+    assert play.server is not None
+    ann = play.server.game.players[play.world.local_id]
+    ann.inventory.slots[9] = ItemStack(app.content.items["oak_log"], 5)
+    play.leave()
+    app.update_settings(player_name="Anna")
+    saved = next(
+        w for w in list_worlds(app.worlds_dir) if w.name.startswith("Ann's")
+    )
+    again = WorldsScene(app, back=MainMenu(app))
+    assert again.focused is again.world_name
+    again.play(saved)
+    renamed = app.pending_scene
+    assert isinstance(renamed, PlayScene)
+    renamed.tick()
+    stack = renamed.world.inventory[9]
+    assert stack is not None
+    assert stack.item.name == "oak_log"
+    renamed.leave()
+    app.update_settings(player_name=default)

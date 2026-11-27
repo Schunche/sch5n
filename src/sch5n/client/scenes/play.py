@@ -117,6 +117,7 @@ class PlayScene(Scene):
             world = World(
                 f"{settings.player_name}'s world", load_start_map(app), {}
             )
+        world.hand_over(settings.player_name)
         server = Server(
             app.content,
             world.tilemap,
@@ -213,7 +214,7 @@ class PlayScene(Scene):
         """
         if self.server is None or self.save_path is None:
             return None
-        self.server.save(self.save_path)
+        self.server.save(self.save_path, owner=self.app.settings.player_name)
         return self.save_path
 
     def save_copy(self) -> str:

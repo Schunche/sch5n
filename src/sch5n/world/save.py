@@ -174,6 +174,25 @@ class World:
     tilemap: TileMap
     inventories: dict[str, Inventory]
     """Inventories of the players who played here, by name."""
+    owner: str | None = None
+    """The player whose single player world it is, if any."""
+
+    def hand_over(self, player: str) -> None:
+        """Make `player` the owner, taking over the owner's inventory.
+
+        The owner may have renamed itself since the world was saved; its
+        inventory follows it, unless the new name already has one.
+        """
+        old = self.owner
+        if (
+            old is not None
+            and old != player
+            and player not in self.inventories
+        ):
+            inventory = self.inventories.pop(old, None)
+            if inventory is not None:
+                self.inventories[player] = inventory
+        self.owner = player
 
 
 def save_world(
@@ -181,11 +200,16 @@ def save_world(
     name: str,
     tilemap: TileMap,
     inventories: dict[str, Inventory],
+    owner: str | None = None,
 ) -> None:
-    """Write a world file. A crash while saving leaves the old file whole."""
+    """Write a world file. A crash while saving leaves the old file whole.
+
+    `owner` is the player whose single player world it is, if any.
+    """
     data = {
         "format": WORLD_FORMAT,
         "name": clean_name(name),
+        "owner": owner,
         "inventories": {
             player: inventory_to_json(inventory)
             for player, inventory in inventories.items()
@@ -229,4 +253,5 @@ def load_world(path: Path, content: Content) -> World:
             str(player): inventory_from_json(inventory, content.items, size)
             for player, inventory in inventories.items()
         },
+        owner=owner if isinstance(owner := data.get("owner"), str) else None,
     )

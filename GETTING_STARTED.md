@@ -57,8 +57,10 @@ for example to your Documents.
 
 ## 3. Play
 
-In the main menu, click **Singleplayer**. Type a name for a new world and
-click **Create**, or click one of your saved worlds to continue it.
+In the main menu, click **Singleplayer**. Type your name first: other
+players see it when you open your world to them. Then type a name for a new
+world and click **Create**, or click one of your saved worlds to continue
+it. Tab switches between the two fields.
 
 | Input | Action |
 | --- | --- |

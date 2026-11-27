@@ -426,9 +426,18 @@ class Server:
         for client in self.clients:
             client.connection.flush()
 
-    def save(self, path: Path) -> None:
-        """Save the world, with every player's inventory, as `self.name`."""
-        save_world(path, self.name, self.game.tilemap, self.game.inventories())
+    def save(self, path: Path, owner: str | None = None) -> None:
+        """Save the world, with every player's inventory, as `self.name`.
+
+        `owner` is the host of a single player world.
+        """
+        save_world(
+            path,
+            self.name,
+            self.game.tilemap,
+            self.game.inventories(),
+            owner,
+        )
 
     def stop_listening(self) -> None:
         """Stop accepting and announcing. Connected players stay."""

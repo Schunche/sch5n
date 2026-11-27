@@ -21,7 +21,9 @@ from sch5n.client.ui import (
 from sch5n.client.window import CharEvent, KeyEvent, MouseButtonEvent
 from sch5n.client.world_view import load_start_map
 from sch5n.error.exceptions import ParseError
+from sch5n.game.config import Settings
 from sch5n.math.rect import Rect
+from sch5n.net.protocol import MAX_NAME_LENGTH as MAX_PLAYER_NAME_LENGTH
 from sch5n.world.save import (
     MAX_NAME_LENGTH,
     World,
@@ -78,13 +80,27 @@ class WorldsScene(Scene):
         super().__init__(app)
         self.back = back
         self.worlds: list[WorldInfo] = list_worlds(app.worlds_dir)
-        self.name = TextField(
-            "name",
-            "New world",
+        settings = app.settings
+        self.player_name = TextField(
+            "player",
+            "Your name",
             Rect(0, 0, 0, 0),
-            unique_name(app.worlds_dir, f"{app.settings.player_name}'s world"),
-            MAX_NAME_LENGTH,
+            settings.player_name,
+            MAX_PLAYER_NAME_LENGTH,
         )
+        self.world_name = TextField(
+            "name", "New world", Rect(0, 0, 0, 0), "", MAX_NAME_LENGTH
+        )
+        self._world_name_typed = False
+        """Once the world name is typed, it no longer follows the player."""
+        self._suggest_world_name()
+        self.focused = (
+            self.player_name
+            if settings.player_name == Settings().player_name
+            else self.world_name
+        )
+        """The field typing goes to. The player name comes first while it
+        is still the default."""
         self.panel = Rect(0, 0, 0, 0)
         self.list_top = 0.0
         self.world_buttons: list[Button] = []
@@ -93,11 +109,44 @@ class WorldsScene(Scene):
         self.ticks = 0
         self.update_layout()
 
+    def _suggest_world_name(self) -> None:
+        if not self._world_name_typed:
+            player = " ".join(self.player_name.text.split()) or "Player"
+            self.world_name.text = unique_name(
+                self.app.worlds_dir, f"{player}'s world"
+            )[:MAX_NAME_LENGTH]
+
+    def _type(self, text: str) -> None:
+        self.focused.type(text)
+        self._edited()
+
+    def _edited(self) -> None:
+        if self.focused is self.world_name:
+            self._world_name_typed = True
+        else:
+            self._suggest_world_name()
+
+    def _take_player_name(self) -> bool:
+        """Save the typed player name to the settings.
+
+        Returns:
+            bool: False, with a message, if no name was typed.
+
+        """
+        name = " ".join(self.player_name.text.split())
+        if not name:
+            self.message = "Type your name first"
+            self.focused = self.player_name
+            return False
+        if name != self.app.settings.player_name:
+            self.app.update_settings(player_name=name)
+        return True
+
     def layout(self) -> None:
         """Place everything for the window size."""
         w, h = self.app.screen
         list_height = MAX_LISTED_WORLDS * (ROW_HEIGHT + ROW_GAP)
-        height = 2 * PADDING + 2 * FIELD_GAP + FIELD_HEIGHT + list_height
+        height = 2 * PADDING + 3 * FIELD_GAP + 2 * FIELD_HEIGHT + list_height
         height += 2 * TEXT_SIZE
         self.panel = Rect(
             (w - PANEL_WIDTH) / 2, TITLE_Y + 40, PANEL_WIDTH, height
@@ -105,7 +154,9 @@ class WorldsScene(Scene):
         left = self.panel.x + PADDING
         inner = PANEL_WIDTH - 2 * PADDING
         y = self.panel.y + PADDING + FIELD_GAP
-        self.name.rect = Rect(
+        self.player_name.rect = Rect(left, y, inner / 2, FIELD_HEIGHT)
+        y += FIELD_HEIGHT + FIELD_GAP
+        self.world_name.rect = Rect(
             left, y, inner - CREATE_WIDTH - PADDING / 2, FIELD_HEIGHT
         )
         create = Button(
@@ -144,6 +195,8 @@ class WorldsScene(Scene):
 
     def play(self, world: WorldInfo) -> None:
         """Load a saved world and play it."""
+        if not self._take_player_name():
+            return
         try:
             loaded = load_world(world.path, self.app.content)
         except ParseError as error:
@@ -153,8 +206,10 @@ class WorldsScene(Scene):
 
     def create(self) -> None:
         """Start a new world from the start map, named as typed."""
+        if not self._take_player_name():
+            return
         directory = self.app.worlds_dir
-        name = clean_name(self.name.text)
+        name = clean_name(self.world_name.text)
         if world_path(directory, name).exists():
             self.message = f"A world called {name!r} already exists"
             return
@@ -172,15 +227,26 @@ class WorldsScene(Scene):
             case glfw.KEY_ESCAPE:
                 self.app.switch(self.back)
             case glfw.KEY_BACKSPACE:
-                self.name.backspace()
+                self.focused.backspace()
+                self._edited()
+            case glfw.KEY_TAB:
+                self.focused = (
+                    self.world_name
+                    if self.focused is self.player_name
+                    else self.player_name
+                )
             case glfw.KEY_ENTER | glfw.KEY_KP_ENTER:
                 self.create()
             case glfw.KEY_V if event.mods & glfw.MOD_CONTROL:
-                self.name.type(self.app.window.clipboard)
+                self._type(self.app.window.clipboard)
             case _:
                 pass
 
     def _on_click(self, pos: tuple[float, float]) -> None:
+        for field in (self.player_name, self.world_name):
+            if field.contains(pos):
+                self.focused = field
+                return
         button_id = hit_button(self.buttons + self.world_buttons, pos)
         match button_id:
             case "create":
@@ -196,7 +262,7 @@ class WorldsScene(Scene):
         """Handle typing and clicks."""
         match event:
             case CharEvent(char=char):
-                self.name.type(char)
+                self._type(char)
             case KeyEvent():
                 self._on_key(event)
             case MouseButtonEvent(button=glfw.MOUSE_BUTTON_LEFT) if (
@@ -231,7 +297,14 @@ class WorldsScene(Scene):
         )
         draw_panel(app.batch, self.panel, style)
         caret = (self.ticks // CARET_BLINK_TICKS) % 2 == 0
-        self.name.draw(app.batch, app.text, style, focused=True, caret=caret)
+        for field in (self.player_name, self.world_name):
+            field.draw(
+                app.batch,
+                app.text,
+                style,
+                focused=field is self.focused,
+                caret=caret,
+            )
         self._text(
             "Your worlds",
             (self.panel.x + PADDING, self.list_top - 4),
