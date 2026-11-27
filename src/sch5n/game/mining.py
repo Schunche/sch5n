@@ -7,10 +7,10 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from typing import TYPE_CHECKING
 
-from sch5n.game.content import AIR
+from sch5n.game.content import AIR, TreePart
 
 if TYPE_CHECKING:
-    from sch5n.game.content import BlockDef, ItemDef
+    from sch5n.game.content import BlockDef, BlockRegistry, ItemDef
     from sch5n.world.tilemap import TileMap
 
 
@@ -101,6 +101,57 @@ def hit_tile(tilemap: TileMap, x: int, y: int, tool: ItemDef | None) -> Hit:
     else:
         tilemap.set(x, y, AIR)
     return Hit(HitResult.BROKEN, block)
+
+
+CROWN_REACH = 3
+"""Leaves this many tiles beside a trunk fall with its tree."""
+
+
+def fell_tree(tilemap: TileMap, x: int, y: int) -> list[BlockDef]:
+    """Bring down the tree above a trunk tile that was just broken.
+
+    The rest of the trunk above, in the same column, and the leaves joined
+    to it within `CROWN_REACH` tiles beside it are removed. Other trees'
+    trunks stay, and so do their crowns beyond that reach.
+
+    Returns:
+        list[BlockDef]: The removed blocks.
+
+    """
+    blocks = tilemap.blocks
+    removed: list[BlockDef] = []
+    seen = {(x, y)}
+    todo = [(x, y - 1)]
+    while todo:
+        tx, ty = todo.pop()
+        if (tx, ty) in seen or ty >= y:
+            continue
+        seen.add((tx, ty))
+        block = blocks.get(tilemap.get(tx, ty))
+        if block is None or block.spec.tree is None:
+            continue
+        if block.spec.tree is TreePart.TRUNK and tx != x:
+            continue
+        if abs(tx - x) > CROWN_REACH:
+            continue
+        removed.append(block)
+        tilemap.set(tx, ty, AIR)
+        todo += [(tx, ty - 1), (tx - 1, ty), (tx + 1, ty)]
+    return removed
+
+
+def log_of(blocks: BlockRegistry, block: BlockDef) -> str | None:
+    """Name the item a felled block gives: its drop, or its stripped form's.
+
+    Returns:
+        str | None: Item id, `None` for leaves.
+
+    """
+    if block.spec.drop is not None:
+        return block.spec.drop
+    if block.spec.transform_to is not None:
+        return blocks.by_name(block.spec.transform_to).spec.drop
+    return None
 
 
 def can_place(tilemap: TileMap, x: int, y: int) -> bool:

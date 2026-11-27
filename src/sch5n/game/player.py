@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING
@@ -117,6 +118,22 @@ class Player:
             # swing then, so back to back swings never blink out.
             if self.swing.age > self.swing.duration:
                 self.swing = None
+
+    def can_reach(self, tile: tuple[int, int]) -> bool:
+        """Whether a tile is close enough to use or build on.
+
+        Returns:
+            bool: The tile's middle is within `reach` tiles of the body's.
+
+        """
+        size = self.config.tile_size
+        cx, cy = self.body.center
+        return (
+            math.hypot(
+                (tile[0] + 0.5) * size - cx, (tile[1] + 0.5) * size - cy
+            )
+            <= self.tuning.reach * size
+        )
 
     def start_swing(self, item: ItemDef, toward_x: float) -> None:
         """Swing `item` once, turning to face `toward_x` (world pixels).

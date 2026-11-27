@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import math
+from collections import Counter
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -11,9 +12,10 @@ import numpy as np
 
 from sch5n.game.ambient import Ambience
 from sch5n.game.config import GameMode
+from sch5n.game.content import AIR, TreePart
 from sch5n.game.floating_item import FloatingItem
 from sch5n.game.inventory import Inventory, ItemStack
-from sch5n.game.mining import HitResult, can_place, hit_tile
+from sch5n.game.mining import HitResult, can_place, fell_tree, hit_tile, log_of
 from sch5n.game.player import Player
 from sch5n.log.logger import LOGGER
 from sch5n.math.rect import Rect
@@ -21,7 +23,7 @@ from sch5n.math.rect import Rect
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from sch5n.game.content import Content
+    from sch5n.game.content import BlockDef, Content
     from sch5n.world.tilemap import TileMap
 
 SPAWN_SEARCH_DEPTH = 512
@@ -69,7 +71,8 @@ DEFAULT_SETUP = GameSetup()
 def swing_tool(player: Player, inp: TickInput, tile_size: int) -> bool:
     """Swing the held tool at the target if the input asks and it is ready.
 
-    Tools swing whether or not they hit anything, like in the air. Shared
+    Tools swing whether or not they hit anything, like in the air, but only
+    at tiles within reach. Shared
     by the game and by clients predicting their own player.
 
     Returns:
@@ -80,6 +83,8 @@ def swing_tool(player: Player, inp: TickInput, tile_size: int) -> bool:
     if not inp.use or inp.target is None or held is None:
         return False
     if not held.item.is_tool or player.use_cooldown < held.item.spec.use_time:
+        return False
+    if not player.can_reach(inp.target):
         return False
     player.start_swing(held.item, (inp.target[0] + 0.5) * tile_size)
     player.use_cooldown = 0
@@ -267,19 +272,15 @@ class Game:
             return
         x, y = inp.target
         target_x = (x + 0.5) * self.config.tile_size
+        if not player.can_reach(inp.target):
+            return
 
         if swing_tool(player, inp, self.config.tile_size):
             hit = hit_tile(self.tilemap, x, y, held.item)
             if hit.result is HitResult.WRONG_TOOL and self.ticks % 10 == 0:
                 LOGGER.debug("Another tool is needed for %s", hit.block)
-            if (
-                hit.result is HitResult.BROKEN
-                and hit.block is not None
-                and hit.block.spec.drop is not None
-            ):
-                self.drop(
-                    ItemStack(self.content.items[hit.block.spec.drop]), (x, y)
-                )
+            if hit.result is HitResult.BROKEN and hit.block is not None:
+                self._broken(hit.block, (x, y))
 
         elif inp.place and held.item.spec.places is not None:
             size = self.config.tile_size
@@ -294,6 +295,27 @@ class Game:
             player.start_swing(held.item, target_x)
             player.inventory.consume_held()
             player.use_cooldown = 0
+
+    def _broken(self, block: BlockDef, tile: tuple[int, int]) -> None:
+        """Drop what a broken block leaves, and fell a tree above it."""
+        drops = Counter[str]()
+        if block.spec.drop is not None:
+            drops[block.spec.drop] += 1
+        if (
+            self.tilemap.get(*tile) == AIR
+            and block.spec.tree is TreePart.TRUNK
+        ):
+            for felled in fell_tree(self.tilemap, *tile):
+                drop = log_of(self.tilemap.blocks, felled)
+                if drop is not None:
+                    drops[drop] += 1
+        for name, count in drops.items():
+            item = self.content.items[name]
+            left = count
+            while left > 0:
+                stack = ItemStack(item, min(left, item.spec.max_stack))
+                left -= stack.amount
+                self.drop(stack, tile)
 
     def _nearest_player(self, pos: tuple[float, float]) -> Player | None:
         return min(

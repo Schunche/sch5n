@@ -118,7 +118,7 @@ def test_swinging_at_air_and_wrong_blocks_still_swings(
     game: Game, content: Content
 ) -> None:
     """Swings animate even when nothing is hit."""
-    assert swings(game, 60, TickInput(use=True, target=(2, 2)))  # Empty air.
+    assert swings(game, 60, TickInput(use=True, target=(2, 6)))  # Empty air.
     game.inventory.select(1)  # The axe cannot break dirt.
     assert swings(game, 60, TickInput(use=True, target=(1, 10)))
     assert game.tilemap.get(1, 10) == content.blocks.id_of("dirt")
@@ -126,9 +126,9 @@ def test_swinging_at_air_and_wrong_blocks_still_swings(
 
 def test_player_faces_what_it_swings_at(game: Game) -> None:
     """The player turns to the target and keeps facing it while moving."""
-    swings(game, 40, TickInput(use=True, target=(-5, 10)))
+    swings(game, 40, TickInput(use=True, target=(-3, 10)))
     assert game.player.facing_left
-    game.tick(TickInput(move_x=1, use=True, target=(-5, 10)))
+    game.tick(TickInput(move_x=1, use=True, target=(-3, 10)))
     assert game.player.facing_left  # Walking away mid swing.
     for _ in range(60):
         game.tick(TickInput(move_x=1))

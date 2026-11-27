@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -30,6 +31,15 @@ class _Model(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
 
+class TreePart(StrEnum):
+    """What a block is in a tree."""
+
+    TRUNK = "trunk"
+    """Wood: falls with the tree and drops its log."""
+    CROWN = "crown"
+    """Leaves: fall with the tree."""
+
+
 class BlockSpec(_Model):
     """A block as written in `blocks.json`."""
 
@@ -48,6 +58,8 @@ class BlockSpec(_Model):
     """Block left behind instead of air when broken."""
     particle: str | None = None
     """Ambient particle emitted by the block."""
+    tree: TreePart | None = None
+    """Part of a tree: breaking a trunk block fells everything above."""
     aliases: tuple[str, ...] = ()
     """Legacy names accepted when loading maps."""
 

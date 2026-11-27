@@ -82,8 +82,8 @@ def test_place_block(game: Game, content: Content) -> None:
     slot, amount = 2, 3
     game.inventory.slots[slot] = ItemStack(content.items["dirt_block"], amount)
     game.inventory.select(slot)
-    run(game, 40, place=True, target=(5, 9))
-    assert game.tilemap.get(5, 9) == content.blocks.id_of("dirt")
+    run(game, 40, place=True, target=(3, 9))
+    assert game.tilemap.get(3, 9) == content.blocks.id_of("dirt")
     placed = game.inventory[slot]
     assert placed is not None
     assert placed.amount == amount - 1
@@ -153,6 +153,9 @@ def test_stone_drops_a_stone_block(game: Game, content: Content) -> None:
 
 
 TILE = 32
+LOGS_ABOVE_AND_CHOPPED = 3
+"""The chopped log, the log above it and the leafy log on top."""
+MIN_LOG_HITS = 8
 MIN_JUMP_TILES = 2.1
 """A held jump must clear a two block step."""
 MAX_JUMP_TILES = 2.6
@@ -176,3 +179,97 @@ def test_jump_height_and_walk_speed(content: Content) -> None:
     run(game, 30, move_x=1)
     tiles_per_second = (body.x - x) / 30 * content.game.tick_rate / TILE
     assert tiles_per_second < MAX_WALK_TILES_PER_SECOND
+
+
+def test_distant_blocks_are_out_of_reach(game: Game, content: Content) -> None:
+    """Blocks farther than the reach can be neither broken nor built on."""
+    reach = content.game.player.reach
+    far = (int(reach) + 3, 10)
+    run(game, 300, use=True, target=far)
+    assert game.tilemap.get(*far) != AIR
+    assert game.player.swing is None
+    game.inventory.slots[2] = ItemStack(content.items["dirt_block"], 3)
+    game.inventory.select(2)
+    above = (far[0], 9)
+    run(game, 40, place=True, target=above)
+    assert game.tilemap.get(*above) == AIR
+
+
+def planted(content: Content) -> tuple[Game, dict[str, int]]:
+    """Grow two trees on flat ground: trunks at x 2 and 5, crowns touching.
+
+    Returns:
+        tuple[Game, dict[str, int]]: The game, and block ids by name.
+
+    """
+    ids = {
+        name: content.blocks.id_of(name)
+        for name in ("oak_log", "oak_leaf", "oak_log_leaf")
+    }
+    tilemap = flat_world(content)
+    for trunk in (2, 5):
+        for y in range(6, 10):
+            tilemap.set(trunk, y, ids["oak_log"])
+        tilemap.set(trunk, 5, ids["oak_log_leaf"])
+        for x in range(trunk - 1, trunk + 2):
+            for y in (4, 5):
+                if (x, y) != (trunk, 5):
+                    tilemap.set(x, y, ids["oak_leaf"])
+    tilemap.set(3, 5, ids["oak_leaf"])  # Joins the two crowns.
+    tilemap.set(4, 5, ids["oak_leaf"])
+    game = Game(content, tilemap, GameSetup(seed=1, spawn=(0, 0)))
+    game.inventory.select(1)  # The axe.
+    return game, ids
+
+
+def test_chopping_a_log_fells_the_tree_above(content: Content) -> None:
+    """Breaking a trunk brings down what is above; the stump stays."""
+    game, ids = planted(content)
+    tilemap = game.tilemap
+    run(game, 600, use=True, target=(2, 7))
+    assert tilemap.get(2, 7) == AIR
+    # Above: trunk and crown are gone.
+    assert all(tilemap.get(2, y) == AIR for y in range(4, 7))
+    assert tilemap.get(1, 4) == AIR
+    # Below: the stump stays.
+    assert tilemap.get(2, 8) == ids["oak_log"]
+    assert tilemap.get(2, 9) == ids["oak_log"]
+    # The other tree keeps its trunk.
+    assert tilemap.get(5, 6) == ids["oak_log"]
+    assert tilemap.get(5, 5) == ids["oak_log_leaf"]
+    # Every log of the felled part comes down, in one stack.
+    run(game, 300)
+    logs = sum(
+        s.amount for s in game.inventory if s and s.item.name == "oak_log"
+    )
+    assert logs == LOGS_ABOVE_AND_CHOPPED
+
+
+def test_leafy_logs_are_logs(content: Content) -> None:
+    """A leafy log is chopped like a log, and fells what is above it."""
+    game, ids = planted(content)
+    tilemap = game.tilemap
+    leafy, log = (
+        content.blocks.by_name(name) for name in ("oak_log_leaf", "oak_log")
+    )
+    assert leafy.durability == log.durability
+    run(game, 600, use=True, target=(2, 5))
+    assert tilemap.get(2, 5) == AIR
+    assert tilemap.get(2, 4) == AIR  # The crown above fell.
+    assert tilemap.get(2, 6) == ids["oak_log"]  # The trunk below stays.
+    run(game, 300)
+    logs = sum(
+        s.amount for s in game.inventory if s and s.item.name == "oak_log"
+    )
+    assert logs == 1
+
+
+def test_logs_take_longer_than_one_swing_a_second(content: Content) -> None:
+    """A log takes many axe hits."""
+    game, _ = planted(content)
+    axe = content.items["copper_axe"]
+    log = content.blocks.by_name("oak_log")
+    hits = -(-log.durability // axe.spec.tool_power["axe"])
+    assert hits >= MIN_LOG_HITS
+    run(game, (hits - 1) * axe.spec.use_time, use=True, target=(2, 7))
+    assert game.tilemap.get(2, 7) != AIR

@@ -70,6 +70,8 @@ class PlayerConfig(_Model):
     """Push away from the wall and lift."""
     wall_slide_speed: float = 1.5
     airborne_after_ticks: int = 4
+    reach: float = Field(default=5.0, gt=0)
+    """How far, in tiles from the body's middle, blocks can be used."""
     max_jumps: dict[GameMode, int] = Field(
         default_factory=lambda: {GameMode.SURVIVAL: 1, GameMode.ADMIN: 256}
     )
