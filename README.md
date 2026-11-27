@@ -6,21 +6,12 @@ Experimental software
 
 ### Python 3.15
 
-#### Linux
+Install [uv](https://docs.astral.sh/uv/), then:
 
-    uv venv .venv
-    source .venv/bin/activate
-    python -m pip install uv
-    uv pip install -e .
+    uv sync --python 3.15
+    uv run sch5n
 
-#### Windows
-
-https://www.python.org/downloads/release/pymanager-264/
-
-    py -m venv .venv
-    (Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; .\.venv\Scripts\Activate.ps1
-    python -m pip install uv
-    python -m pip install -e .
+`uv build` builds the wheel and source distribution.
 
 ## Usage
 
@@ -30,7 +21,7 @@ https://www.python.org/downloads/release/pymanager-264/
     sch5n edit map1             # edit a map: LMB place, RMB erase, wheel picks tile, Ctrl+S saves
     sch5n generate mymap --seed 42 --width 300 --height 160
 
-Without installing, run from the repository root with `PYTHONPATH=src python -m sch5n`.
+Prefix with `uv run` when the virtual environment is not activated.
 
 ### Controls
 
@@ -77,8 +68,10 @@ frame is a handful of draw calls.
 
 ## Tests
 
-    pytest                 # logic tests; rendering tests are skipped without a display
-    xvfb-run -a pytest     # everything, headless
+    uv run pytest                 # logic tests; rendering tests are skipped without a display
+    xvfb-run -a uv run pytest     # everything, headless
+
+The suite runs on every push (`.github/workflows/tests.yml`).
 
 ## Development
 

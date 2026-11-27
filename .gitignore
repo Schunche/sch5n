@@ -13,3 +13,5 @@ uv.lock
 .python-version
 __temp*__.py
 *.prof
+
+dist/
