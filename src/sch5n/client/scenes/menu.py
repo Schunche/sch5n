@@ -14,7 +14,7 @@ from sch5n.client.render.batch import rgba
 from sch5n.client.render.text import Anchor, TextStyle
 from sch5n.client.scenes.base import Scene
 from sch5n.client.ui import Button, aligned_rect, draw_panel, hit_button
-from sch5n.client.window import KeyEvent, MouseButtonEvent, ResizeEvent
+from sch5n.client.window import KeyEvent, MouseButtonEvent
 from sch5n.client.world_view import WorldRenderer, load_world
 from sch5n.game.config import MenuBackground
 from sch5n.game.session import Game, GameSetup, TickInput
@@ -87,7 +87,7 @@ class MenuWorld:
             (bounds[1] + bounds[3]) / 2 * size,
         )
         self.camera = Camera()
-        self.camera.center_on(self._target(), app.screen)
+        self.camera.center_on(self._target())
         self.renderer = WorldRenderer(app)
 
     def _target(self) -> tuple[float, float]:
@@ -107,7 +107,7 @@ class MenuWorld:
     def tick(self) -> None:
         """Advance the world and move the camera."""
         self.game.tick(TickInput(view=self.camera.view(self.app.screen)))
-        self.camera.follow(self._target(), self.app.screen, CAMERA_SMOOTHING)
+        self.camera.follow(self._target(), CAMERA_SMOOTHING)
 
     def draw(self) -> None:
         """Draw the world."""
@@ -129,7 +129,7 @@ class MainMenu(Scene):
         self.world = MenuWorld(app)
         self.buttons: list[Button] = []
         self.panel = Rect(0, 0, 0, 0)
-        self.layout()
+        self.update_layout()
 
     def layout(self) -> None:
         """Place the panel and buttons for the window size."""
@@ -157,10 +157,8 @@ class MainMenu(Scene):
         ]
 
     def on_event(self, event: Event) -> None:
-        """Handle clicks, escape and resizing."""
+        """Handle clicks and escape."""
         match event:
-            case ResizeEvent():
-                self.layout()
             case KeyEvent(key=glfw.KEY_ESCAPE) if event.pressed:
                 self.app.quit()
             case MouseButtonEvent(button=glfw.MOUSE_BUTTON_LEFT) if (

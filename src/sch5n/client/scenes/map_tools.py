@@ -52,7 +52,7 @@ class ViewerScene(Scene):
             LOGGER.info("%s does not exist, starting empty", map_path)
             self.tilemap = TileMap(blocks)
         self.tile_size = app.content.game.tile_size
-        self.camera = Camera()
+        self.camera = Camera.showing_top_left((0, 0), app.screen)
         self.tiles = TileRenderer(app.assets, self.tile_size)
         app.window.set_title(f"{map_path.stem} - {self.title}")
 
@@ -68,7 +68,9 @@ class ViewerScene(Scene):
             tuple[int, int]: Tile coordinate.
 
         """
-        x, y = self.camera.screen_to_world(self.app.window.mouse_pos)
+        x, y = self.camera.screen_to_world(
+            self.app.window.mouse_pos, self.app.screen
+        )
         return math.floor(x / self.tile_size), math.floor(y / self.tile_size)
 
     def on_escape(self) -> None:
@@ -80,11 +82,11 @@ class ViewerScene(Scene):
         mouse = self.app.window.mouse_pos
         match action:
             case Action.ZOOM_IN:
-                self.camera.zoom_at(ZOOM_STEP, mouse)
+                self.camera.zoom_at(ZOOM_STEP, mouse, self.app.screen)
             case Action.ZOOM_OUT:
-                self.camera.zoom_at(1 / ZOOM_STEP, mouse)
+                self.camera.zoom_at(1 / ZOOM_STEP, mouse, self.app.screen)
             case Action.RESET_CAMERA:
-                self.camera = Camera()
+                self.camera = Camera.showing_top_left((0, 0), self.app.screen)
             case Action.SETTINGS:
                 self.app.switch(SettingsScene(self.app, back=self))
             case _:
@@ -114,8 +116,7 @@ class ViewerScene(Scene):
             Action.PAN_UP, window
         )
         speed = PAN_SPEED / self.camera.zoom
-        self.camera.x += dx * speed
-        self.camera.y += dy * speed
+        self.camera.pan(dx * speed, dy * speed)
 
     def status_lines(self) -> list[str]:
         """Text shown in the corner.
@@ -141,7 +142,9 @@ class ViewerScene(Scene):
         """Draw the map without the tool's overlays."""
         app = self.app
         app.clear(BACKGROUND)
-        app.batch.begin(app.screen, self.camera.offset(), self.camera.zoom)
+        app.batch.begin(
+            app.screen, self.camera.offset(app.screen), self.camera.zoom
+        )
         self.tiles.draw(
             app.batch,
             self.tilemap,

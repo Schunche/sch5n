@@ -193,6 +193,7 @@ class App:
         self.scene = upcoming
         LOGGER.debug("Scene: %s", type(upcoming).__name__)
         upcoming.on_enter()
+        upcoming.update_layout()
         return upcoming
 
     def _apply_cursor(self, previous: Settings | None) -> None:
@@ -271,6 +272,7 @@ class App:
                 for event in self.window.poll():
                     if isinstance(event, ResizeEvent):
                         self._update_viewport()
+                    scene.update_layout()
                     scene.on_event(event)
 
                 while lag >= tick:
@@ -278,6 +280,7 @@ class App:
                     lag -= tick
 
                 self.batch.draw_calls = 0
+                scene.update_layout()
                 scene.render()
                 self.batch.flush()
                 self.window.swap()

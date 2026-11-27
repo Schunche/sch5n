@@ -44,10 +44,11 @@ def ui() -> Style:
 
 def test_camera_roundtrip_and_zoom() -> None:
     """Screen positions map to world positions, also while zooming."""
-    cam = Camera(100, 50)
-    assert cam.screen_to_world((10, 20)) == (110, 70)
-    cam.zoom_at(2.0, (100, 100))
-    assert cam.screen_to_world((100, 100)) == pytest.approx((200, 150))
+    screen = (200, 100)
+    cam = Camera.showing_top_left((100, 50), screen)
+    assert cam.screen_to_world((10, 20), screen) == (110, 70)
+    cam.zoom_at(2.0, (100, 100), screen)
+    assert cam.screen_to_world((100, 100), screen) == pytest.approx((200, 150))
     cam.zoom = 100
     assert cam.zoom == MAX_ZOOM
 
@@ -56,9 +57,19 @@ def test_camera_follow_converges() -> None:
     """Following a point eventually centers it on screen."""
     cam = Camera()
     for _ in range(500):
-        cam.follow((1000, 1000), (200, 100), 0.05)
-    assert (cam.x, cam.y) == pytest.approx((900, 950))
+        cam.follow((1000, 1000), 0.05)
+    assert cam.top_left((200, 100)) == pytest.approx((900, 950))
     assert cam.view((200, 100)).center == pytest.approx((1000, 1000))
+
+
+def test_camera_keeps_its_center_when_resized() -> None:
+    """A bigger or smaller window shows more or less around the same point."""
+    cam = Camera((500, 300))
+    for screen in ((800, 600), (1920, 1080), (640, 360)):
+        assert cam.view(screen).center == pytest.approx((500, 300))
+        assert cam.screen_to_world(
+            (screen[0] / 2, screen[1] / 2), screen
+        ) == pytest.approx((500, 300))
 
 
 def test_pack_shelves_no_overlap() -> None:

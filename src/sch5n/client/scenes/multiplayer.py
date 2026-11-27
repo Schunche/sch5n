@@ -21,7 +21,6 @@ from sch5n.client.window import (
     CharEvent,
     KeyEvent,
     MouseButtonEvent,
-    ResizeEvent,
 )
 from sch5n.math.rect import Rect
 from sch5n.net.client import ClientSession, Dialer, SessionState, parse_address
@@ -86,7 +85,7 @@ class MultiplayerScene(Scene):
         self.session: ClientSession | None = None
         self.joining_ticks = 0
         self.ticks = 0
-        self.layout()
+        self.update_layout()
 
     @property
     def joining(self) -> bool:
@@ -308,8 +307,6 @@ class MultiplayerScene(Scene):
                 event.pressed
             ):
                 self._on_click(event.pos)
-            case ResizeEvent():
-                self.layout()
             case _:
                 pass
 

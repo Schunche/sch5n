@@ -25,7 +25,6 @@ from sch5n.client.video import FPS_LIMITS, WINDOW_SIZES, cycle, fps_label
 from sch5n.client.window import (
     KeyEvent,
     MouseButtonEvent,
-    ResizeEvent,
     ScrollEvent,
 )
 from sch5n.game.config import MenuBackground, Settings
@@ -505,9 +504,6 @@ class SettingsScene(Scene):
 
     def on_event(self, event: Event) -> None:
         """Handle input."""
-        if isinstance(event, ResizeEvent):
-            self.layout()
-            return
         if self.capturing is not None:
             self._on_capture(event)
             return

@@ -533,7 +533,7 @@ class WorldRenderer:
         """
         app = self.app
         batch = app.batch
-        offset = camera.offset()
+        offset = camera.offset(app.screen)
 
         app.clear(app.content.game.sky_color)
         batch.begin(app.screen)

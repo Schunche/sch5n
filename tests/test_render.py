@@ -195,7 +195,7 @@ def test_play_scene_input(app: App) -> None:
 
     play.on_event(press(glfw.KEY_TAB))
     assert play.inventory_open
-    play.on_event(click(play.layout.slot_rect(0).center))
+    play.on_event(click(play.inventory_layout.slot_rect(0).center))
     play.tick()
     assert inventory.cursor is not None
     assert inventory[0] is None
@@ -422,18 +422,20 @@ def test_gui_size_applies_when_returning_to_game(app: App) -> None:
     settings.on_event(press(glfw.KEY_ESCAPE))
     assert app.pending_scene is play
     play.on_enter()
-    assert play.layout.slot_size == pytest.approx(app.settings.gui_size * 1.5)
+    assert play.inventory_layout.slot_size == pytest.approx(
+        app.settings.gui_size * 1.5
+    )
     app.update_settings(gui_size=Settings().gui_size)
 
 
 def test_main_menu_runs_the_world(app: App) -> None:
     """The main menu shows a live world that keeps running."""
     menu = MainMenu(app)
-    start = (menu.world.camera.x, menu.world.camera.y)
+    start = menu.world.camera.center
     for _ in range(WARMUP_TICKS):
         menu.tick()
     assert menu.world.game.ticks == WARMUP_TICKS
-    assert (menu.world.camera.x, menu.world.camera.y) != start
+    assert menu.world.camera.center != start
     assert draw(app, menu).std() > MIN_BACKGROUND_STD
 
     # It keeps running behind the settings.
@@ -610,3 +612,38 @@ def test_open_to_lan_and_join(app: App) -> None:
     assert menu.notice == "The host left the game"
     assert draw(app, menu).any()
     app.switch(menu)
+
+
+def test_resizing_keeps_the_view_and_the_layout(app: App) -> None:
+    """A resized window keeps the view and lays out every screen again.
+
+    Like maximizing: the player stays in the middle, and screens hidden
+    behind a menu are laid out again when they return.
+    """
+    play = PlayScene.singleplayer(app)
+    for _ in range(WARMUP_TICKS):
+        play.tick()
+    settings = SettingsScene(app, back=play, in_game=True)
+    center = play.camera.center
+    original = app.screen
+    try:
+        # The window is maximized while the settings are open.
+        app.screen = (original[0] + 320, original[1] + 180)
+        settings.update_layout()
+        footer = settings.buttons
+        middle = (footer[0].rect.x + footer[-1].rect.right) / 2
+        assert middle == pytest.approx(app.screen[0] / 2)
+
+        # Back in the game: same view center, HUD in the new corner.
+        play.update_layout()
+        assert play.camera.view(app.screen).center == pytest.approx(center)
+        pad = app.ui.outer_padding
+        assert play.buttons[0].rect.right == app.screen[0] - pad
+        assert play.buttons[0].rect.bottom == app.screen[1] - pad
+        play.tick()
+        moved = math.dist(play.camera.center, center)
+        assert moved < 1
+    finally:
+        app.screen = original
+        play.update_layout()
+        play.leave()

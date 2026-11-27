@@ -26,6 +26,22 @@ class Scene:
     def __init__(self, app: App) -> None:
         """Create the scene."""
         self.app = app
+        self._layout_size: tuple[int, int] | None = None
+        """Window size `layout` last ran for."""
+
+    def layout(self) -> None:
+        """Place everything that depends on the window size."""
+
+    def update_layout(self) -> None:
+        """Run `layout` if the window size changed since it last ran.
+
+        The app calls this before the scene handles input or draws, so a
+        scene that was hidden behind another while the window changed
+        size is laid out again when it comes back.
+        """
+        if self._layout_size != self.app.screen:
+            self._layout_size = self.app.screen
+            self.layout()
 
     def on_enter(self) -> None:
         """Prepare for becoming the active scene."""

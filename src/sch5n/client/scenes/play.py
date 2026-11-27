@@ -23,7 +23,6 @@ from sch5n.client.ui import Align, InventoryLayout, button_at, hit_button
 from sch5n.client.window import (
     KeyEvent,
     MouseButtonEvent,
-    ResizeEvent,
 )
 from sch5n.client.world_view import WorldRenderer, load_world
 from sch5n.game.inventory import HOTBAR_SIZE
@@ -84,9 +83,9 @@ class PlayScene(Scene):
         self._left = False
         player = self.world.player
         if player is not None:
-            self.camera.center_on(player.body.center, app.screen)
+            self.camera.center_on(player.body.center)
         self._build_hud()
-        self._place_layout()
+        self.update_layout()
         app.at_exit(self.leave)
 
     @classmethod
@@ -183,16 +182,17 @@ class PlayScene(Scene):
         app = self.app
         inventory = app.content.game.inventory
         self.hud = Hud(app.assets, app.text, app.ui, app.settings.gui_size)
-        self.layout = InventoryLayout.create(
+        self.inventory_layout = InventoryLayout.create(
             inventory.columns, inventory.size, app.settings.gui_size, app.ui
         )
 
     def on_enter(self) -> None:
         """Pick up settings changed while away, like the GUI size."""
         self._build_hud()
-        self._place_layout()
+        self.layout()
 
-    def _place_layout(self) -> None:
+    def layout(self) -> None:
+        """Place the settings button for the window size."""
         w, h = self.app.screen
         pad = self.app.ui.outer_padding
         self.buttons = [
@@ -206,7 +206,7 @@ class PlayScene(Scene):
         ]
 
     def _over_gui(self, pos: tuple[float, float]) -> bool:
-        if self.layout.bounds(
+        if self.inventory_layout.bounds(
             hotbar_only=not self.inventory_open
         ).contains_point(*pos):
             return True
@@ -245,7 +245,7 @@ class PlayScene(Scene):
 
         """
         inventory = self.session.inventory
-        slot = self.layout.slot_at(
+        slot = self.inventory_layout.slot_at(
             event.pos, hotbar_only=not self.inventory_open
         )
         if slot is None:
@@ -271,9 +271,6 @@ class PlayScene(Scene):
     def on_event(self, event: Event) -> None:
         """Handle input."""
         match event:
-            case ResizeEvent():
-                self._place_layout()
-                return
             case KeyEvent(key=glfw.KEY_ESCAPE) if event.pressed:
                 if self.inventory_open:
                     self._toggle_inventory()
@@ -294,7 +291,7 @@ class PlayScene(Scene):
         app = self.app
         window = app.window
         mouse = window.mouse_pos
-        world_x, world_y = self.camera.screen_to_world(mouse)
+        world_x, world_y = self.camera.screen_to_world(mouse, app.screen)
         target = (
             None
             if self._over_gui(mouse)
@@ -336,7 +333,6 @@ class PlayScene(Scene):
         if player is not None:
             self.camera.follow(
                 player.body.center,
-                app.screen,
                 app.content.game.camera.smoothing / app.tick_rate,
             )
 
@@ -370,7 +366,11 @@ class PlayScene(Scene):
         batch.begin(app.screen)
         mouse = app.window.mouse_pos
         self.hud.draw_inventory(
-            batch, self.layout, inventory, mouse, full=self.inventory_open
+            batch,
+            self.inventory_layout,
+            inventory,
+            mouse,
+            full=self.inventory_open,
         )
         if self.inventory_open:
             for button in self.buttons:
@@ -384,7 +384,9 @@ class PlayScene(Scene):
 
     def _draw_notice(self) -> None:
         app = self.app
-        layout = self.layout.bounds(hotbar_only=not self.inventory_open)
+        layout = self.inventory_layout.bounds(
+            hotbar_only=not self.inventory_open
+        )
         fade = min(1.0, self.notice_ticks / app.tick_rate)
         app.text.draw(
             app.batch,
