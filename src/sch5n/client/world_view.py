@@ -212,8 +212,10 @@ def place_cloud(
     width, height = screen
     scale = cloud_scale(cloud.depth)
     w, h = image.width * scale, image.height * scale
-    x = (cloud.x - camera_center[0] * cloud.depth) % (width + w) - w
-    horizon_on_screen = height / 2 + (horizon - camera_center[1]) * cloud.depth
+    x = (cloud.x - camera_center[0] * cloud.parallax) % (width + w) - w
+    horizon_on_screen = (
+        height / 2 + (horizon - camera_center[1]) * cloud.parallax
+    )
     lift = cloud.altitude * (0.4 + 0.6 * cloud.depth)
     y = horizon_on_screen - lift - h
     if y > height or y + h < 0:

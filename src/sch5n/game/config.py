@@ -121,6 +121,10 @@ class CloudConfig(_Model):
     """Height above the horizon in pixels, for the nearest clouds."""
     speed: float = 0.5
     """Pixels per tick of the nearest clouds at wind strength 1."""
+    parallax: float = 1.3
+    """How strongly depth separates the cloud layers. 1 moves each layer
+    with its depth; higher values make distant clouds follow the camera
+    and the wind less, so the layers drift apart more."""
 
 
 class WindConfig(_Model):

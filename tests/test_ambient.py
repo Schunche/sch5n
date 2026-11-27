@@ -123,7 +123,14 @@ def make_cloud(depth: float, altitude: float = 100.0) -> Cloud:
         Cloud: The cloud.
 
     """
-    return Cloud(x=500, altitude=altitude, depth=depth, speed=0, size=0.5)
+    return Cloud(
+        x=500,
+        altitude=altitude,
+        depth=depth,
+        parallax=depth,
+        speed=0,
+        size=0.5,
+    )
 
 
 IMAGE = Region(0, 0, 1, 1, 40, 12)
@@ -167,5 +174,29 @@ def test_far_clouds_are_smaller_fainter_and_lower() -> None:
 def test_cloud_image_follows_size(size: float, index: int) -> None:
     """Small clouds use the small images."""
     images = [Region(0, 0, 1, 1, w, w) for w in (8, 20, 110)]
-    cloud = Cloud(x=0, altitude=0, depth=0.5, speed=0, size=size)
+    cloud = Cloud(x=0, altitude=0, depth=0.5, parallax=0.5, speed=0, size=size)
     assert cloud_image(images, cloud) is images[index]
+
+
+def test_parallax_separates_layers(content: Content) -> None:
+    """Distant clouds follow the camera less than their depth alone."""
+    ambience = Ambience(content.game, np.random.default_rng(8))
+    strength = content.game.clouds.parallax
+    for cloud in ambience.clouds:
+        assert cloud.parallax == pytest.approx(cloud.depth**strength)
+        assert cloud.parallax < cloud.depth
+
+    camera_moves = 100.0
+    shifts = []
+    for parallax in (0.1, 0.8):
+        cloud = Cloud(
+            x=500, altitude=100, depth=0.5, parallax=parallax, speed=0, size=0
+        )
+        before = place_cloud(cloud, IMAGE, (640.0, 0.0), 0.0, SCREEN)
+        after = place_cloud(
+            cloud, IMAGE, (640.0 + camera_moves, 0.0), 0.0, SCREEN
+        )
+        assert before is not None
+        assert after is not None
+        shifts.append(before[0][0] - after[0][0])
+    assert shifts == [pytest.approx(10, abs=1), pytest.approx(80, abs=1)]

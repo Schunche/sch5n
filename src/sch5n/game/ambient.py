@@ -52,7 +52,9 @@ class Cloud:
     x: float
     altitude: float
     depth: float
-    """Parallax factor in (0, 1): smaller is further away."""
+    """Distance in (0, 1): smaller is further away."""
+    parallax: float
+    """How much the cloud moves with the camera, in (0, 1)."""
     speed: float
     """Pixels per tick at wind strength 1."""
     size: float
@@ -139,12 +141,16 @@ class Ambience:
         for _ in range(config.count):
             depth = float(rng.uniform(0.2, 0.9))
             nearness = (depth - 0.2) / 0.7
+            parallax = depth**config.parallax
             clouds.append(
                 Cloud(
                     x=float(rng.random() * 99999),
                     altitude=float(rng.uniform(low, high)),
                     depth=depth,
-                    speed=config.speed * depth * float(rng.uniform(0.7, 1.3)),
+                    parallax=parallax,
+                    speed=config.speed
+                    * parallax
+                    * float(rng.uniform(0.7, 1.3)),
                     size=float(
                         np.clip(
                             nearness + rng.uniform(-SIZE_JITTER, SIZE_JITTER),
