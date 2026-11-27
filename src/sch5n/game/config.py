@@ -364,9 +364,12 @@ class ToolUseConfig(_Model):
     """Texture directory with the front arm poses."""
     rig: str
     """JSON file with shoulder and hand positions, see `Rig`."""
-    swing: tuple[float, float] = (-120.0, 60.0)
-    """Direction of the item at the start and end of a swing, in degrees,
+    swing: tuple[float, float] = (-100.0, 55.0)
+    """Direction of the arm at the start and end of a swing, in degrees,
     clockwise from straight forward."""
+    wrist: tuple[float, float] = (-90.0, -15.0)
+    """Angle of the item to the arm at the start and end of a swing: cocked
+    back across the fist, then snapping through to strike."""
     grip: tuple[float, float] = (0.15, 0.85)
     """Where the hand holds an item image, as a fraction of its size. Item
     images point up and forward (45 degrees) from the grip."""

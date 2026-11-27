@@ -142,16 +142,39 @@ class HeldItemPose:
     item_transform: Transform
 
 
+def _eased(progress: float) -> float:
+    """Ease a swing: fast at first, slowing down at the end.
+
+    Returns:
+        float: Eased progress in [0, 1].
+
+    """
+    return 1 - (1 - min(max(progress, 0.0), 1.0)) ** 2
+
+
 def swing_direction(tool_use: ToolUseConfig, progress: float) -> float:
-    """Direction of the swung item, fast at first and slowing down.
+    """Direction of the swinging arm.
 
     Returns:
         float: Degrees clockwise from straight forward.
 
     """
     start, end = tool_use.swing
-    eased = 1 - (1 - min(max(progress, 0.0), 1.0)) ** 2
-    return start + (end - start) * eased
+    return start + (end - start) * _eased(progress)
+
+
+def item_direction(tool_use: ToolUseConfig, progress: float) -> float:
+    """Direction the swung item points, from the grip to its head.
+
+    The item is held across the fist, at the wrist angle to the arm.
+
+    Returns:
+        float: Degrees clockwise from straight forward.
+
+    """
+    start, end = tool_use.wrist
+    wrist = start + (end - start) * _eased(progress)
+    return swing_direction(tool_use, progress) + wrist
 
 
 @dataclass(frozen=True, slots=True)
@@ -186,7 +209,7 @@ def held_item_pose(
     hand_x, hand_y = rig.arm.hands[arm]
     grip_x, grip_y = tool_use.grip
     # Item images point up and forward (-45 degrees) from the grip.
-    rotation = math.radians(angle + 45)
+    rotation = math.radians(item_direction(tool_use, moment.progress) + 45)
     if moment.facing_left:
         # Everything is mirrored around the sprite's middle.
         dx = -dx

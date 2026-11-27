@@ -217,10 +217,27 @@ def test_facing_left_mirrors_the_swing(rig: Rig, progress: float) -> None:
     assert (rx + gx * rw, ry + gy * rh) == pytest.approx(hand)
 
 
-def test_item_points_where_the_swing_goes(rig: Rig) -> None:
-    """At the end of the swing the item points forward and down."""
+def item_pointing(rig: Rig, progress: float) -> float:
+    """Direction the drawn item points, facing right.
+
+    Returns:
+        float: Degrees clockwise from straight forward.
+
+    """
     tool_use = load_animations(path.DATA_DIR).tool_use["player"]
-    end = held_item_pose(rig, tool_use, moment(1.0, facing_left=False))
-    # Item images point at -45 degrees; rotated, they point at the swing end.
-    pointing = math.degrees(end.item_transform.rotation) - 45
-    assert pointing == pytest.approx(tool_use.swing[1])
+    pose = held_item_pose(rig, tool_use, moment(progress, facing_left=False))
+    # Item images point at -45 degrees before rotating.
+    return math.degrees(pose.item_transform.rotation) - 45
+
+
+def test_tool_is_held_across_the_fist(rig: Rig) -> None:
+    """The tool starts cocked behind the head and strikes forward, down."""
+    tool_use = load_animations(path.DATA_DIR).tool_use["player"]
+    start = item_pointing(rig, 0.0)
+    end = item_pointing(rig, 1.0)
+    backwards, straight_down = -180, 90
+    assert start <= backwards + 20  # Pointing back, behind the head.
+    assert 0 < end < straight_down  # Forward and down.
+    # Held across the fist: never in line with the arm while winding up.
+    arm = swing_direction(tool_use, 0.0)
+    assert abs(start - arm) == pytest.approx(abs(tool_use.wrist[0]))

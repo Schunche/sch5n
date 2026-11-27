@@ -17,7 +17,8 @@
             "armless": "mob/player/armless",
             "arm": "mob/player/use_arm",
             "rig": "mob/player/rig.json",
-            "swing": [-120, 60],
+            "swing": [-100, 55],
+            "wrist": [-90, -15],
             "grip": [0.15, 0.85]
         }
     },
