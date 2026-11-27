@@ -5,12 +5,20 @@ The mirror has the same shape as `Game` where drawing needs it
 (`tilemap`, `players`, `floating_items`, `ambience`, `horizon`), so the
 world renderer draws either. Leaves, clouds and wind streaks are cosmetic
 and simulated here, blown by the server's wind.
+
+The client's own player is predicted: every input moves it right away,
+with the same code the server runs. Each snapshot says which inputs the
+server has applied; the player is put where the server has it and the
+newer inputs are replayed on top. As long as nothing unforeseen happens,
+like another player building a wall in its way, the result is exactly
+where the server will put it, so lag delays only what others do.
 """
 
 from __future__ import annotations
 
 import socket
 import threading
+from collections import deque
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
@@ -20,6 +28,7 @@ from sch5n.game.ambient import Ambience
 from sch5n.game.floating_item import FloatingItem
 from sch5n.game.inventory import Inventory, ItemStack
 from sch5n.game.player import Action, Player, Swing
+from sch5n.game.session import swing_tool
 from sch5n.net.connection import SocketConnection
 from sch5n.net.protocol import (
     DEFAULT_PORT,
@@ -185,6 +194,13 @@ class ClientWorld:
         self.floating_items: list[FloatingItem] = []
         self.inventory = Inventory(self.config.inventory.size)
         self.ticks = 0
+        self.prediction = True
+        """Move the own player right away instead of waiting for the
+        server."""
+        self.pending: deque[tuple[int, TickInput]] = deque()
+        """Inputs sent but not applied by the server yet, by `seq`."""
+        self.corrections = 0
+        """Times the prediction differed from the server, for debugging."""
 
     @property
     def player(self) -> Player | None:
@@ -206,12 +222,14 @@ class ClientWorld:
         body.x, body.y, body.vx, body.vy = state.x, state.y, state.vx, state.vy
         player.name = state.name
         player.facing_left = state.facing_left
-        action = Action(state.action)
-        if action != player.action:
-            player.action = action
-            player.action_age = 0
-        else:
-            player.action_age += 1
+        player.action = Action(state.action)
+        player.action_age = state.action_age
+        player.jumps = state.jumps
+        player.air_time = state.air_time
+        player.jump_hold = state.jump_hold
+        player.jump_speed = state.jump_speed
+        player.wall_slide = state.wall_slide
+        player.use_cooldown = state.use_cooldown
         if state.swing is None:
             player.swing = None
         else:
@@ -229,6 +247,7 @@ class ClientWorld:
             ProtocolError: The snapshot names unknown blocks or items.
 
         """
+        predicted = self._predicted_position()
         try:
             players = {
                 state.id: self._player(state) for state in snapshot.players
@@ -254,6 +273,46 @@ class ClientWorld:
         self.tilemap.damage = {(x, y): left for x, y, left in snapshot.damage}
         self.ambience.wind.strength = snapshot.wind
         self.ticks = snapshot.tick
+        self._reconcile(snapshot.ack, predicted)
+
+    def _predicted_position(self) -> tuple[float, float] | None:
+        player = self.player
+        if player is None or not self.prediction:
+            return None
+        return (player.body.x, player.body.y)
+
+    def _reconcile(
+        self, ack: int | None, predicted: tuple[float, float] | None
+    ) -> None:
+        """Replay the inputs the server has not applied yet."""
+        pending = self.pending
+        while pending and ack is not None and pending[0][0] <= ack:
+            pending.popleft()
+        player = self.player
+        if player is None or not self.prediction:
+            return
+        for _, inp in pending:
+            self._step_local(player, inp)
+        if predicted is not None and predicted != (
+            player.body.x,
+            player.body.y,
+        ):
+            self.corrections += 1
+
+    def _step_local(self, player: Player, inp: TickInput) -> None:
+        """Move the own player like the server's `Game.step_player`."""
+        if inp.jump:
+            player.jump()
+        swing_tool(player, inp, self.config.tile_size)
+        player.tick(self.tilemap, inp.move_x, jump_held=inp.jump_held)
+
+    def predict(self, seq: int, inp: TickInput) -> None:
+        """Apply an input to the own player now, before the server does."""
+        player = self.player
+        if player is None or not self.prediction:
+            return
+        self.pending.append((seq, inp))
+        self._step_local(player, inp)
 
     def apply_inventory(self, state: InventoryState) -> None:
         """Take over the server's view of this player's inventory.
@@ -320,6 +379,7 @@ class ClientSession:
         self.error: str | None = None
         """Why the session closed, for the player."""
         self.world: ClientWorld | None = None
+        self._seq = 0
         connection.send(
             Hello(
                 protocol=PROTOCOL_VERSION,
@@ -368,8 +428,12 @@ class ClientSession:
         """Tell the server what the player does this tick."""
         if self.state is not SessionState.PLAYING:
             return
+        self._seq += 1
+        if self.world is not None:
+            self.world.predict(self._seq, inp)
         self.connection.send(
             InputMessage(
+                seq=self._seq,
                 move_x=inp.move_x,
                 jump=inp.jump,
                 jump_held=inp.jump_held,

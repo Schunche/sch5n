@@ -40,6 +40,17 @@ tick each client sends its input and the server sends back what moved.
 Leaves, clouds and wind streaks are drawn by each client, blown by the
 server's wind.
 
+Clients predict their own player, so lag doesn't make walking, jumping or
+swinging feel slow. Each input moves the player right away with the same
+code the server runs, and is numbered. The server applies each player's
+inputs one per tick, in order, and every snapshot says which input it has
+reached. The client then puts its player where the server has it and
+replays the inputs still on their way. Normally that lands exactly where
+the player already was; when it doesn't, like when another player built a
+wall in the way, the server's version wins. Breaking blocks, items and
+other players still arrive with the lag. F3 shows how many inputs are on
+their way and how often a prediction was corrected.
+
 - **Singleplayer** runs a server inside the game, connected in memory.
 - **Open to LAN** (Esc in a singleplayer game) makes that server accept
   players from the network and announce itself there (mDNS / zeroconf). The

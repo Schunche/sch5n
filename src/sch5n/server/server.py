@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Schunche
 """The authoritative game server.
 
-The server owns the world. Every tick it reads the input of each
+The server owns the world. Every tick it applies an input of each
 connected player, advances the game and sends every client a snapshot.
 Clients connect in memory (the player hosting a single player game) or
 over TCP. It imports nothing that needs a window, so it runs headless.
@@ -9,6 +9,7 @@ over TCP. It imports nothing that needs a window, so it runs headless.
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass, field, replace
 from itertools import starmap
 from typing import TYPE_CHECKING
@@ -55,6 +56,10 @@ HELLO_TIMEOUT_TICKS = 600
 """Clients that do not say hello within this many ticks are dropped."""
 MAX_MESSAGES_PER_TICK = 64
 """Clients sending more than this in one tick are flooding."""
+INPUT_BACKLOG = 4
+"""With more inputs than this waiting, two are used per tick."""
+MAX_QUEUED_INPUTS = 120
+"""Older inputs beyond this are dropped; the client gets corrected."""
 SERVER_SETUP = GameSetup(host_player=False)
 
 
@@ -67,9 +72,12 @@ class _Client:
     """Server tick of the connection."""
     player_id: int | None = None
     name: str = ""
-    input: InputMessage = field(default_factory=InputMessage)
-    jump: bool = False
-    """A jump was asked for since the last tick."""
+    inputs: deque[InputMessage] = field(default_factory=deque)
+    """Inputs not applied yet, oldest first."""
+    received: int = -1
+    """`seq` of the newest input received."""
+    ack: int | None = None
+    """`seq` of the newest input applied."""
     sent_inventory: InventoryState | None = None
     ended: bool = False
     """The client left, or the server sent it away."""
@@ -127,11 +135,18 @@ def player_state(player_id: int, player: Player) -> PlayerState:
         vy=body.vy,
         facing_left=player.facing_left,
         action=player.action.value,
+        action_age=player.action_age,
         swing=None
         if swing is None
         else SwingState(
             item=swing.item.name, age=swing.age, duration=swing.duration
         ),
+        jumps=player.jumps,
+        air_time=player.air_time,
+        jump_hold=player.jump_hold,
+        jump_speed=player.jump_speed,
+        wall_slide=player.wall_slide,
+        use_cooldown=player.use_cooldown,
     )
 
 
@@ -282,8 +297,11 @@ class Server:
             case Hello() if not joined:
                 self._hello(client, message)
             case InputMessage() if joined:
-                client.input = message
-                client.jump = client.jump or message.jump
+                if message.seq <= client.received:
+                    _kick(client, "Inputs out of order")
+                    return
+                client.received = message.seq
+                client.inputs.append(message)
             case InventoryMessage() if joined:
                 self._inventory(client, message)
             case Goodbye():
@@ -322,22 +340,35 @@ class Server:
                 )
         self.clients = remaining
 
-    def _inputs(self) -> dict[int, TickInput]:
-        inputs: dict[int, TickInput] = {}
+    def _step_players(self) -> None:
+        """Step each player once per input its client sent.
+
+        Inputs queue up, one is used per tick: the server then simulates a
+        player exactly like its client predicts it. After a lag spike two
+        are used per tick until the backlog is gone. A player whose input
+        did not arrive in time waits for it.
+        """
         for client in self.clients:
             if client.player_id is None:
                 continue
-            message = client.input
-            inputs[client.player_id] = TickInput(
-                move_x=message.move_x,
-                jump=client.jump,
-                jump_held=message.jump_held,
-                use=message.use,
-                place=message.place,
-                target=message.target,
-            )
-            client.jump = False
-        return inputs
+            queue = client.inputs
+            while len(queue) > MAX_QUEUED_INPUTS:
+                queue.popleft()
+            count = 2 if len(queue) > INPUT_BACKLOG else 1
+            for _ in range(min(count, len(queue))):
+                message = queue.popleft()
+                self.game.step_player(
+                    client.player_id,
+                    TickInput(
+                        move_x=message.move_x,
+                        jump=message.jump,
+                        jump_held=message.jump_held,
+                        use=message.use,
+                        place=message.place,
+                        target=message.target,
+                    ),
+                )
+                client.ack = message.seq
 
     def _snapshot(self) -> Snapshot:
         game = self.game
@@ -368,13 +399,16 @@ class Server:
             self._receive(client)
         self._drop_closed()
 
-        self.game.tick(self._inputs())
+        self._step_players()
+        self.game.tick_world()
 
         snapshot = self._snapshot()
         for client in self.clients:
             if client.player_id is None:
                 continue
-            client.connection.send(snapshot)
+            client.connection.send(
+                snapshot.model_copy(update={"ack": client.ack})
+            )
             state = inventory_state(
                 self.game.players[client.player_id].inventory
             )

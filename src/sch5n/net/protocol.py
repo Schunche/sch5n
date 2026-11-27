@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from sch5n.game.content import Content
     from sch5n.world.tilemap import TileMap
 
-PROTOCOL_VERSION = 1
+PROTOCOL_VERSION = 2
 """Raised whenever messages change incompatibly."""
 DEFAULT_PORT = 47315
 MAX_NAME_LENGTH = 24
@@ -63,6 +63,8 @@ class InputMessage(_Message):
     """What a player does this tick. See `TickInput`."""
 
     type: Literal["input"] = "input"
+    seq: int = Field(default=0, ge=0)
+    """Counts up by one per input. Snapshots acknowledge it."""
     move_x: int = Field(default=0, ge=-1, le=1)
     jump: bool = False
     jump_held: bool = False
@@ -148,7 +150,14 @@ class PlayerState(_Message):
     vy: float
     facing_left: bool
     action: str
+    action_age: int = 0
     swing: SwingState | None = None
+    jumps: int = 0
+    air_time: int = 0
+    jump_hold: int = 0
+    jump_speed: float = 0.0
+    wall_slide: bool = False
+    use_cooldown: int = 0
 
 
 class ItemState(_Message):
@@ -165,6 +174,9 @@ class Snapshot(_Message):
 
     type: Literal["snapshot"] = "snapshot"
     tick: int
+    ack: int | None = None
+    """`seq` of the receiver's last input the server applied, `None`
+    before the first. The receiver replays its later inputs on top."""
     wind: float
     players: list[PlayerState]
     items: list[ItemState]

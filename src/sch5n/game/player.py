@@ -78,7 +78,8 @@ class Player:
         """Ticks the current jump may still be held to rise higher."""
         self.swing: Swing | None = None
         """The item swing in progress, if any."""
-        self._jump_speed = self.tuning.jump_velocity
+        self.jump_speed = self.tuning.jump_velocity
+        """Upward speed of the current jump, kept while it is held."""
 
     def _set_action(self, action: Action) -> None:
         if action != self.action:
@@ -153,7 +154,7 @@ class Player:
             body.vy = 0.0
             self.jump_hold = 0
         if self.jump_hold > 0 and jump_held:
-            body.vy = min(body.vy, -self._jump_speed)
+            body.vy = min(body.vy, -self.jump_speed)
             self.jump_hold -= 1
         else:
             self.jump_hold = 0
@@ -189,14 +190,14 @@ class Player:
         if self.wall_slide:
             push, lift = tuning.wall_jump_velocity
             self.body.vx = push if self.facing_left else -push
-            self._jump_speed = lift
+            self.jump_speed = lift
             self.jumps = max(0, self.jumps - 1)
         elif self.jumps:
-            self._jump_speed = tuning.jump_velocity
+            self.jump_speed = tuning.jump_velocity
             self.jumps -= 1
         else:
             return False
-        self.body.vy = -self._jump_speed
+        self.body.vy = -self.jump_speed
         self.jump_hold = tuning.jump_hold_ticks
         self.air_time = tuning.airborne_after_ticks + 1
         return True

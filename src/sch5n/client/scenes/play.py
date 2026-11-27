@@ -420,6 +420,11 @@ class PlayScene(Scene):
             ),
             f"wind {world.ambience.wind.strength:+.2f}",
             f"{world.server_name}: {len(world.players)} players",
+            (
+                f"{len(world.pending)} inputs ahead of the server "
+                f"(~{len(world.pending) * 1000 // app.tick_rate} ms), "
+                f"{world.corrections} corrections"
+            ),
         ]
         if self.lan_address is not None:
             lines.append(f"open to LAN at {self.lan_address}")

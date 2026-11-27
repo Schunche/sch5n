@@ -66,6 +66,26 @@ class GameSetup:
 DEFAULT_SETUP = GameSetup()
 
 
+def swing_tool(player: Player, inp: TickInput, tile_size: int) -> bool:
+    """Swing the held tool at the target if the input asks and it is ready.
+
+    Tools swing whether or not they hit anything, like in the air. Shared
+    by the game and by clients predicting their own player.
+
+    Returns:
+        bool: Whether a swing started.
+
+    """
+    held = player.inventory.held
+    if not inp.use or inp.target is None or held is None:
+        return False
+    if not held.item.is_tool or player.use_cooldown < held.item.spec.use_time:
+        return False
+    player.start_swing(held.item, (inp.target[0] + 0.5) * tile_size)
+    player.use_cooldown = 0
+    return True
+
+
 class Game:
     """Owns the simulation state of one play session.
 
@@ -231,10 +251,7 @@ class Game:
         x, y = inp.target
         target_x = (x + 0.5) * self.config.tile_size
 
-        if inp.use and held.item.is_tool:
-            # Tools swing whether or not they hit anything, like in the air.
-            player.start_swing(held.item, target_x)
-            player.use_cooldown = 0
+        if swing_tool(player, inp, self.config.tile_size):
             hit = hit_tile(self.tilemap, x, y, held.item)
             if hit.result is HitResult.WRONG_TOOL and self.ticks % 10 == 0:
                 LOGGER.debug("Another tool is needed for %s", hit.block)
@@ -299,6 +316,24 @@ class Game:
                 return True
         return False
 
+    def step_player(self, player_id: int, inp: TickInput) -> None:
+        """Advance one player by one input: jump, use items, move.
+
+        Servers call this once for every input a client sends, so the
+        client can predict its player exactly. See `tick_world`.
+        """
+        player = self.players[player_id]
+        if inp.jump:
+            player.jump()
+        self._use_held_item(player, inp)
+        player.tick(self.tilemap, inp.move_x, jump_held=inp.jump_held)
+
+    def tick_world(self, view: Rect | None = None) -> None:
+        """Advance everything but the players by one tick."""
+        self.ambience.tick(self.tilemap, view, self.config.tile_size)
+        self._tick_floating_items()
+        self.ticks += 1
+
     def tick(self, inputs: TickInput | Mapping[int, TickInput]) -> None:
         """Advance the simulation by one tick.
 
@@ -314,14 +349,6 @@ class Game:
             view = None
 
         idle = TickInput()
-        for player_id, player in self.players.items():
-            inp = inputs.get(player_id, idle)
-            if inp.jump:
-                player.jump()
-            self._use_held_item(player, inp)
-        self.ambience.tick(self.tilemap, view, self.config.tile_size)
-        for player_id, player in self.players.items():
-            inp = inputs.get(player_id, idle)
-            player.tick(self.tilemap, inp.move_x, jump_held=inp.jump_held)
-        self._tick_floating_items()
-        self.ticks += 1
+        for player_id in list(self.players):
+            self.step_player(player_id, inputs.get(player_id, idle))
+        self.tick_world(view)

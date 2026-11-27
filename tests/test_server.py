@@ -8,6 +8,7 @@ import multiprocessing
 import socket
 import sys
 import time
+from collections import deque
 from typing import TYPE_CHECKING
 
 import pytest
@@ -22,7 +23,7 @@ from sch5n.net.client import (
     SessionState,
     parse_address,
 )
-from sch5n.net.connection import HEADER_SIZE, local_pair
+from sch5n.net.connection import HEADER_SIZE, Connection, local_pair
 from sch5n.net.discovery import Announcer, Browser, lan_addresses
 from sch5n.net.protocol import (
     DEFAULT_PORT,
@@ -47,8 +48,10 @@ from tests.test_session import flat_world
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from pydantic import BaseModel
+
     from sch5n.game.content import Content
-    from sch5n.net.connection import Connection
+    from sch5n.game.player import Player
     from sch5n.net.protocol import ClientMessage, ServerMessage
 
 SETUP = GameSetup(seed=1, spawn=(0, 0))
@@ -585,3 +588,184 @@ def test_lan_discovery() -> None:
     finally:
         announcer.close()
         browser.close()
+
+
+# Client side prediction.
+
+LAG_TICKS = 10
+"""Ticks each way: a round trip of a third of a second."""
+
+
+class Delayed[Out: BaseModel, In: BaseModel](Connection[Out, In]):
+    """A connection that holds messages back, like a slow network.
+
+    Time is counted in calls to `receive`, which clients make once per
+    tick.
+    """
+
+    def __init__(self, inner: Connection[Out, In], ticks: int) -> None:
+        """Delay `inner` by `ticks` in each direction."""
+        super().__init__()
+        self.inner = inner
+        self.ticks = ticks
+        self.now = 0
+        self.outgoing: deque[tuple[int, Out]] = deque()
+        self.incoming: deque[tuple[int, In]] = deque()
+
+    def send(self, message: Out) -> None:
+        """Send `message` after the delay."""
+        self.outgoing.append((self.now + self.ticks, message))
+
+    def receive(self) -> list[In]:
+        """Advance time; deliver what is due both ways.
+
+        Returns:
+            list[In]: Messages whose delay is over.
+
+        """
+        self.now += 1
+        while self.outgoing and self.outgoing[0][0] <= self.now:
+            self.inner.send(self.outgoing.popleft()[1])
+        for message in self.inner.receive():
+            self.incoming.append((self.now + self.ticks, message))
+        due = []
+        while self.incoming and self.incoming[0][0] <= self.now:
+            due.append(self.incoming.popleft()[1])
+        self.closed = self.inner.closed and not self.incoming
+        return due
+
+
+def lagged(server: Server, content: Content) -> ClientSession:
+    """Join over a connection with `LAG_TICKS` of delay each way.
+
+    Returns:
+        ClientSession: The joined session.
+
+    """
+    connection = Delayed(server.connect_local(), LAG_TICKS)
+    session = ClientSession(connection, content, "far", GameMode.SURVIVAL)
+    connection.receive()
+    for _ in range(3 * LAG_TICKS):
+        step(server, [session])
+    assert session.world is not None
+    assert session.world.player is not None
+    return session
+
+
+def play(
+    server: Server, session: ClientSession, ticks: int, inp: TickInput
+) -> None:
+    """Send the same input for `ticks`, the way the game does."""
+    for _ in range(ticks):
+        session.send_input(inp)
+        step(server, [session])
+
+
+def own_player(session: ClientSession) -> Player:
+    """Get the session's own player.
+
+    Returns:
+        Player: The player.
+
+    """
+    assert session.world is not None
+    player = session.world.player
+    assert player is not None
+    return player
+
+
+def test_own_player_moves_right_away(server: Server, content: Content) -> None:
+    """With lag, the own player moves at once; the server catches up."""
+    session = lagged(server, content)
+    world = session.world
+    assert world is not None
+    player = own_player(session)
+    on_server = server.game.players[world.local_id]
+    x0, y0 = player.body.x, player.body.y
+
+    play(server, session, 1, TickInput(move_x=1, jump=True, jump_held=True))
+    assert player.body.x > x0
+    assert player.body.y < y0
+    assert on_server.body.x == x0  # The input is still on its way.
+
+    play(server, session, 60, TickInput(move_x=1))
+    play(server, session, LAG_TICKS, TickInput())
+    # Every input sent is in flight for a round trip.
+    assert len(world.pending) >= 2 * LAG_TICKS - 1
+    step(server, [session], 3 * LAG_TICKS)
+    assert not world.pending
+    assert (player.body.x, player.body.y) == (
+        on_server.body.x,
+        on_server.body.y,
+    )
+    assert world.corrections == 0
+
+
+def test_prediction_is_corrected(server: Server, content: Content) -> None:
+    """When the server disagrees, its word counts and the client follows."""
+    session = lagged(server, content)
+    world = session.world
+    assert world is not None
+    player = own_player(session)
+    on_server = server.game.players[world.local_id]
+
+    play(server, session, 2 * LAG_TICKS, TickInput(move_x=1))
+    # A wall appears just ahead of where the server has the player. The
+    # client, ahead of the server, walks into it before it learns of it.
+    stone = content.blocks.id_of("stone")
+    wall_x = int((on_server.body.x + on_server.body.w + 33) // 32)
+    for y in range(SURFACE - 4, SURFACE):
+        server.game.tilemap.set(wall_x, y, stone)
+    play(server, session, 40, TickInput(move_x=1))
+    step(server, [session], 3 * LAG_TICKS)
+    assert player.body.x + player.body.w <= wall_x * 32
+    assert player.body.x == on_server.body.x
+    assert world.corrections > 0
+
+
+def test_without_prediction_the_player_waits(
+    server: Server, content: Content
+) -> None:
+    """Turning prediction off shows the lag: nothing moves at first."""
+    session = lagged(server, content)
+    assert session.world is not None
+    session.world.prediction = False
+    player = own_player(session)
+    x0 = player.body.x
+    play(server, session, LAG_TICKS, TickInput(move_x=1))
+    assert own_player(session).body.x == x0
+    play(server, session, 2 * LAG_TICKS + 2, TickInput(move_x=1))
+    assert own_player(session).body.x > x0
+    del player
+
+
+def test_server_uses_one_input_per_tick(
+    server: Server, content: Content
+) -> None:
+    """Inputs are applied one per tick, catching up after a burst."""
+    session = join(server, content)
+    assert session.world is not None
+    burst = 10
+    for _ in range(burst):
+        session.send_input(TickInput(move_x=1))
+    server.step()
+    queued = server.clients[0].inputs
+    assert len(queued) == burst - 2
+    while queued:
+        server.step()
+    session.poll()
+    assert session.world.pending == deque()
+
+
+def test_inputs_out_of_order_are_refused(server: Server) -> None:
+    """A client cannot send an input twice."""
+    connection = server.connect_local()
+    connection.send(
+        Hello(protocol=PROTOCOL_VERSION, content=server.fingerprint, name="x")
+    )
+    server.step()
+    connection.send(InputMessage(seq=5))
+    connection.send(InputMessage(seq=5))
+    server.step()
+    assert connection.receive()[-1].type == "bye"
+    assert connection.closed
