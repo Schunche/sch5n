@@ -68,12 +68,10 @@ class SkyRenderer:
         program = self.program
         program["u_resolution"].value = (float(width), float(height))
         program["u_scale"].value = height / max(screen[1], 1)
-        program["u_pixel"].value = float(config.pixel_size)
         program["u_horizon_y"].value = horizon_on_screen(
             camera, horizon, screen[1], config.parallax
         )
         program["u_height"].value = float(config.height)
-        program["u_bands"].value = float(config.bands)
         program["u_view_top"].value = camera.top_left(screen)[1]
         program["u_world_per_px"].value = 1 / camera.zoom
         program["u_surface"].value = horizon
@@ -81,6 +79,9 @@ class SkyRenderer:
         program["u_horizon"].value = _rgb(config.horizon)
         program["u_middle"].value = _rgb(config.middle)
         program["u_zenith"].value = _rgb(config.zenith)
+        program["u_sun"].value = config.sun_position
+        program["u_sun_size"].value = config.sun_size
+        program["u_sun_color"].value = _rgb(config.sun)
         program["u_deep"].value = _rgb(config.deep)
         self.vao.render(vertices=3)
 

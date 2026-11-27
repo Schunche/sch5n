@@ -161,19 +161,23 @@ class WindStreakConfig(_Model):
 class SkyConfig(_Model):
     """The sky behind the world. Sizes are screen pixels unless noted."""
 
-    horizon: Color = (166, 214, 240)
-    middle: Color = (31, 127, 191)
-    zenith: Color = (18, 56, 122)
-    deep: Color = (24, 20, 28)
+    horizon: Color = (184, 226, 246)
+    middle: Color = (74, 156, 224)
+    zenith: Color = (30, 82, 168)
+    sun: Color = (255, 244, 214)
+    """Color of the soft glow around the sun."""
+    sun_position: tuple[float, float] = (0.78, 0.72)
+    """Across the screen (0 left, 1 right) and up the sky (0 horizon,
+    1 zenith)."""
+    sun_size: float = 260.0
+    """Radius of the glow."""
+    deep: Color = (14, 18, 34)
     """Shown through holes deep underground."""
     height: float = 900.0
     """From the horizon to the zenith color."""
     parallax: float = 0.15
     """How much the sky moves with the camera, in (0, 1]."""
-    bands: int = 10
-    """Color steps from horizon to zenith, dithered in between."""
-    pixel_size: int = 4
-    underground: tuple[float, float] = (192.0, 960.0)
+    underground: tuple[float, float] = (640.0, 2400.0)
     """World pixels below the surface where the deep color starts and
     where it takes over."""
 

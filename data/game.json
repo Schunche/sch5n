@@ -3,15 +3,16 @@
     "tick_rate": 60,
     "tile_size": 32,
     "sky": {
-        "horizon": [166, 214, 240],
-        "middle": [31, 127, 191],
-        "zenith": [18, 56, 122],
-        "deep": [24, 20, 28],
+        "horizon": [184, 226, 246],
+        "middle": [74, 156, 224],
+        "zenith": [30, 82, 168],
+        "sun": [255, 244, 214],
+        "sun_position": [0.78, 0.72],
+        "sun_size": 260,
+        "deep": [14, 18, 34],
         "height": 900,
         "parallax": 0.15,
-        "bands": 10,
-        "pixel_size": 4,
-        "underground": [192, 960]
+        "underground": [640, 2400]
     },
     "physics": {
         "gravity": 0.4,

@@ -1,77 +1,63 @@
 #version 330 core
 
-// The sky behind the world: a gradient from the horizon up to the zenith,
-// drawn in big pixels and a few color steps blended by ordered dithering,
-// like pixel art. The gradient sits on the world's horizon with parallax.
-// Deep below the surface, what shows through holes fades to the
+// The sky behind the world: a smooth gradient from the horizon up to the
+// zenith with a soft sun glow, sitting on the world's horizon with
+// parallax. Deep below the surface, what shows through holes fades to the
 // underground color.
 
 uniform vec2 u_resolution;     // framebuffer size in pixels
 uniform float u_scale;         // framebuffer pixels per screen pixel
-uniform float u_pixel;         // size of one sky pixel, screen pixels
 uniform float u_horizon_y;     // screen y of the sky's horizon, from the top
 uniform float u_height;        // screen pixels from horizon to zenith
-uniform float u_bands;         // color steps from horizon to zenith
 uniform float u_view_top;      // world y at the top of the screen
 uniform float u_world_per_px;  // world pixels per screen pixel
 uniform float u_surface;       // world y of the surface
 uniform vec2 u_underground;    // world pixels below the surface: start, full
+uniform vec2 u_sun;            // screen position of the sun glow, 0-1
+uniform float u_sun_size;      // glow radius, screen pixels
 uniform vec3 u_horizon;
 uniform vec3 u_middle;
 uniform vec3 u_zenith;
+uniform vec3 u_sun_color;
 uniform vec3 u_deep;
 
 out vec4 f_color;
 
-// 4x4 Bayer matrix, as thresholds in [0, 1).
-float bayer(vec2 cell) {
-    int x = int(mod(cell.x, 4.0));
-    int y = int(mod(cell.y, 4.0));
-    int index = x + y * 4;
-    int values[16] = int[16](0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5);
-    return (float(values[index]) + 0.5) / 16.0;
-}
-
-// Quantize `t` in [0, 1] to `steps` solid bands. Only a strip at the top
-// of each band is dithered into the next, like hand made pixel art.
-const float EDGE = 0.4;  // Part of a band that is dithered.
-
-float dithered(float t, float steps, float threshold) {
-    float scaled = t * steps;
-    float base = floor(scaled);
-    float into_edge = (scaled - base - (1.0 - EDGE)) / EDGE;
-    return min(base + step(threshold, into_edge), steps) / steps;
+// Gentle noise against 8 bit banding: invisible, but smooths the steps.
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
 }
 
 vec3 sky_at(float t) {
-    // Horizon to middle over the first third, then on to the zenith.
-    return t < 0.35
-        ? mix(u_horizon, u_middle, t / 0.35)
-        : mix(u_middle, u_zenith, (t - 0.35) / 0.65);
+    // Bright near the horizon, then quickly into blue, deepest at the top.
+    vec3 low = mix(u_horizon, u_middle, smoothstep(0.0, 0.45, t));
+    return mix(low, u_zenith, smoothstep(0.3, 1.0, t));
 }
 
 void main() {
-    // Screen coordinates from the top left, snapped to sky pixels.
     vec2 screen = vec2(
         gl_FragCoord.x, u_resolution.y - gl_FragCoord.y
     ) / u_scale;
-    vec2 cell = floor(screen / u_pixel);
-    vec2 snapped = (cell + 0.5) * u_pixel;
-    float threshold = bayer(cell);
+    vec2 size = u_resolution / u_scale;
 
-    float up = clamp((u_horizon_y - snapped.y) / u_height, 0.0, 1.0);
-    // Ease out: the color changes faster near the horizon.
-    up = 1.0 - (1.0 - up) * (1.0 - up);
-    vec3 color = sky_at(dithered(up, u_bands, threshold));
+    float up = clamp((u_horizon_y - screen.y) / u_height, 0.0, 1.0);
+    vec3 color = sky_at(up);
 
-    float world_y = u_view_top + snapped.y * u_world_per_px;
-    float depth = clamp(
-        (world_y - u_surface - u_underground.x)
-            / (u_underground.y - u_underground.x),
-        0.0,
-        1.0
+    // A soft, wide glow around the sun that lightens the sky around it.
+    vec2 sun = vec2(u_sun.x * size.x, u_horizon_y - u_sun.y * u_height);
+    float dist = length(screen - sun) / u_sun_size;
+    float glow = exp(-dist * dist * 1.8) * 0.45 + exp(-dist * 7.0) * 0.4;
+    color += u_sun_color * glow * (1.0 - color);
+
+    // Deep underground, what shows through holes darkens: back through
+    // the sky's blues, so it stays rich instead of turning grey.
+    float world_y = u_view_top + screen.y * u_world_per_px;
+    float depth = smoothstep(
+        u_underground.x, u_underground.y, world_y - u_surface
     );
-    color = mix(color, u_deep, dithered(depth, u_bands * 0.5, threshold));
+    vec3 below = mix(sky_at(depth), u_deep, smoothstep(0.4, 1.0, depth));
+    color = mix(color, below, smoothstep(0.0, 0.15, depth));
 
+    color += (hash(gl_FragCoord.xy) - 0.5) / 255.0;
     f_color = vec4(color, 1.0);
 }
