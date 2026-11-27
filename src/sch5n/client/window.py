@@ -59,6 +59,13 @@ class ResizeEvent:
     height: int
 
 
+@dataclass(frozen=True, slots=True)
+class CharEvent:
+    """A character was typed, for text fields."""
+
+    char: str
+
+
 _MODIFIERS = (
     (glfw.KEY_LEFT_SHIFT, glfw.KEY_RIGHT_SHIFT, glfw.MOD_SHIFT),
     (glfw.KEY_LEFT_CONTROL, glfw.KEY_RIGHT_CONTROL, glfw.MOD_CONTROL),
@@ -66,7 +73,9 @@ _MODIFIERS = (
     (glfw.KEY_LEFT_SUPER, glfw.KEY_RIGHT_SUPER, glfw.MOD_SUPER),
 )
 
-type Event = KeyEvent | MouseButtonEvent | ScrollEvent | ResizeEvent
+type Event = (
+    KeyEvent | MouseButtonEvent | ScrollEvent | ResizeEvent | CharEvent
+)
 
 
 class Cursor:
@@ -156,6 +165,7 @@ class Window:
         glfw.set_mouse_button_callback(self.handle, self._on_mouse_button)
         glfw.set_scroll_callback(self.handle, self._on_scroll)
         glfw.set_window_size_callback(self.handle, self._on_resize)
+        glfw.set_char_callback(self.handle, self._on_char)
 
     def _on_key(
         self, _w: object, key: int, _sc: int, action: int, mods: int
@@ -174,6 +184,17 @@ class Window:
 
     def _on_resize(self, _w: object, width: int, height: int) -> None:
         self._events.append(ResizeEvent(width, height))
+
+    def _on_char(self, _w: object, codepoint: int) -> None:
+        self._events.append(CharEvent(chr(codepoint)))
+
+    @property
+    def clipboard(self) -> str:
+        """Text on the clipboard, empty if there is none."""
+        data = glfw.get_clipboard_string(self.handle)
+        if isinstance(data, bytes):
+            return data.decode("utf-8", "replace")
+        return data or ""
 
     def poll(self) -> list[Event]:
         """Process OS events.

@@ -19,6 +19,7 @@ from sch5n.client.world_view import WorldRenderer, load_world
 from sch5n.game.config import MenuBackground
 from sch5n.game.session import Game, GameSetup, TickInput
 from sch5n.math.rect import Rect
+lazy from sch5n.client.scenes.multiplayer import MultiplayerScene
 lazy from sch5n.client.scenes.play import PlayScene
 lazy from sch5n.client.scenes.settings import SettingsScene
 
@@ -29,7 +30,13 @@ if TYPE_CHECKING:
 MENU_BUTTON_SIZE = (220, 40)
 TITLE_SIZE = 56
 PANEL_PADDING = 24
-ENTRIES = (("play", "Play"), ("settings", "Settings"), ("exit", "Exit"))
+ENTRIES = (
+    ("singleplayer", "Singleplayer"),
+    ("multiplayer", "Multiplayer"),
+    ("settings", "Settings"),
+    ("exit", "Exit"),
+)
+NOTICE_SIZE = 16
 
 DRIFT_PERIOD = (2400, 3700)
 """Ticks for one camera sway, horizontally and vertically."""
@@ -71,7 +78,7 @@ class MenuWorld:
         self.game = Game(
             app.content,
             load_world(app),
-            GameSetup(),
+            GameSetup(host_player=False),
         )
         bounds = self.game.tilemap.bounds() or (0, 0, 1, 1)
         size = app.content.game.tile_size
@@ -104,17 +111,21 @@ class MenuWorld:
 
     def draw(self) -> None:
         """Draw the world."""
-        self.renderer.draw(self.game, self.camera, show_player=False)
+        self.renderer.draw(self.game, self.camera)
 
 
 class MainMenu(Scene):
-    """Title, play, settings and exit."""
+    """Title, single player, multiplayer, settings and exit."""
 
     has_backdrop = True
 
-    def __init__(self, app: App) -> None:
-        """Create the screen and start the background world."""
+    def __init__(self, app: App, notice: str = "") -> None:
+        """Create the screen and start the background world.
+
+        `notice` is shown under the buttons, like why a game ended.
+        """
         super().__init__(app)
+        self.notice = notice
         self.world = MenuWorld(app)
         self.buttons: list[Button] = []
         self.panel = Rect(0, 0, 0, 0)
@@ -162,8 +173,10 @@ class MainMenu(Scene):
     def on_button(self, button_id: str | None) -> None:
         """Start the game, open settings or quit."""
         match button_id:
-            case "play":
-                self.app.switch(PlayScene(self.app))
+            case "singleplayer":
+                self.app.switch(PlayScene.singleplayer(self.app))
+            case "multiplayer":
+                self.app.switch(MultiplayerScene(self.app, back=self))
             case "settings":
                 self.app.switch(SettingsScene(self.app, back=self))
             case "exit":
@@ -205,6 +218,15 @@ class MainMenu(Scene):
         for button in self.buttons:
             button.draw(app.batch, app.text, style, mouse)
 
+        if self.notice:
+            app.text.draw(
+                app.batch,
+                self.notice,
+                (w / 2, self.panel.bottom + PANEL_PADDING),
+                TextStyle(
+                    NOTICE_SIZE, rgba(style.color("accent")), Anchor.CENTER
+                ),
+            )
         app.text.draw(
             app.batch,
             f"v{__version__}",

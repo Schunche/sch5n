@@ -28,6 +28,7 @@ class Anchor(StrEnum):
     CENTER = "center"
     BOTTOM_RIGHT = "bottom_right"
     BOTTOM_CENTER = "bottom_center"
+    BOTTOM_LEFT = "bottom_left"
 
 
 def anchored(
@@ -52,6 +53,8 @@ def anchored(
             x, y = x - w, y - h
         case Anchor.BOTTOM_CENTER:
             x, y = x - w / 2, y - h
+        case Anchor.BOTTOM_LEFT:
+            y -= h
     return round(x), round(y)
 
 

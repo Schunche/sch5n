@@ -53,9 +53,13 @@ class Player:
         inventory: Inventory,
         pos: tuple[float, float],
         mode: GameMode,
+        *,
+        name: str = "",
     ) -> None:
         """Create a player with its top left corner at `pos`."""
         self.config = config
+        self.name = name
+        """Shown above the player in multiplayer."""
         self.tuning = config.player
         width, height = self.tuning.size
         self.body = Body(pos[0], pos[1], width, height)
@@ -69,12 +73,12 @@ class Player:
         self.action_age = 0
         """Ticks since `action` last changed."""
         self.use_cooldown = 0
+        """Ticks since the held item was last used."""
         self.jump_hold = 0
         """Ticks the current jump may still be held to rise higher."""
         self.swing: Swing | None = None
         """The item swing in progress, if any."""
         self._jump_speed = self.tuning.jump_velocity
-        """Ticks since the held item was last used."""
 
     def _set_action(self, action: Action) -> None:
         if action != self.action:

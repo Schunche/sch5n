@@ -9,16 +9,33 @@ from __future__ import annotations
 
 import json
 import operator
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from sch5n.error.exceptions import ParseError
+from sch5n.utility.path import MAPS_DIR
 from sch5n.world.tilemap import TileMap
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from sch5n.game.content import BlockRegistry
     from sch5n.vendor.json import Json
+
+
+DEFAULT_MAP = "map1"
+"""Map played when none is chosen."""
+
+
+def map_file(name: str) -> Path:
+    """Resolve a map argument: a path, or the name of a bundled map.
+
+    Returns:
+        Path: The map file.
+
+    """
+    candidate = Path(name)
+    if candidate.suffix == ".json" or candidate.exists():
+        return candidate
+    return MAPS_DIR / f"{name}.json"
 
 
 def _parse_key(key: str) -> tuple[int, int]:

@@ -65,6 +65,9 @@ class TileMap:
         self.chunks: dict[IntTuple2, Chunk] = {}
         self.damage: dict[IntTuple2, float] = {}
         """Remaining durability of partially broken tiles."""
+        self.changes: list[tuple[int, int, int, int]] | None = None
+        """When a list, `set` records every change in it as
+        `(x, y, block, variant)`. Servers use it to tell clients."""
 
     def __len__(self) -> int:
         """Count non-air tiles.
@@ -108,6 +111,8 @@ class TileMap:
                 return
             chunk = self.chunks[key] = Chunk()
 
+        if self.changes is not None:
+            self.changes.append((x, y, block, variant if block != AIR else 0))
         ly, lx = y & _CHUNK_MASK, x & _CHUNK_MASK
         previous = int(chunk.blocks[ly, lx])
         chunk.blocks[ly, lx] = block

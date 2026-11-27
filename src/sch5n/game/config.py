@@ -195,6 +195,10 @@ class Settings(_Model):
     master_volume: int = Field(default=100, ge=0, le=100)
     music_volume: int = Field(default=70, ge=0, le=100)
     effects_volume: int = Field(default=80, ge=0, le=100)
+    player_name: str = Field(default="Player", min_length=1, max_length=24)
+    """Shown to other players in multiplayer."""
+    last_server: str = ""
+    """Address typed last on the multiplayer screen."""
     keybinds: dict[str, dict[str, tuple[str, ...]]] = Field(
         default_factory=dict
     )

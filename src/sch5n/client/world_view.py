@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 import numpy as np
 
@@ -16,9 +16,9 @@ from sch5n.client.render.batch import (
     Transform,
     sprite_instances,
 )
+from sch5n.client.render.text import Anchor, TextStyle
 from sch5n.game.mining import durability_fraction
-from sch5n.utility import path
-from sch5n.world.io import load_tilemap
+from sch5n.world.io import DEFAULT_MAP, load_tilemap, map_file
 from sch5n.world.tilemap import CHUNK_SHIFT, CHUNK_SIZE
 
 STREAK_THICKNESS = 2
@@ -26,9 +26,11 @@ STREAK_OPACITY = 0.55
 STREAK_WOBBLE = 3.0
 """Pixels a wind streak moves up and down."""
 STREAK_WOBBLE_SPEED = 0.12
-
-DEFAULT_MAP = "map1"
-"""Map played when none is chosen on the command line."""
+NAME_TAG_SIZE = 14
+NAME_TAG_GAP = 6
+"""Pixels between a player's head and its name."""
+NAME_TAG_COLOR = (1.0, 1.0, 1.0, 0.95)
+NAME_TAG_SHADOW = (0.0, 0.0, 0.0, 0.6)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -42,7 +44,6 @@ if TYPE_CHECKING:
     from sch5n.game.config import Rig, ToolUseConfig
     from sch5n.game.floating_item import FloatingItem
     from sch5n.game.player import Player, Swing
-    from sch5n.game.session import Game
     from sch5n.math.rect import Rect
     from sch5n.math.vector import IntTuple2
     from sch5n.world.tilemap import Chunk, TileMap
@@ -422,16 +423,18 @@ def place_cloud(
 def draw_clouds(
     batch: SpriteBatch,
     assets: ClientAssets,
-    game: Game,
+    world: WorldView,
     camera_center: tuple[float, float],
     screen: tuple[float, float],
 ) -> None:
     """Queue clouds in screen space, far ones first."""
     if not assets.clouds:
         return
-    for cloud in game.ambience.clouds:
+    for cloud in world.ambience.clouds:
         image = cloud_image(assets.clouds, cloud)
-        placed = place_cloud(cloud, image, camera_center, game.horizon, screen)
+        placed = place_cloud(
+            cloud, image, camera_center, world.horizon, screen
+        )
         if placed is not None:
             rect, opacity = placed
             batch.sprite(assets.atlas, rect, image, (1.0, 1.0, 1.0, opacity))
@@ -453,43 +456,81 @@ def draw_wind_streaks(batch: SpriteBatch, ambience: Ambience) -> None:
         )
 
 
-class WorldRenderer:
-    """Draws a game session as the player sees it: sky, clouds, world.
+class WorldView(Protocol):
+    """What drawing needs of a world: a `Game`, or a client's mirror."""
 
-    Also animates the player; call `tick` once per game tick.
+    tilemap: TileMap
+    ambience: Ambience
+    horizon: float
+    floating_items: list[FloatingItem]
+    players: dict[int, Player]
+
+
+class WorldRenderer:
+    """Draws a world as a player sees it: sky, clouds, tiles, players.
+
+    Also animates the players; call `tick` once per game tick.
     """
 
     def __init__(self, app: App) -> None:
         """Create the renderer."""
         self.app = app
         self.tiles = TileRenderer(app.assets, app.content.game.tile_size)
-        self.player_animator: Animator | None = None
+        self.animators: dict[int, Animator] = {}
+        """Animation of each player, by id."""
         self.player_renderer = PlayerRenderer(
             app.assets, app.animations.tool_use.get("player")
         )
+        self._name_style = TextStyle(
+            NAME_TAG_SIZE, NAME_TAG_COLOR, Anchor.BOTTOM_CENTER
+        )
+        self._name_shadow = TextStyle(
+            NAME_TAG_SIZE, NAME_TAG_SHADOW, Anchor.BOTTOM_CENTER
+        )
 
-    def _animator(self, game: Game) -> Animator:
-        if self.player_animator is None:
+    def _animator(self, player_id: int, player: Player) -> Animator:
+        animator = self.animators.get(player_id)
+        if animator is None:
             assets = self.app.assets
-            self.player_animator = Animator(
+            animator = self.animators[player_id] = Animator(
                 {
                     action: animation
                     for (mob, action), animation in assets.mobs.items()
                     if mob == "player"
                 },
                 self.app.animations.transitions.get("player", ()),
-                game.player.action.value,
+                player.action.value,
             )
-        return self.player_animator
+        return animator
 
-    def tick(self, game: Game) -> None:
-        """Advance the player's animation by one tick."""
-        self._animator(game).update(game.player.action.value)
+    def tick(self, world: WorldView) -> None:
+        """Advance every player's animation by one tick."""
+        for player_id in self.animators.keys() - world.players.keys():
+            del self.animators[player_id]
+        for player_id, player in world.players.items():
+            self._animator(player_id, player).update(player.action.value)
+
+    def _draw_name(self, player: Player) -> None:
+        body = player.body
+        pos = (body.center[0], body.y - NAME_TAG_GAP)
+        text = self.app.text
+        batch = self.app.batch
+        shadow = (pos[0] + 1, pos[1] + 1)
+        text.draw(batch, player.name, shadow, self._name_shadow)
+        text.draw(batch, player.name, pos, self._name_style)
 
     def draw(
-        self, game: Game, camera: Camera, *, show_player: bool = True
+        self,
+        world: WorldView,
+        camera: Camera,
+        *,
+        show_players: bool = True,
+        local_id: int | None = None,
     ) -> None:
-        """Draw everything but the HUD. Leaves a world space batch open."""
+        """Draw everything but the HUD. Leaves a world space batch open.
+
+        Players other than `local_id` get their name above them.
+        """
         app = self.app
         batch = app.batch
         offset = camera.offset()
@@ -497,15 +538,22 @@ class WorldRenderer:
         app.clear(app.content.game.sky_color)
         batch.begin(app.screen)
         view = camera.view(app.screen)
-        draw_clouds(batch, app.assets, game, view.center, app.screen)
+        draw_clouds(batch, app.assets, world, view.center, app.screen)
 
         batch.begin(app.screen, offset, camera.zoom)
-        self.tiles.draw(batch, game.tilemap, camera.view(app.screen))
-        if show_player:
-            self.player_renderer.draw(batch, game.player, self._animator(game))
-        draw_particles(batch, app.assets, game.ambience)
-        draw_wind_streaks(batch, game.ambience)
-        draw_floating_items(batch, app.assets, game.floating_items)
+        self.tiles.draw(batch, world.tilemap, camera.view(app.screen))
+        if show_players:
+            for player_id, player in world.players.items():
+                self.player_renderer.draw(
+                    batch, player, self._animator(player_id, player)
+                )
+        draw_particles(batch, app.assets, world.ambience)
+        draw_wind_streaks(batch, world.ambience)
+        draw_floating_items(batch, app.assets, world.floating_items)
+        if show_players:
+            for player_id, player in world.players.items():
+                if player_id != local_id and player.name:
+                    self._draw_name(player)
 
 
 def load_world(app: App) -> TileMap:
@@ -515,5 +563,5 @@ def load_world(app: App) -> TileMap:
         TileMap: The map.
 
     """
-    map_path = app.options.map_path or path.MAPS_DIR / f"{DEFAULT_MAP}.json"
+    map_path = app.options.map_path or map_file(DEFAULT_MAP)
     return load_tilemap(map_path, app.content.blocks)

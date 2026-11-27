@@ -42,6 +42,9 @@ class Scene:
     def render(self) -> None:
         """Draw a frame."""
 
+    def leave(self) -> None:
+        """End what the scene runs, like a game, before the main menu."""
+
     def tick_backdrop(self) -> None:
         """Advance while a menu opened from this scene is shown."""
 

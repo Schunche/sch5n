@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import math
+import time
 from typing import TYPE_CHECKING
 
 import glfw
@@ -17,6 +18,7 @@ from sch5n.client.keybinds import Action, Binding, Context, Mod
 from sch5n.client.render.batch import Transform
 from sch5n.client.scenes.map_tools import EditorScene, ViewerScene
 from sch5n.client.scenes.menu import MainMenu
+from sch5n.client.scenes.multiplayer import MultiplayerScene
 from sch5n.client.scenes.play import PlayScene
 from sch5n.client.scenes.settings import (
     BindRow,
@@ -26,6 +28,7 @@ from sch5n.client.scenes.settings import (
     SettingsScene,
 )
 from sch5n.client.window import (
+    CharEvent,
     KeyEvent,
     MouseButtonEvent,
     ScrollEvent,
@@ -46,6 +49,8 @@ MIN_SKY_SHARE = 0.3
 """At least this much of the game screen is open sky."""
 MAX_GAME_DRAW_CALLS = 8
 WARMUP_TICKS = 30
+JOIN_TIMEOUT = 10.0
+"""Seconds a join over the network may take."""
 
 
 @pytest.fixture(scope="module")
@@ -152,7 +157,7 @@ def test_scenes_render(app: App) -> None:
     menu_pixels = draw(app, MainMenu(app))
     assert menu_pixels.std() > MIN_BACKGROUND_STD
 
-    play = PlayScene(app)
+    play = PlayScene.singleplayer(app)
     for _ in range(WARMUP_TICKS):
         play.tick()
     pixels = draw(app, play)
@@ -175,30 +180,38 @@ def test_text_cache_reuses_textures(app: App) -> None:
 
 def test_play_scene_input(app: App) -> None:
     """Hotbar and inventory react to input in the game."""
-    play = PlayScene(app)
-    inventory = play.game.inventory
+    play = PlayScene.singleplayer(app)
+    inventory = play.world.inventory
+    assert play.server is not None
+    server_inventory = play.server.game.players[play.world.local_id].inventory
 
+    # Changes go to the server and come back with the next tick.
     play.on_event(ScrollEvent(0, -1))
-    assert inventory.selected == 1
+    play.tick()
+    assert inventory.selected == server_inventory.selected == 1
     play.on_event(press(glfw.KEY_3))
+    play.tick()
     assert inventory.selected == Action.HOTBAR_3.hotbar_slot
 
     play.on_event(press(glfw.KEY_TAB))
     assert play.inventory_open
     play.on_event(click(play.layout.slot_rect(0).center))
+    play.tick()
     assert inventory.cursor is not None
     assert inventory[0] is None
 
     # Closing the inventory puts the held stack back.
     play.on_event(press(glfw.KEY_TAB))
+    play.tick()
     assert not play.inventory_open
     assert inventory.cursor is None
     assert inventory[0] is not None
+    play.leave()
 
 
 def test_rebind_in_settings_and_play(app: App) -> None:
     """Rebinding in the settings changes the game's controls and is saved."""
-    play = PlayScene(app)
+    play = PlayScene.singleplayer(app)
     settings = SettingsScene(app, back=play, in_game=True, page=Page.CONTROLS)
     jump = BindRow(Context.GAME, Action.JUMP)
     index = show_row(settings, jump)
@@ -403,7 +416,7 @@ def test_background_shader_animates(app: App) -> None:
 
 def test_gui_size_applies_when_returning_to_game(app: App) -> None:
     """The game picks up a new GUI size when the settings close."""
-    play = PlayScene(app)
+    play = PlayScene.singleplayer(app)
     settings = SettingsScene(app, back=play, in_game=True, page=Page.INTERFACE)
     click_value(settings, Option.GUI_SIZE)
     settings.on_event(press(glfw.KEY_ESCAPE))
@@ -478,7 +491,7 @@ def test_each_program_edits_only_its_own_controls(
     """The game, the editor and the viewer each reach only their bindings."""
     target = tmp_path_factory.mktemp("maps") / "m.json"
     origins = {
-        Context.GAME: [MainMenu(app), PlayScene(app)],
+        Context.GAME: [MainMenu(app), PlayScene.singleplayer(app)],
         Context.EDITOR: [EditorScene(app, target)],
         Context.VIEWER: [ViewerScene(app, target)],
     }
@@ -530,3 +543,70 @@ def test_rotated_sprite(app: App) -> None:
     slack = 5
     assert xs.max() - xs.min() < height + slack  # Narrow,
     assert ys.max() - ys.min() > width - 2 * slack  # and tall.
+
+
+def joined(app: App, host: PlayScene) -> bool:
+    """Whether a game other than the host's is about to start.
+
+    Returns:
+        bool: True once the guest's game is the next scene.
+
+    """
+    scene = app.pending_scene
+    return (
+        isinstance(scene, PlayScene)
+        and scene is not host
+        and scene.server is None
+    )
+
+
+def test_open_to_lan_and_join(app: App) -> None:
+    """A single player game opens to the network; another client joins."""
+    host = PlayScene.singleplayer(app)
+    assert host.server is not None
+    settings = SettingsScene(app, back=host, in_game=True)
+    lan = next(b for b in settings.buttons if b.id == "lan")
+    settings.on_event(click(lan.rect.center))
+    port = host.server.port
+    assert port is not None
+    assert str(port) in settings.message
+    assert all(b.id != "lan" for b in settings.buttons)
+
+    # Join through the multiplayer screen, typing the address.
+    joining = MultiplayerScene(app, back=MainMenu(app))
+    joining.on_enter()
+    joining.address.text = ""
+    for char in f"127.0.0.1:{port}":
+        joining.on_event(CharEvent(char))
+    joining.on_event(press(glfw.KEY_ENTER))
+    assert joining.joining
+    deadline = time.monotonic() + JOIN_TIMEOUT
+    while not joined(app, host):
+        assert time.monotonic() < deadline, joining.message
+        host.tick()
+        joining.tick()
+        time.sleep(0.002)
+    guest = app.pending_scene
+    assert isinstance(guest, PlayScene)
+    joining.on_exit()
+
+    deadline = time.monotonic() + JOIN_TIMEOUT
+    while len(host.world.players) < len(("host", "guest")):
+        assert time.monotonic() < deadline
+        host.tick()
+        guest.tick()
+        time.sleep(0.002)
+    assert draw(app, guest).any()
+
+    # The guest goes back to the main menu, told why, when the host quits.
+    host.leave()
+    deadline = time.monotonic() + JOIN_TIMEOUT
+    while not isinstance(menu := app.pending_scene, MainMenu) or not (
+        menu.notice
+    ):
+        assert time.monotonic() < deadline
+        guest.tick()
+        time.sleep(0.002)
+    assert menu.notice == "The host left the game"
+    assert draw(app, menu).any()
+    app.switch(menu)

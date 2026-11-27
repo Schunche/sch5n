@@ -259,13 +259,21 @@ class Ambience:
         self.streaks = alive
 
     def tick(
-        self, tilemap: TileMap, view: Rect | None, tile_size: int
+        self,
+        tilemap: TileMap,
+        view: Rect | None,
+        tile_size: int,
+        wind: float | None = None,
     ) -> None:
         """Advance the wind and everything it moves.
 
-        New particles and streaks only appear inside `view`.
+        New particles and streaks only appear inside `view`. Clients pass
+        the server's `wind` so everyone sees the same weather.
         """
-        self.wind.tick()
+        if wind is None:
+            self.wind.tick()
+        else:
+            self.wind.strength = wind
         for cloud in self.clouds:
             cloud.x += cloud.speed * self.wind.strength
         self._tick_particles()

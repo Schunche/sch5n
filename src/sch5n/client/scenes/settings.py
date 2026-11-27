@@ -31,6 +31,7 @@ from sch5n.client.window import (
 from sch5n.game.config import MenuBackground, Settings
 from sch5n.math.rect import Rect
 lazy from sch5n.client.scenes.menu import MainMenu, draw_menu_background
+lazy from sch5n.client.scenes.play import PlayScene
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -339,6 +340,8 @@ class SettingsScene(Scene):
 
         entries = [("reset", "Reset Page"), ("back", "Back")]
         if self.in_game:
+            if self.hosted_game is not None:
+                entries.append(("lan", "Open to LAN"))
             entries.append(("menu", "Main Menu"))
         size = (FOOTER_BUTTON_WIDTH, self.app.ui.button.height)
         total = len(entries) * size[0] + (len(entries) - 1) * FOOTER_GAP
@@ -352,6 +355,26 @@ class SettingsScene(Scene):
             )
             for i, (button_id, label) in enumerate(entries)
         ]
+
+    @property
+    def hosted_game(self) -> PlayScene | None:
+        """The game behind, if it may still be opened to the network."""
+        back = self.back
+        if isinstance(back, PlayScene) and back.can_open_to_lan:
+            return back
+        return None
+
+    def _open_to_lan(self) -> None:
+        game = self.hosted_game
+        if game is None:
+            return
+        address = game.open_to_lan()
+        self.message = (
+            game.notice
+            if address is None
+            else f"Others on your network can join at {address}"
+        )
+        self.layout()
 
     def row_index(self, row: Row) -> int:
         """Position of a row on the current page.
@@ -455,7 +478,10 @@ class SettingsScene(Scene):
                 self.layout()
             case "back":
                 self._leave()
+            case "lan":
+                self._open_to_lan()
             case "menu":
+                self.back.leave()
                 self.app.switch(MainMenu(self.app))
             case _:
                 pass

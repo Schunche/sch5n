@@ -58,3 +58,12 @@ jobs:
         if: runner.os == 'Windows'
         shell: cmd
         run: play.bat --frames 60 --hidden
+
+      - name: Run a dedicated server with the launcher (Linux)
+        if: runner.os == 'Linux'
+        run: ./play.sh server --port 0 --no-lan --ticks 120
+
+      - name: Run a dedicated server with the launcher (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: play.bat server --port 0 --no-lan --ticks 120

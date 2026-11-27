@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -15,10 +16,12 @@ from sch5n.game.inventory import Inventory, ItemStack
 from sch5n.game.mining import HitResult, can_place, hit_tile
 from sch5n.game.player import Player
 from sch5n.log.logger import LOGGER
+from sch5n.math.rect import Rect
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from sch5n.game.content import Content
-    from sch5n.math.rect import Rect
     from sch5n.world.tilemap import TileMap
 
 SPAWN_SEARCH_DEPTH = 512
@@ -53,15 +56,22 @@ class GameSetup:
     seed: int | None = None
     """Seed for cosmetic randomness and item scatter."""
     spawn: tuple[float, float] = (640.0, 360.0)
-    """Preferred spawn position in pixels. The player is dropped onto the
+    """Preferred spawn position in pixels. Players are dropped onto the
     ground below it."""
+    host_player: bool = True
+    """Start with a player. Servers start empty and add players as they
+    join."""
 
 
 DEFAULT_SETUP = GameSetup()
 
 
 class Game:
-    """Owns the simulation state of one play session."""
+    """Owns the simulation state of one play session.
+
+    Any number of players may join and leave. A session starts with one
+    player unless `GameSetup.host_player` is off, as on a server.
+    """
 
     def __init__(
         self,
@@ -80,28 +90,60 @@ class Game:
         self.content = content
         self.config = content.game
         self.tilemap = tilemap
+        self.setup = setup
         self.rng = np.random.default_rng(setup.seed)
         self.ticks = 0
+        self.players: dict[int, Player] = {}
+        """Players in the session by id, in joining order."""
+        self._next_id = 0
+        self._departed: dict[str, Inventory] = {}
+        """Inventories of players who left, by name, for when they return."""
+        self.floating_items: list[FloatingItem] = []
+        self.ambience = Ambience(self.config, self.rng)
+        bounds = tilemap.bounds()
+        self.horizon = (bounds[1] if bounds else 0) * self.config.tile_size
+        """World y of the top of the world, where the sky begins."""
+        if setup.host_player:
+            self.add_player()
 
-        items = content.items
-        inventory = Inventory(
+    def _starting_inventory(self) -> Inventory:
+        items = self.content.items
+        return Inventory(
             self.config.inventory.size,
             (
                 ItemStack(items[start.item], start.amount)
                 for start in self.config.inventory.starting_items
             ),
         )
-        self.player = Player(
+
+    def add_player(self, name: str = "") -> int:
+        """Spawn a player. A returning `name` gets its inventory back.
+
+        Returns:
+            int: The new player's id.
+
+        """
+        inventory = self._departed.pop(name, None) if name else None
+        player = Player(
             self.config,
-            inventory,
-            self._spawn_point(setup.spawn),
-            setup.mode,
+            inventory or self._starting_inventory(),
+            self._spawn_point(self.setup.spawn),
+            self.setup.mode,
+            name=name,
         )
-        self.floating_items: list[FloatingItem] = []
-        self.ambience = Ambience(self.config, self.rng)
-        bounds = tilemap.bounds()
-        self.horizon = (bounds[1] if bounds else 0) * self.config.tile_size
-        """World y of the top of the world, where the sky begins."""
+        player_id = self._next_id
+        self._next_id += 1
+        self.players[player_id] = player
+        return player_id
+
+    def remove_player(self, player_id: int) -> None:
+        """Take a player out of the world, keeping its inventory by name."""
+        player = self.players.pop(player_id, None)
+        if player is None:
+            return
+        self.return_cursor_stack(player)
+        if player.name:
+            self._departed[player.name] = player.inventory
 
     def _spawn_point(
         self, preferred: tuple[float, float]
@@ -125,8 +167,21 @@ class Game:
         return (column * size + (size - width) / 2, ground * size - height)
 
     @property
+    def player(self) -> Player:
+        """The first player, who is the only one in single player.
+
+        Raises:
+            LookupError: Nobody is playing.
+
+        """
+        for player in self.players.values():
+            return player
+        msg = "No player is in the game"
+        raise LookupError(msg)
+
+    @property
     def inventory(self) -> Inventory:
-        """The player's inventory."""
+        """The first player's inventory."""
         return self.player.inventory
 
     def drop(self, stack: ItemStack, tile: tuple[int, int]) -> FloatingItem:
@@ -149,8 +204,25 @@ class Game:
         self.floating_items.append(floating)
         return floating
 
-    def _use_held_item(self, inp: TickInput) -> None:
-        player = self.player
+    def return_cursor_stack(self, player: Player) -> None:
+        """Put the stack held by the cursor back, dropping what won't fit.
+
+        Done when the inventory closes, so nothing stays on the cursor.
+        """
+        inventory = player.inventory
+        if inventory.cursor is None:
+            return
+        leftover = inventory.add(inventory.cursor)
+        inventory.cursor = None
+        if leftover is not None:
+            body = player.body
+            size = self.config.tile_size
+            self.drop(
+                leftover,
+                (int(body.center[0] // size), int(body.y // size)),
+            )
+
+    def _use_held_item(self, player: Player, inp: TickInput) -> None:
         held = player.inventory.held
         if inp.target is None or held is None:
             return
@@ -177,15 +249,11 @@ class Game:
 
         elif inp.place and held.item.spec.places is not None:
             size = self.config.tile_size
-            tile_rect = (x * size, y * size)
-            body = player.body.rect
-            overlaps_player = (
-                body.left < tile_rect[0] + size
-                and tile_rect[0] < body.right
-                and body.top < tile_rect[1] + size
-                and tile_rect[1] < body.bottom
-            )
-            if overlaps_player or not can_place(self.tilemap, x, y):
+            tile = Rect(x * size, y * size, size, size)
+            if any(
+                other.body.rect.collides(tile)
+                for other in self.players.values()
+            ) or not can_place(self.tilemap, x, y):
                 return
             block = self.content.blocks.id_of(held.item.spec.places)
             self.tilemap.set(x, y, block)
@@ -193,32 +261,67 @@ class Game:
             player.inventory.consume_held()
             player.use_cooldown = 0
 
+    def _nearest_player(self, pos: tuple[float, float]) -> Player | None:
+        return min(
+            self.players.values(),
+            key=lambda p: math.dist(p.body.center, pos),
+            default=None,
+        )
+
     def _tick_floating_items(self) -> None:
-        player = self.player
-        target = player.body.center
-        player_rect = player.body.rect
         remaining: list[FloatingItem] = []
         for floating in self.floating_items:
+            nearest = self._nearest_player(floating.body.center)
             floating.tick(
                 self.tilemap,
                 self.config.tile_size,
                 self.config.floating_item,
-                target,
+                None if nearest is None else nearest.body.center,
             )
-            if floating.body.rect.collides(player_rect):
-                leftover = player.inventory.add(floating.stack)
-                if leftover is None:
-                    continue
+            if self._pick_up(floating):
+                continue
             remaining.append(floating)
         self.floating_items = remaining
 
-    def tick(self, inp: TickInput) -> None:
-        """Advance the simulation by one tick."""
-        if inp.jump:
-            self.player.jump()
+    def _pick_up(self, floating: FloatingItem) -> bool:
+        """Give an item to a player touching it.
 
-        self._use_held_item(inp)
-        self.ambience.tick(self.tilemap, inp.view, self.config.tile_size)
-        self.player.tick(self.tilemap, inp.move_x, jump_held=inp.jump_held)
+        Returns:
+            bool: Whether all of it was picked up.
+
+        """
+        rect = floating.body.rect
+        for player in self.players.values():
+            if (
+                rect.collides(player.body.rect)
+                and player.inventory.add(floating.stack) is None
+            ):
+                return True
+        return False
+
+    def tick(self, inputs: TickInput | Mapping[int, TickInput]) -> None:
+        """Advance the simulation by one tick.
+
+        Args:
+            inputs: Input for every player by id, or for the first player.
+                Players without input stand still.
+
+        """
+        if isinstance(inputs, TickInput):
+            view = inputs.view
+            inputs = {next(iter(self.players)): inputs} if self.players else {}
+        else:
+            view = None
+
+        idle = TickInput()
+        for player_id, player in self.players.items():
+            inp = inputs.get(player_id, idle)
+            if inp.jump:
+                player.jump()
+            self._use_held_item(player, inp)
+        self.ambience.tick(self.tilemap, view, self.config.tile_size)
+        for player_id, player in self.players.items():
+            inp = inputs.get(player_id, idle)
+            player.tick(self.tilemap, inp.move_x, jump_held=inp.jump_held)
         self._tick_floating_items()
         self.ticks += 1

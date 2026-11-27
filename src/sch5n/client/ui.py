@@ -28,6 +28,8 @@ TABLE_WIDTH = TABLE_LABEL_WIDTH + TABLE_COLUMNS * (
     TABLE_CELL_WIDTH + TABLE_GAP
 )
 PANEL_RADIUS = 10
+FIELD_PADDING = 10
+FIELD_LABEL_SIZE = 14
 PANEL_BORDER = 2
 
 
@@ -172,6 +174,78 @@ def hit_button(buttons: list[Button], pos: tuple[float, float]) -> str | None:
         if button.contains(pos):
             return button.id
     return None
+
+
+@dataclass(slots=True)
+class TextField:
+    """A one line text input with a label above it."""
+
+    id: str
+    label: str
+    rect: Rect
+    text: str = ""
+    max_length: int = 64
+
+    def type(self, chars: str) -> None:
+        """Append printable characters, up to `max_length`."""
+        for char in chars:
+            if char.isprintable() and len(self.text) < self.max_length:
+                self.text += char
+
+    def backspace(self) -> None:
+        """Delete the last character."""
+        self.text = self.text[:-1]
+
+    def contains(self, pos: tuple[float, float]) -> bool:
+        """Whether a screen position is on the field.
+
+        Returns:
+            bool: True if hovered.
+
+        """
+        return self.rect.contains_point(*pos)
+
+    def draw(
+        self,
+        batch: SpriteBatch,
+        text: TextRenderer,
+        style: Style,
+        *,
+        focused: bool,
+        caret: bool,
+    ) -> None:
+        """Queue the field. `caret` shows the blinking text cursor."""
+        b = style.button
+        r = self.rect
+        box = (r.x, r.y, r.w, r.h)
+        batch.shape(box, rgba(style.color("button_inner")), radius=4)
+        batch.shape(
+            box,
+            rgba(style.color("accent" if focused else "button_border")),
+            radius=4,
+            border=b.border_width / 2,
+        )
+        text.draw(
+            batch,
+            self.label,
+            (r.x, r.y - 4),
+            TextStyle(
+                size=FIELD_LABEL_SIZE,
+                color=rgba(style.color("text_dim")),
+                anchor=Anchor.BOTTOM_LEFT,
+            ),
+        )
+        shown = self.text + ("|" if focused and caret else "")
+        text.draw(
+            batch,
+            shown,
+            (r.x + FIELD_PADDING, r.center[1]),
+            TextStyle(
+                size=b.font_size,
+                color=rgba(style.color("text")),
+                anchor=Anchor.MIDDLE_LEFT,
+            ),
+        )
 
 
 @dataclass(frozen=True, slots=True)

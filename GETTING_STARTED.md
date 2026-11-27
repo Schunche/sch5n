@@ -57,7 +57,7 @@ for example to your Documents.
 
 ## 3. Play
 
-In the main menu, click **Play**.
+In the main menu, click **Singleplayer**.
 
 | Input | Action |
 | --- | --- |
@@ -89,6 +89,41 @@ stay when you update the game:
 - **Linux:** `~/.config/sch5n/settings.json`
 
 Delete that file to go back to the default settings.
+
+## Playing together
+
+Everyone needs the same version of the game.
+
+### On the same network (home, LAN party)
+
+1. One player starts a **Singleplayer** game, presses **Esc** and clicks
+   **Open to LAN**. The game shows an address like `192.168.1.20:47315`.
+2. The others click **Multiplayer** in the main menu and type their name.
+   The game appears under *Games on your network*; click it. If it doesn't show up, type the
+   address into **Server address** and click **Join**.
+
+When the player who opened the game quits, the game ends for everyone.
+
+Windows may ask whether Python may use the network the first time. Allow it
+on **private networks**, or others can't join.
+
+### A server that keeps running
+
+A **dedicated server** runs the game without a window, so it can keep going
+on a spare computer while players come and go. In a command window in the
+game folder (see [The map tools](#the-map-tools) for how to open one):
+
+```bat
+play.bat server
+```
+
+On Linux: `./play.sh server`. It shows the port players need. Close it with
+**Ctrl+C**. Players join through **Multiplayer**, like above.
+
+To play with friends over the internet instead, the server's router must
+forward TCP port 47315 to the server computer, and the others join with the
+router's public address. How to forward a port depends on the router; look
+up its manual.
 
 ## The map tools
 
@@ -161,6 +196,12 @@ or company networks block the download; try another network.
 
 **Linux: "Permission denied" when running `./play.sh`.**
 Make it runnable with `chmod +x play.sh`, then try again.
+
+**Others can't find or join my game.**
+Check that you are on the same network, and that Windows allowed Python on
+private networks (search the Start menu for *Allow an app through Windows
+Firewall*, find Python, tick **Private**). Some networks, like guest or
+school Wi-Fi, keep devices apart; nothing can be done about those.
 
 **Linux: errors about `libGL` or `GLX`.**
 Install your distribution's Mesa OpenGL packages, for example

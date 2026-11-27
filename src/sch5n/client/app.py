@@ -51,6 +51,8 @@ class Options:
     """Stop after this many frames. For automated runs."""
     hidden: bool = False
     """Do not show the window. For automated runs."""
+    connect: str | None = None
+    """Join the server at this address right away."""
     settings_file: Path | None = None
     """Where user settings are read and saved. Defaults to the per-user
     config directory."""
@@ -97,6 +99,7 @@ class App:
         self._apply_cursor(None)
         self._apply_video(None)
         self._textures: dict[str, moderngl.Texture] = {}
+        self._exit_callbacks: list[Callable[[], None]] = []
 
         self.screen: tuple[int, int] = self.window.size
         self.scene: Scene | None = None
@@ -301,8 +304,20 @@ class App:
             scene.on_exit()
             self.release()
 
+    def at_exit(self, callback: Callable[[], None]) -> None:
+        """Call `callback` when the app closes, like to stop a server."""
+        self._exit_callbacks.append(callback)
+
+    def cancel_at_exit(self, callback: Callable[[], None]) -> None:
+        """Forget a callback given to `at_exit`."""
+        if callback in self._exit_callbacks:
+            self._exit_callbacks.remove(callback)
+
     def release(self) -> None:
-        """Free resources and close the window."""
+        """Run exit callbacks, free resources and close the window."""
+        for callback in list(reversed(self._exit_callbacks)):
+            callback()
+        self._exit_callbacks.clear()
         for texture in self._textures.values():
             texture.release()
         self.text.release()

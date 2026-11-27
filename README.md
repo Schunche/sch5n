@@ -24,11 +24,45 @@ For development, install [uv](https://docs.astral.sh/uv/), then:
     sch5n                       # play (same as `sch5n client`)
     sch5n client --map procedural --seed 1
     sch5n client --game-mode admin   # unlimited jumps; survival is the default
+    sch5n client --connect 192.168.1.20  # join a server right away
+    sch5n server                # dedicated server, no window (see below)
     sch5n view procedural       # fly over a map
     sch5n edit map1             # edit a map, Esc saves and quits
     sch5n generate mymap --seed 42 --width 300 --height 160
 
 Prefix with `uv run` when the virtual environment is not activated.
+
+### Multiplayer
+
+One server runs the game; any number of clients play in it. The server owns
+the world, the players, their inventories, mining and dropped items. Every
+tick each client sends its input and the server sends back what moved.
+Leaves, clouds and wind streaks are drawn by each client, blown by the
+server's wind.
+
+- **Singleplayer** runs a server inside the game, connected in memory.
+- **Open to LAN** (Esc in a singleplayer game) makes that server accept
+  players from the network and announce itself there (mDNS / zeroconf). The
+  address to join is shown in the game and on the F3 screen. A singleplayer
+  game pauses while the settings are open; once open to the network it
+  keeps running.
+- **Multiplayer** in the main menu lists the games found on your network
+  and joins one, or the address you type (`host` or `host:port`; Ctrl+V
+  pastes).
+- **`sch5n server`** runs a dedicated server without a window, OpenGL or
+  pygame, for example on a headless machine:
+
+      sch5n server --port 47315 --map map1 --name "My server"
+      sch5n server --no-lan   # do not announce it on the local network
+
+  Ctrl+C stops it. Port 47315 is the default; players on other networks
+  need it forwarded on the server's router.
+
+Players who leave and come back with the same name get their inventory
+back while the server runs. Clients must run the same game version and
+data; others are turned away with a reason. Messages are length prefixed
+JSON over TCP, validated on arrival; a client that sends something invalid
+or too large is disconnected, the server goes on.
 
 ### Controls
 
@@ -95,6 +129,8 @@ own by copying an entry.
     - [moderngl](https://moderngl.readthedocs.io/): rendering
     - [pygame-ce](https://www.pyga.me): image loading and text rendering
     - [numpy](https://numpy.org/), [pydantic](https://docs.pydantic.dev/)
+    - [zeroconf](https://pypi.org/project/zeroconf/): finding games on the
+      local network
 
 ## Layout
 
@@ -108,6 +144,8 @@ own by copying an entry.
     src/sch5n/           source code only
         game/            game rules: player, inventory, mining, items, particles (no GL, no window)
         world/           chunked tilemap, map files, world generator
+        net/             protocol, TCP and in-memory connections, LAN discovery, client session
+        server/          the authoritative game server and `sch5n server` (no GL, no window)
         client/          glfw window, scenes, HUD
             render/      texture atlas, instanced sprite batch, text
         math/, log/, utility/, ...

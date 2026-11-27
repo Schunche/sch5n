@@ -4,31 +4,21 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from sch5n.game.config import GameMode
 from sch5n.log.logger import init as init_logging
 from sch5n.utility import path
+from sch5n.world.io import map_file
 lazy from sch5n.client.app import App, Options
 lazy from sch5n.client.scenes.map_tools import EditorScene, ViewerScene
 lazy from sch5n.client.scenes.menu import MainMenu
+lazy from sch5n.client.scenes.multiplayer import MultiplayerScene
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-
-def map_file(name: str) -> Path:
-    """Resolve a map argument: a path, or the name of a bundled map.
-
-    Returns:
-        Path: The map file.
-
-    """
-    candidate = Path(name)
-    if candidate.suffix == ".json" or candidate.exists():
-        return candidate
-    return path.MAPS_DIR / f"{name}.json"
+    from sch5n.client.scenes.base import Scene
 
 
 def add_common_arguments(parser: argparse.ArgumentParser) -> None:
@@ -62,6 +52,12 @@ def main(argv: Sequence[str] | None = None) -> None:
         help="admin allows unlimited jumps (default: survival)",
     )
     parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument(
+        "--connect",
+        metavar="ADDRESS",
+        default=None,
+        help="join the server at ADDRESS (host or host:port) right away",
+    )
     add_common_arguments(parser)
     args = parser.parse_args(argv)
 
@@ -71,10 +67,26 @@ def main(argv: Sequence[str] | None = None) -> None:
             map_path=args.map,
             game_mode=args.game_mode,
             seed=args.seed,
+            connect=args.connect,
             max_frames=args.frames,
             hidden=args.hidden,
         )
-    ).run(MainMenu)
+    ).run(first_scene)
+
+
+def first_scene(app: App) -> Scene:
+    """Pick the main menu, or the multiplayer screen to join right away.
+
+    Returns:
+        Scene: The scene to start with.
+
+    """
+    menu = MainMenu(app)
+    if app.options.connect is None:
+        return menu
+    scene = MultiplayerScene(app, back=menu)
+    scene.join(app.options.connect)
+    return scene
 
 
 def _tool_main(
