@@ -158,13 +158,33 @@ class WindStreakConfig(_Model):
     """Pixels per tick at wind strength 1."""
 
 
+class SkyConfig(_Model):
+    """The sky behind the world. Sizes are screen pixels unless noted."""
+
+    horizon: Color = (166, 214, 240)
+    middle: Color = (31, 127, 191)
+    zenith: Color = (18, 56, 122)
+    deep: Color = (24, 20, 28)
+    """Shown through holes deep underground."""
+    height: float = 900.0
+    """From the horizon to the zenith color."""
+    parallax: float = 0.15
+    """How much the sky moves with the camera, in (0, 1]."""
+    bands: int = 10
+    """Color steps from horizon to zenith, dithered in between."""
+    pixel_size: int = 4
+    underground: tuple[float, float] = (192.0, 960.0)
+    """World pixels below the surface where the deep color starts and
+    where it takes over."""
+
+
 class GameConfig(_Model):
     """Fixed game rules, `game.json`."""
 
     title: str = "sch5n"
     tick_rate: int = 60
     tile_size: int = 32
-    sky_color: Color = (31, 127, 191)
+    sky: SkyConfig = SkyConfig()
     physics: PhysicsConfig = PhysicsConfig()
     player: PlayerConfig = PlayerConfig()
     camera: CameraConfig = CameraConfig()

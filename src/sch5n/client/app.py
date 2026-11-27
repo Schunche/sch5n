@@ -15,6 +15,7 @@ from sch5n.client.keybinds import Keybinds
 from sch5n.client.render.atlas import create_texture
 from sch5n.client.render.background import BackgroundRenderer
 from sch5n.client.render.batch import SpriteBatch, rgba
+from sch5n.client.render.sky import SkyRenderer
 from sch5n.client.render.text import TextRenderer
 from sch5n.client.style import Style
 from sch5n.client.window import ResizeEvent, Window
@@ -91,6 +92,7 @@ class App:
 
         self.batch = SpriteBatch(self.ctx, path.SHADER_DIR)
         self.background = BackgroundRenderer(self.ctx, path.SHADER_DIR)
+        self.sky = SkyRenderer(self.ctx, path.SHADER_DIR)
         self.text = TextRenderer(self.ctx)
         self.assets = ClientAssets(
             self.ctx, path.TEXTURES_DIR, self.content, self.animations
@@ -333,5 +335,6 @@ class App:
         self.assets.release()
         self.batch.release()
         self.background.release()
+        self.sky.release()
         self.window.destroy()
         LOGGER.info("Closed after %s frames", self.frame)

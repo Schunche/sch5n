@@ -55,6 +55,8 @@ MIN_BACKGROUND_STD = 10
 MIN_SKY_SHARE = 0.3
 """At least this much of the game screen is open sky."""
 MAX_GAME_DRAW_CALLS = 8
+MIN_GRADIENT = 20
+"""Brightness difference between the sky's horizon and zenith."""
 WARMUP_TICKS = 30
 JOIN_TIMEOUT = 10.0
 """Seconds a join over the network may take."""
@@ -109,6 +111,18 @@ def draw(app: App, scene: Scene) -> np.ndarray:
     """
     app.batch.draw_calls = 0
     scene.render()
+    app.batch.flush()
+    return read_pixels(app)
+
+
+def draw_backdrop(app: App, scene: Scene) -> np.ndarray:
+    """Render only what a scene shows behind menus.
+
+    Returns:
+        np.ndarray: The rendered pixels.
+
+    """
+    scene.draw_backdrop()
     app.batch.flush()
     return read_pixels(app)
 
@@ -175,11 +189,40 @@ def test_scenes_render(app: App) -> None:
     for _ in range(WARMUP_TICKS):
         play.tick()
     pixels = draw(app, play)
-    sky = tuple(app.content.game.sky_color)
-    sky_share = (pixels.reshape(-1, 3) == sky).all(axis=1).mean()
+    # Plenty of open sky, which is blue.
+    rgb = pixels.reshape(-1, 3).astype(int)
+    sky_share = (rgb[:, 2] > rgb[:, 0] + 40).mean()
     assert sky_share > MIN_SKY_SHARE
     # The whole world is a handful of batched draw calls.
     assert app.batch.draw_calls <= MAX_GAME_DRAW_CALLS
+    play.leave()
+
+
+def test_sky_is_a_gradient_that_darkens_underground(app: App) -> None:
+    """The sky is no flat color: lighter at the horizon, dark deep down."""
+    play = PlayScene.singleplayer(app)
+    center = play.camera.center
+    width = app.screen[0]
+
+    def mean_rows(camera_y: float) -> tuple[float, float]:
+        """Brightness of the top and bottom quarter of the backdrop.
+
+        Returns:
+            tuple[float, float]: Mean brightness of both.
+
+        """
+        play.camera.center_on((center[0] + 10 * width, camera_y))
+        pixels = draw_backdrop(app, play).astype(float).mean(axis=2)
+        quarter = len(pixels) // 4
+        return pixels[:quarter].mean(), pixels[-quarter:].mean()
+
+    # Up high, away from the world: the zenith is darker than the horizon.
+    zenith, horizon = mean_rows(center[1] - 600)
+    assert horizon > zenith + MIN_GRADIENT
+    # Deep below the surface it is dark.
+    deep, _ = mean_rows(center[1] + 3000)
+    assert deep < zenith
+    play.leave()
 
 
 def test_text_cache_reuses_textures(app: App) -> None:

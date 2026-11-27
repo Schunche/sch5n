@@ -535,7 +535,7 @@ class WorldRenderer:
         batch = app.batch
         offset = camera.offset(app.screen)
 
-        app.clear(app.content.game.sky_color)
+        app.sky.draw(app.content.game.sky, camera, app.screen, world.horizon)
         batch.begin(app.screen)
         view = camera.view(app.screen)
         draw_clouds(batch, app.assets, world, view.center, app.screen)

@@ -178,6 +178,11 @@ own by copying an entry.
         math/, log/, utility/, ...
     tests/
 
+The sky behind the world is a shader too (`assets/shader/sky.frag`): a
+gradient from the horizon to the zenith in solid pixel-art bands with
+dithered seams, moving with slight parallax, that turns dark deep
+underground. Its colors and sizes are under `sky` in `game.json`.
+
 The game logic runs at a fixed tick rate and never touches the window or
 OpenGL, so it can be tested directly. Rendering packs every texture into one
 atlas and draws all sprites with instancing; tiles are cached per chunk, so a

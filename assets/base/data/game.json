@@ -2,7 +2,17 @@
     "title": "Das Spielplatz",
     "tick_rate": 60,
     "tile_size": 32,
-    "sky_color": [31, 127, 191],
+    "sky": {
+        "horizon": [166, 214, 240],
+        "middle": [31, 127, 191],
+        "zenith": [18, 56, 122],
+        "deep": [24, 20, 28],
+        "height": 900,
+        "parallax": 0.15,
+        "bands": 10,
+        "pixel_size": 4,
+        "underground": [192, 960]
+    },
     "physics": {
         "gravity": 0.4,
         "max_fall_speed": 10.0
