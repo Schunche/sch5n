@@ -492,6 +492,10 @@ class ToolUseConfig(_Model):
     styles: dict[str, tuple[SwingKey, ...]] = Field(default_factory=dict)
     """Swings of tool kinds that are not overhead, like the axe's chop:
     keyframes over the swing. Other items swing overhead."""
+    mirrored: tuple[str, ...] = ()
+    """Tool kinds whose swing turns the other way round, counterclockwise
+    facing right, like the axe's chop. Their item is mirrored across its
+    handle so the blade still leads the swing."""
 
     @field_validator("styles")
     @classmethod
@@ -516,6 +520,23 @@ class ToolUseConfig(_Model):
                 msg = f"{kind}: keyframes must be in order"
                 raise ValueError(msg)
         return styles
+
+    @model_validator(mode="after")
+    def _mirrored_have_styles(self) -> ToolUseConfig:
+        """Check that mirrored tool kinds have their own swing.
+
+        Returns:
+            ToolUseConfig: The config.
+
+        Raises:
+            ValueError: A mirrored kind swings overhead.
+
+        """
+        for kind in self.mirrored:
+            if kind not in self.styles:
+                msg = f"{kind}: only keyframed swings can be mirrored"
+                raise ValueError(msg)
+        return self
 
 
 class ArmRig(_Model):

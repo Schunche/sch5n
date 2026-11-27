@@ -285,15 +285,28 @@ def held_item_pose(
 
 
 def keyframe_pose(
-    rig: Rig, tool_use: ToolUseConfig, moment: SwingMoment, frame: SwingFrame
+    rig: Rig,
+    tool_use: ToolUseConfig,
+    moment: SwingMoment,
+    frame: SwingFrame,
+    *,
+    mirrored: bool = False,
 ) -> HeldItemPose:
     """Place the arm and the item for a moment of a keyframed swing.
+
+    A `mirrored` item is flipped across its handle, for swings that turn
+    the other way round than overhead ones, so the blade leads.
 
     Returns:
         HeldItemPose: Positions relative to the body sprite's top left.
 
     """
-    hold = Hold(rig.arm.names.index(frame.arm), frame.item, frame.scale)
+    hold = Hold(
+        rig.arm.names.index(frame.arm),
+        frame.item,
+        frame.scale,
+        mirrored=mirrored,
+    )
     pose = place_item(rig, tool_use, moment, hold)
     return replace(pose, behind=frame.behind)
 
@@ -308,6 +321,8 @@ class Hold:
     """Where the item points, degrees clockwise from straight forward."""
     scale: float = 1.0
     """Item size factor, around the grip."""
+    mirrored: bool = False
+    """Item mirrored across its handle, so its blade is on the other side."""
 
 
 def place_item(
@@ -325,12 +340,20 @@ def place_item(
     grip_x, grip_y = tool_use.grip
     # Item images point up and forward (-45 degrees) from the grip.
     rotation = math.radians(hold.direction + 45)
+    flip = False
+    if hold.mirrored:
+        # Mirroring across the handle is flipping (now pointing at -135
+        # degrees) and turning a quarter more.
+        flip = True
+        grip_x = 1 - grip_x
+        rotation += math.pi / 2
     if moment.facing_left:
         # Everything is mirrored around the sprite's middle.
         dx = -dx
         hand_x = moment.frame_width - hand_x
         grip_x = 1 - grip_x
         rotation = -rotation
+        flip = not flip
     size = moment.item_size * hold.scale
     return HeldItemPose(
         arm=hold.arm,
@@ -342,7 +365,7 @@ def place_item(
             size,
         ),
         item_transform=Transform(
-            flip_x=moment.facing_left,
+            flip_x=flip,
             rotation=rotation,
             pivot=(grip_x, grip_y),
         ),
@@ -399,7 +422,8 @@ class PlayerRenderer:
             msg = "No tool use configured for the player"
             raise RuntimeError(msg)
         rig = self.assets.rigs["player"]
-        keys = self.tool_use.styles.get(tool_kind(swing.item) or "")
+        kind = tool_kind(swing.item) or ""
+        keys = self.tool_use.styles.get(kind)
         frame = None if keys is None else swing_frame(keys, swing.progress)
         clip = animator.clip
         index = None
@@ -420,7 +444,13 @@ class PlayerRenderer:
         )
         if frame is None:
             return body, held_item_pose(rig, self.tool_use, moment)
-        return body, keyframe_pose(rig, self.tool_use, moment, frame)
+        return body, keyframe_pose(
+            rig,
+            self.tool_use,
+            moment,
+            frame,
+            mirrored=kind in self.tool_use.mirrored,
+        )
 
     def _draw_swinging(
         self,

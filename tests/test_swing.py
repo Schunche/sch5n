@@ -12,9 +12,11 @@ import pytest
 from sch5n.client.assets import frame_files
 from sch5n.client.render.image import load_rgba
 from sch5n.client.world_view import (
+    HeldItemPose,
     SwingFrame,
     SwingMoment,
     held_item_pose,
+    keyframe_pose,
     swing_direction,
     swing_frame,
     tool_kind,
@@ -325,3 +327,80 @@ def test_keyframes_blend_the_item() -> None:
     assert swing_frame(keys, 0.75).arm == "forward"
     with pytest.raises(pydantic.ValidationError):
         ToolUseConfig(armless="a", arm="b", rig="c", styles={"axe": keys[:1]})
+
+
+def drawn_at(pose: HeldItemPose, u: float, v: float) -> tuple[float, float]:
+    """Where a point of the item image ends up, as the renderer draws it.
+
+    Returns:
+        tuple[float, float]: Position relative to the body sprite's corner.
+
+    """
+    x, y, w, h = pose.item_rect
+    t = pose.item_transform
+    if t.flip_x:
+        u = 1 - u
+    px, py = t.pivot
+    dx, dy = (u - px) * w, (v - py) * h
+    c, s = math.cos(t.rotation), math.sin(t.rotation)
+    return (x + px * w + dx * c - dy * s, y + py * h + dx * s + dy * c)
+
+
+HANDLE_TIP = (0.85, 0.15)
+"""Top right of an item image: the end of the handle, at the head."""
+BLADE = (0.85, 0.5)
+"""A point below the handle's diagonal, on the side of the blade."""
+
+
+def blade_side(pose: HeldItemPose) -> float:
+    """Which side of the drawn handle the blade is on.
+
+    Returns:
+        float: Positive when clockwise of the handle, seen from the grip.
+
+    """
+    gx, gy = drawn_at(pose, 0.15, 0.85)
+    tx, ty = drawn_at(pose, *HANDLE_TIP)
+    bx, by = drawn_at(pose, *BLADE)
+    return (tx - gx) * (by - gy) - (ty - gy) * (bx - gx)
+
+
+@pytest.mark.parametrize("facing_left", [False, True])
+def test_mirrored_item_flips_its_blade_only(
+    rig: Rig, *, facing_left: bool
+) -> None:
+    """A mirrored item has its blade across the handle, nothing else moves."""
+    tool_use = load_animations(path.DATA_DIR).tool_use["player"]
+    frame = SwingFrame(
+        arm="forward", item=20, scale=1, behind=False, body=None
+    )
+    at = moment(0.5, facing_left=facing_left)
+    plain = keyframe_pose(rig, tool_use, at, frame)
+    mirrored = keyframe_pose(rig, tool_use, at, frame, mirrored=True)
+    for point in [(0.15, 0.85), HANDLE_TIP]:
+        assert drawn_at(mirrored, *point) == pytest.approx(
+            drawn_at(plain, *point)
+        )
+    assert blade_side(mirrored) * blade_side(plain) < 0
+
+
+def test_axe_blade_leads_the_chop(rig: Rig) -> None:
+    """The chop turns counterclockwise, so the blade is on that side."""
+    tool_use = load_animations(path.DATA_DIR).tool_use["player"]
+    assert "axe" in tool_use.mirrored
+    chop = frames("axe")
+    assert chop[0].item > chop[-1].item  # Counterclockwise, facing right.
+    for frame in chop:
+        pose = keyframe_pose(
+            rig, tool_use, moment(0.5, facing_left=False), frame, mirrored=True
+        )
+        assert blade_side(pose) < 0
+    # Overhead swings turn clockwise: their blade is on the other side.
+    overhead = held_item_pose(rig, tool_use, moment(0.5, facing_left=False))
+    assert blade_side(overhead) > 0
+
+
+def test_only_keyframed_swings_are_mirrored() -> None:
+    """Overhead swings cannot be mirrored."""
+    with pytest.raises(pydantic.ValidationError):
+        ToolUseConfig(armless="a", arm="b", rig="c", mirrored=("pickaxe",))

@@ -23,6 +23,7 @@
             "swing": [-100, 55],
             "wrist": [-90, -15],
             "grip": [0.15, 0.85],
+            "mirrored": ["axe"],
             "styles": {
                 "axe": [
                     {"at": 0.0, "arm": "back", "item": 200, "behind": true},
