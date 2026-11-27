@@ -54,7 +54,9 @@ per topic:
 - **Interface**: theme, menu background and GUI size. The menu background is
   either the game world (a live world behind the main menu, the paused game
   behind the in-game settings) or the theme's background.
-- **Game / Editor / Viewer Controls**: each program's bindings. Click a slot,
+- **Controls**: the bindings of the program you are in. The game, the map
+  editor and the map viewer each have their own, and each can only be
+  changed from inside that program. Click a slot,
   then press a key, mouse button or wheel direction, with modifiers if you
   like (Ctrl+S). Esc cancels, Backspace or right click clears. Esc itself
   cannot be rebound.

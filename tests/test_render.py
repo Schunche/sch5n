@@ -198,9 +198,7 @@ def test_play_scene_input(app: App) -> None:
 def test_rebind_in_settings_and_play(app: App) -> None:
     """Rebinding in the settings changes the game's controls and is saved."""
     play = PlayScene(app)
-    settings = SettingsScene(
-        app, back=play, in_game=True, page=Page.GAME_CONTROLS
-    )
+    settings = SettingsScene(app, back=play, in_game=True, page=Page.CONTROLS)
     jump = BindRow(Context.GAME, Action.JUMP)
     index = show_row(settings, jump)
     cell = settings.table.cell_rect(index, 0, settings.scroll).center
@@ -237,11 +235,12 @@ def test_rebind_in_settings_and_play(app: App) -> None:
     assert binds.action_for(Binding.key(glfw.KEY_SPACE)) is Action.JUMP
 
 
-def test_capture_modifier_combinations(app: App) -> None:
+def test_capture_modifier_combinations(
+    app: App, tmp_path_factory: pytest.TempPathFactory
+) -> None:
     """Modifier combinations, lone modifiers and the wheel can be bound."""
-    settings = SettingsScene(
-        app, back=MainMenu(app), page=Page.EDITOR_CONTROLS
-    )
+    editor = EditorScene(app, tmp_path_factory.mktemp("maps") / "m.json")
+    settings = SettingsScene(app, back=editor, page=Page.CONTROLS)
     binds = app.keybinds[Context.EDITOR]
     reset = BindRow(Context.EDITOR, Action.RESET_CAMERA)
     index = show_row(settings, reset)
@@ -351,13 +350,10 @@ def test_sidebar_switches_pages(app: App) -> None:
     for page, button in zip(Page, list(settings.sidebar), strict=True):
         settings.on_event(click(button.rect.center))
         assert settings.page is page
-        if page.context is None:
-            assert all(isinstance(row, OptionRow) for row in settings.rows)
+        if page is Page.CONTROLS:
+            assert all(isinstance(row, BindRow) for row in settings.rows)
         else:
-            assert all(
-                isinstance(row, BindRow) and row.context is page.context
-                for row in settings.rows
-            )
+            assert all(isinstance(row, OptionRow) for row in settings.rows)
         assert draw(app, settings).any()
 
 
@@ -472,3 +468,44 @@ def test_uncolored_cursor_is_the_system_cursor(app: App) -> None:
 
     app.update_settings(cursor_color=None)
     assert app.window.cursor.visible
+
+
+def test_each_program_edits_only_its_own_controls(
+    app: App, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """The game, the editor and the viewer each reach only their bindings."""
+    target = tmp_path_factory.mktemp("maps") / "m.json"
+    origins = {
+        Context.GAME: [MainMenu(app), PlayScene(app)],
+        Context.EDITOR: [EditorScene(app, target)],
+        Context.VIEWER: [ViewerScene(app, target)],
+    }
+    for context, scenes in origins.items():
+        for scene in scenes:
+            settings = SettingsScene(app, back=scene, page=Page.CONTROLS)
+            contexts = {row.context for row in settings.rows}
+            assert contexts == {context}, type(scene).__name__
+
+
+def test_reset_controls_keeps_other_programs(
+    app: App, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Resetting the controls page leaves other programs' bindings alone."""
+    viewer = ViewerScene(app, tmp_path_factory.mktemp("maps") / "m.json")
+    app.keybinds[Context.GAME].bind(Action.JUMP, 0, Binding.key(glfw.KEY_K))
+    app.keybinds[Context.VIEWER].bind(
+        Action.RESET_CAMERA, 0, Binding.key(glfw.KEY_K)
+    )
+    settings = SettingsScene(app, back=viewer, page=Page.CONTROLS)
+    reset = next(b for b in settings.buttons if b.id == "reset")
+    settings.on_event(click(reset.rect.center))
+    assert (
+        app.keybinds[Context.VIEWER].action_for(Binding.key(glfw.KEY_R))
+        is Action.RESET_CAMERA
+    )
+    assert (
+        app.keybinds[Context.GAME].action_for(Binding.key(glfw.KEY_K))
+        is Action.JUMP
+    )
+    app.keybinds.reset()
+    app.update_settings()

@@ -39,7 +39,7 @@ class ViewerScene(Scene):
 
     title = "Map Viewer"
     has_backdrop = True
-    context = Context.VIEWER
+    controls = Context.VIEWER
 
     def __init__(self, app: App, map_path: Path) -> None:
         """Open `map_path`. A missing file gives an empty map."""
@@ -59,7 +59,7 @@ class ViewerScene(Scene):
     @property
     def keys(self) -> ContextBinds:
         """Bindings of this tool."""
-        return self.app.keybinds[self.context]
+        return self.app.keybinds[self.controls]
 
     def mouse_tile(self) -> tuple[int, int]:
         """Tile under the mouse cursor.
@@ -178,7 +178,7 @@ class EditorScene(ViewerScene):
     """
 
     title = "Map Editor"
-    context = Context.EDITOR
+    controls = Context.EDITOR
     escape_hint = "save & quit"
 
     def __init__(self, app: App, map_path: Path) -> None:

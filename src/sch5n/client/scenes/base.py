@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+from sch5n.client.keybinds import Context
+
 if TYPE_CHECKING:
     from sch5n.client.app import App
     from sch5n.client.window import Event
@@ -16,6 +18,8 @@ class Scene:
     `tick` runs at the fixed game tick rate, `render` once per frame.
     """
 
+    controls: ClassVar[Context] = Context.GAME
+    """Program whose key bindings the settings opened here may change."""
     has_backdrop: ClassVar[bool] = False
     """Whether `draw_backdrop` draws something."""
 

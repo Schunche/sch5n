@@ -70,18 +70,8 @@ class Page(StrEnum):
     VIDEO = "Video"
     AUDIO = "Audio"
     INTERFACE = "Interface"
-    GAME_CONTROLS = "Game Controls"
-    EDITOR_CONTROLS = "Editor Controls"
-    VIEWER_CONTROLS = "Viewer Controls"
-
-    @property
-    def context(self) -> Context | None:
-        """Key binding context shown on a controls page."""
-        return {
-            Page.GAME_CONTROLS: Context.GAME,
-            Page.EDITOR_CONTROLS: Context.EDITOR,
-            Page.VIEWER_CONTROLS: Context.VIEWER,
-        }.get(self)
+    CONTROLS = "Controls"
+    """Bindings of the program the settings were opened from."""
 
 
 class Option(StrEnum):
@@ -159,17 +149,18 @@ class BindRow:
 type Row = OptionRow | BindRow
 
 
-def page_rows(app: App, page: Page) -> list[Row]:
+def page_rows(app: App, page: Page, controls: Context) -> list[Row]:
     """Rows of a settings page, top to bottom.
+
+    `controls` is the program whose bindings the controls page shows.
 
     Returns:
         list[Row]: The rows.
 
     """
-    if page.context is not None:
+    if page is Page.CONTROLS:
         return [
-            BindRow(page.context, action)
-            for action, _ in app.keybinds[page.context]
+            BindRow(controls, action) for action, _ in app.keybinds[controls]
         ]
     return [OptionRow(option) for option in PAGE_OPTIONS[page]]
 
@@ -246,10 +237,13 @@ def set_volume(app: App, option: Option, fraction: float) -> None:
     app.update_settings(**{VOLUMES[option]: steps * VOLUME_STEP})
 
 
-def reset_page(app: App, page: Page) -> None:
-    """Restore the defaults of one page and save."""
-    if page.context is not None:
-        app.keybinds[page.context].reset()
+def reset_page(app: App, page: Page, controls: Context) -> None:
+    """Restore the defaults of one page and save.
+
+    The controls page resets only the bindings of `controls`.
+    """
+    if page is Page.CONTROLS:
+        app.keybinds[controls].reset()
         app.update_settings()
         return
     defaults = Settings()
@@ -281,6 +275,8 @@ class SettingsScene(Scene):
         """Create the screen. `back` is shown again when leaving."""
         super().__init__(app)
         self.back = back
+        self.controls = back.controls
+        """Only the program the settings were opened from is editable."""
         self.in_game = in_game
         self.page = page
         self.rows: list[Row] = []
@@ -301,11 +297,11 @@ class SettingsScene(Scene):
     def show_page(self, page: Page) -> None:
         """Switch to a page."""
         self.page = page
-        self.rows = page_rows(self.app, page)
+        self.rows = page_rows(self.app, page, self.controls)
         self.scroll = 0.0
         self.capturing = None
         self.message = PAGE_NOTES.get(
-            page, CONTROLS_NOTE if page.context else ""
+            page, CONTROLS_NOTE if page is Page.CONTROLS else ""
         )
         self.layout()
 
@@ -454,7 +450,7 @@ class SettingsScene(Scene):
             case str() if button_id.startswith("page:"):
                 self.show_page(Page(button_id.removeprefix("page:")))
             case "reset":
-                reset_page(self.app, self.page)
+                reset_page(self.app, self.page, self.controls)
                 self.message = f"{self.page} reset to defaults"
                 self.layout()
             case "back":
