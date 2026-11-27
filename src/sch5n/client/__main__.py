@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 from sch5n.game.config import GameMode
 from sch5n.log.logger import init as init_logging
-from sch5n.utility import path
 from sch5n.world.io import DEFAULT_MAP, map_file
 lazy from sch5n.client.app import App, Options
 lazy from sch5n.client.scenes.map_tools import MapScene
@@ -35,7 +34,7 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
 
 
 def _init() -> None:
-    init_logging(path.CONFIG_DIR / "logging.json")
+    init_logging()
 
 
 def main(argv: Sequence[str] | None = None) -> None:

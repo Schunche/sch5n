@@ -1,47 +1,21 @@
 # Copyright (c) 2026 Schunche
 """Filesystem locations used by the program."""
 
+from dataclasses import dataclass
 from os import getenv
 from pathlib import Path
 
 import platformdirs
 
-from sch5n.about import NAME, __author__, __version__
+from sch5n.about import NAME, __author__
 
 ASSETS_ENV_VAR = "SCH5N_ASSETS"
 """Environment variable overriding the assets directory."""
-
-
-class DevPlatformDirs(platformdirs.PlatformDirs):
-    """Custom directory for developers."""
-
-
-_args = {
-    "appname": NAME,
-    "appauthor": __author__,
-    "version": __version__,
-    "roaming": False,
-    "multipath": False,
-    "opinion": True,
-    "ensure_exists": False,
-}
-
-_SERVER_PLATFORM_DIRS = DevPlatformDirs(**_args)
-_CLIENT_PLATFORM_DIRS = platformdirs.PlatformDirs(**_args)
-
-
-def get_platformdirs() -> platformdirs.PlatformDirs:
-    """Get platform specific directories.
-
-    Returns:
-        platformdirs.PlatformDirs: Directories for user data, logs, etc.
-
-    """
-    return (
-        _SERVER_PLATFORM_DIRS
-        if getenv("SCH5N_DEV", "0") == "1"
-        else _CLIENT_PLATFORM_DIRS
-    )
+DATA_ENV_VAR = "SCH5N_DATA"
+"""Environment variable overriding the data directory."""
+DEV_ENV_VAR = "SCH5N_DEV"
+"""`1` keeps everything the game writes in the game folder, `0` uses the
+user's folders. Unset, a git checkout counts as developing."""
 
 
 def find_assets_dir(start: Path | None = None) -> Path:
@@ -69,13 +43,94 @@ def find_assets_dir(start: Path | None = None) -> Path:
 
 
 ASSETS_DIR = find_assets_dir()
+"""Pictures and shaders: what draws the game."""
 BASE_DIR = ASSETS_DIR / "base"
-"""The base game content pack."""
-DATA_DIR = BASE_DIR / "data"
+"""The base game's assets."""
 TEXTURES_DIR = BASE_DIR / "textures"
-MAPS_DIR = BASE_DIR / "maps"
-CONFIG_DIR = BASE_DIR / "config"
-SHADER_DIR = ASSETS_DIR / "shader"
+SHADER_DIR = ASSETS_DIR / "shaders"
+DATA_DIR = Path(getenv(DATA_ENV_VAR) or ASSETS_DIR.parent / "data")
+"""Game rules, blocks, items, UI and default settings: what defines the
+game. Next to `assets`."""
+MAPS_DIR = DATA_DIR / "maps"
+"""Maps that come with the game, and the ones made with the editor."""
+
+
+GAME_DIR = ASSETS_DIR.parent
+"""The game folder, holding `assets` and `data`."""
+DEV_USER_DIR = GAME_DIR / "dev" / "user"
+"""Where a developer's settings, worlds and logs go, inside the game
+folder and ignored by git."""
+
+
+def is_developing() -> bool:
+    """Whether the game runs for development.
+
+    Developers work in a git checkout; players download the game without
+    `.git`. `SCH5N_DEV` decides instead when set.
+
+    Returns:
+        bool: True to keep everything inside the game folder.
+
+    """
+    match getenv(DEV_ENV_VAR):
+        case "1":
+            return True
+        case "0":
+            return False
+        case _:
+            return (GAME_DIR / ".git").exists()
+
+
+@dataclass(frozen=True, slots=True)
+class UserDirs:
+    """Where the game writes: the user's settings, worlds and logs."""
+
+    config: Path
+    data: Path
+    logs: Path
+
+
+def user_dirs() -> UserDirs:
+    """Get the directories the game writes to.
+
+    While developing they are inside the game folder, so nothing gets
+    outside it. Otherwise they are the user's own, unversioned so they
+    carry over between releases.
+
+    Returns:
+        UserDirs: Config, data and log directories.
+
+    """
+    if is_developing():
+        return UserDirs(
+            DEV_USER_DIR / "config",
+            DEV_USER_DIR / "data",
+            DEV_USER_DIR / "logs",
+        )
+    dirs = platformdirs.PlatformDirs(appname=NAME, appauthor=__author__)
+    return UserDirs(
+        dirs.user_config_path, dirs.user_data_path, dirs.user_log_path
+    )
+
+
+def user_logging_file() -> Path:
+    """Locate the user's logging configuration, made on first start.
+
+    Returns:
+        Path: A file in the per-user config directory.
+
+    """
+    return user_dirs().config / "logging.json"
+
+
+def user_log_file() -> Path:
+    """Where the game writes its log by default.
+
+    Returns:
+        Path: A file in the per-user log directory.
+
+    """
+    return user_dirs().logs / "sch5n.log.jsonl"
 
 
 def user_settings_file() -> Path:
@@ -85,6 +140,4 @@ def user_settings_file() -> Path:
         Path: A file in the per-user config directory.
 
     """
-    dirs = platformdirs.PlatformDirs(appname=NAME, appauthor=__author__)
-    # Not versioned: settings carry over between releases.
-    return dirs.user_config_path / "settings.json"
+    return user_dirs().config / "settings.json"

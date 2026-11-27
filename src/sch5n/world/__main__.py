@@ -29,7 +29,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--height", type=int, default=defaults.bottom)
     args = parser.parse_args(argv)
 
-    init_logging(path.CONFIG_DIR / "logging.json")
+    init_logging()
     seed = args.seed if args.seed is not None else secrets.randbelow(2**32)
     blocks = BlockRegistry(
         load_model(BlocksFile, path.DATA_DIR / "blocks.json")

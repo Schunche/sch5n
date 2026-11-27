@@ -14,12 +14,10 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import platformdirs
-
-from sch5n.about import NAME, __author__
 from sch5n.error.exceptions import ParseError
 from sch5n.game.inventory import Inventory, ItemStack
 from sch5n.log.logger import LOGGER
+from sch5n.utility.path import user_dirs
 from sch5n.world.io import tilemap_from_json, tilemap_to_json
 
 if TYPE_CHECKING:
@@ -42,8 +40,7 @@ def user_worlds_dir() -> Path:
         Path: A directory in the per-user data directory.
 
     """
-    dirs = platformdirs.PlatformDirs(appname=NAME, appauthor=__author__)
-    return dirs.user_data_path / "worlds"
+    return user_dirs().data / "worlds"
 
 
 def clean_name(name: str) -> str:

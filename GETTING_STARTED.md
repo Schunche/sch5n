@@ -170,7 +170,7 @@ On **Linux**, in the terminal:
 ./play.sh view --edit --map map1
 ```
 
-Maps are in `assets/base/maps`. Editing a map name that doesn't exist yet,
+Maps are in `data/maps`. Editing a map name that doesn't exist yet,
 like `play.bat view --edit --map mymap`, starts a new, empty map. To play on it, start
 the game with `play.bat client --map mymap` and create a new world under
 **Singleplayer**: new worlds start from that map.
@@ -180,7 +180,7 @@ the game with `play.bat client --map mymap` and create a new world under
 Download the new ZIP and extract it, just like the first time. You can delete
 the old folder. Your settings and worlds are kept, as they live in your user
 folder.
-Maps you made are inside the old folder's `assets/base/maps`: copy them over
+Maps you made are inside the old folder's `data/maps`: copy them over
 first.
 
 ## Removing the game
@@ -230,7 +230,9 @@ Install your distribution's Mesa OpenGL packages, for example
 `sudo apt install libgl1-mesa-dri libglx-mesa0` on Ubuntu or Debian.
 
 **Something else.**
-The game writes a log to `dev/user/logs/sch5n.log.jsonl` in the game folder.
+The game writes a log, `sch5n.log.jsonl`, to
+`C:\Users\<you>\AppData\Local\Schunche\sch5n\Logs` on Windows or
+`~/.local/state/sch5n/log` on Linux.
 When you report a problem, include that file and what you were doing.
 
 ## What is all this?

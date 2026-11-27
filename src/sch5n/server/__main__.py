@@ -110,7 +110,7 @@ def run(server: Server, tick_rate: int, ticks: int | None = None) -> None:
 def main(argv: Sequence[str] | None = None) -> None:
     """Run the dedicated server until Ctrl+C."""
     args = parse_arguments(argv)
-    init_logging(path.CONFIG_DIR / "logging.json")
+    init_logging()
     console = logging.getHandlerByName("stderr")
     if console is not None:
         console.setLevel(logging.INFO)

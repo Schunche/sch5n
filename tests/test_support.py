@@ -13,6 +13,9 @@ import pytest
 import sch5n
 from sch5n.client.map import Map
 from sch5n.log.formatter import JsonFormatter
+from sch5n.log.logger import default_config, ensure_config
+from sch5n.utility import path
+from sch5n.world.save import user_worlds_dir
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -98,3 +101,52 @@ def test_package_metadata() -> None:
     """The package exposes its version and author."""
     assert sch5n.__version__
     assert sch5n.__author__ in sch5n.__authors__
+
+
+def test_logging_config_is_made_once(tmp_path: Path) -> None:
+    """The default logging setup is written to the user's config once."""
+    config = tmp_path / "config" / "logging.json"
+    log_file = tmp_path / "logs" / "sch5n.log.jsonl"
+    ensure_config(config, log_file)
+    data = json.loads(config.read_text(encoding="utf-8"))
+    assert data["handlers"]["file_jsonl"]["filename"] == str(log_file)
+    assert data == json.loads(json.dumps(default_config(log_file)))
+
+    # The user's own changes are kept.
+    config.write_text('{"version": 1}', encoding="utf-8")
+    ensure_config(config, log_file)
+    assert json.loads(config.read_text(encoding="utf-8")) == {"version": 1}
+
+
+def test_data_lives_next_to_assets() -> None:
+    """Game data and maps are outside the assets, which draw the game."""
+    assert path.DATA_DIR.parent == path.ASSETS_DIR.parent
+    assert (path.DATA_DIR / "game.json").is_file()
+    assert (path.MAPS_DIR / "map1.json").is_file()
+    assert (path.SHADER_DIR / "sky.frag").is_file()
+    assert path.user_logging_file().parent == path.user_settings_file().parent
+
+
+def test_developing_keeps_everything_in_the_game_folder(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """While developing, settings, worlds and logs stay in `dev/user`."""
+    monkeypatch.setenv(path.DEV_ENV_VAR, "1")
+    assert path.is_developing()
+    written = [
+        path.user_settings_file(),
+        path.user_logging_file(),
+        path.user_log_file(),
+        user_worlds_dir(),
+    ]
+    for file in written:
+        assert file.is_relative_to(path.DEV_USER_DIR)
+        assert file.is_relative_to(path.GAME_DIR)
+
+    monkeypatch.setenv(path.DEV_ENV_VAR, "0")
+    assert not path.is_developing()
+    assert not path.user_settings_file().is_relative_to(path.GAME_DIR)
+
+    # Without the variable, a git checkout counts as developing.
+    monkeypatch.delenv(path.DEV_ENV_VAR)
+    assert path.is_developing() == (path.GAME_DIR / ".git").exists()

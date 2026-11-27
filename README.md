@@ -134,7 +134,7 @@ Click a value for the next option, right click for the previous one.
 Every program uses the same settings. They are saved immediately to
 `settings.json` in your user config directory (e.g.
 `~/.config/sch5n/settings.json` on Linux), which overrides
-`assets/base/data/settings.json`.
+`data/settings.json`.
 
 The mouse cursor is the operating system cursor showing
 `textures/icon/cursor.png`, so it never lags. Setting `cursor_color` in
@@ -143,10 +143,10 @@ image tinted with that color instead.
 
 ### Themes
 
-Themes live in `assets/base/data/ui.json`: Dusk (default), Forest, Ocean,
+Themes live in `data/ui.json`: Dusk (default), Forest, Ocean,
 Ember and Classic (the original look). A theme sets the GUI colors and the
 menu background: an animated, pixelated shader in three colors
-(`assets/shader/background.frag`), an image, or a solid color. Add your
+(`assets/shaders/background.frag`), an image, or a solid color. Add your
 own by copying an entry.
 
 ## Dependencies
@@ -161,13 +161,14 @@ own by copying an entry.
 
 ## Layout
 
-    assets/
-        base/
-            config/      logging configuration
-            data/        game rules, blocks, items, animations, UI style, user settings (JSON)
-            maps/        bundled maps
-            textures/    images
-        shader/          GLSL shaders
+    assets/              what draws the game
+        base/textures/   images
+        shaders/         GLSL shaders
+    data/                what defines the game: rules, blocks, items, animations, UI style, default settings (JSON)
+        maps/            bundled maps, and the ones made with the editor
+    dev/                 ignored by git: everything the game writes while developing
+        user/            settings, logging config, logs and worlds
+        tmp/             temporary files of the tests
     src/sch5n/           source code only
         game/            game rules: player, inventory, mining, items, particles (no GL, no window)
         world/           chunked tilemap, map files, world generator
@@ -178,7 +179,7 @@ own by copying an entry.
         math/, log/, utility/, ...
     tests/
 
-The sky behind the world is a shader too (`assets/shader/sky.frag`): a
+The sky behind the world is a shader too (`assets/shaders/sky.frag`): a
 gradient from the horizon to the zenith in solid pixel-art bands with
 dithered seams, moving with slight parallax, that turns dark deep
 underground. Its colors and sizes are under `sky` in `game.json`.
@@ -187,6 +188,15 @@ The game logic runs at a fixed tick rate and never touches the window or
 OpenGL, so it can be tested directly. Rendering packs every texture into one
 atlas and draws all sprites with instancing; tiles are cached per chunk, so a
 frame is a handful of draw calls.
+
+### Where the game writes
+
+Players' settings, worlds, logging configuration (`logging.json`, written
+with the defaults on first start) and logs go to their user directories,
+so they survive updates. While developing, nothing is written outside the
+game folder: all of it goes to `dev/user/` instead, and the tests keep
+their temporary files in `dev/tmp/`. A git checkout counts as developing;
+`SCH5N_DEV=1` or `SCH5N_DEV=0` decides explicitly.
 
 ## Tests
 

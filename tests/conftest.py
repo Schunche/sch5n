@@ -16,12 +16,20 @@ from sch5n.utility import path
 from sch5n.world.tilemap import TileMap
 
 
+def pytest_configure(config: pytest.Config) -> None:
+    """Keep temporary test files inside the game folder, under `dev`."""
+    if config.option.basetemp is None:
+        base = path.GAME_DIR / "dev" / "tmp" / "pytest"
+        base.parent.mkdir(parents=True, exist_ok=True)
+        config.option.basetemp = base
+
+
 @pytest.fixture(scope="session")
 def content() -> Content:
     """Load the real game data.
 
     Returns:
-        Content: Blocks, items and rules from `assets/base/data`.
+        Content: Blocks, items and rules from `data`.
 
     """
     return Content.load(path.DATA_DIR)

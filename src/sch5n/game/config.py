@@ -1,5 +1,5 @@
 # Copyright (c) 2026 Schunche
-"""Typed configuration loaded from the `assets/base/data` JSON files."""
+"""Typed configuration loaded from the JSON files in `data`."""
 
 from __future__ import annotations
 
