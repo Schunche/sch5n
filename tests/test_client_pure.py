@@ -182,7 +182,8 @@ def test_player_frames_are_real_sprites() -> None:
     """Player frames are real art that fits around the hitbox.
 
     Every animation has frames of one size, with transparency and several
-    colors, at least as big as the hitbox.
+    colors, at least as big as the hitbox, and no part of the character is
+    cut off by the frame's edges.
     """
     animations = load_animations(path.DATA_DIR)
     width, height = load_model(
@@ -197,6 +198,11 @@ def test_player_frames_are_real_sprites() -> None:
             sizes.add(pixels.shape[:2])
             alpha = pixels[..., 3]
             assert (alpha == 0).any(), file  # Not a filled box.
+            # Nothing touches the top or the sides, or the outline would be
+            # cut off there. Feet stand on the bottom row.
+            assert not alpha[0].any(), file
+            assert not alpha[:, 0].any(), file
+            assert not alpha[:, -1].any(), file
             opaque = pixels[alpha > 0][:, :3]
             assert len({tuple(c) for c in opaque.tolist()}) >= MIN_COLORS
     assert len(sizes) == 1
