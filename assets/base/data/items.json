@@ -1,10 +1,10 @@
 {
     "items": {
-        "copper_pickaxe": {"name": "Copper Pickaxe", "icon": "tool/copperPickaxe", "max_stack": 1, "use_time": 25, "tool_power": {"pickaxe": 25}, "damage": 3, "knockback": 2, "drop_size": 32},
-        "copper_axe": {"name": "Copper Axe", "icon": "tool/copperAxe", "max_stack": 1, "use_time": 40, "tool_power": {"axe": 30}, "damage": 4, "knockback": 3, "drop_size": 32},
-        "iron_shovel": {"name": "Iron Shovel", "icon": "tool/ironShovel", "max_stack": 1, "use_time": 20, "tool_power": {"shovel": 50}, "damage": 4, "knockback": 2, "drop_size": 32},
-        "dirt_block": {"name": "Dirt Block", "icon": "tile/dirt/0", "max_stack": 1024, "places": "dirt", "drop_size": 16},
-        "stone_block": {"name": "Stone Block", "icon": "tile/stone/0", "max_stack": 1024, "places": "stone", "drop_size": 16},
-        "oak_log": {"name": "Oak Log", "icon": "tile/oakLog/0", "max_stack": 1024, "places": "oak_log", "drop_size": 16}
+        "copper_pickaxe": {"name": "Copper Pickaxe", "description": "Breaks stone and ore. Digs dirt too, slowly.", "icon": "tool/copperPickaxe", "max_stack": 1, "use_time": 25, "tool_power": {"pickaxe": 25}, "damage": 3, "knockback": 2, "drop_size": 32},
+        "copper_axe": {"name": "Copper Axe", "description": "Chops down trees.", "icon": "tool/copperAxe", "max_stack": 1, "use_time": 40, "tool_power": {"axe": 30}, "damage": 4, "knockback": 3, "drop_size": 32},
+        "iron_shovel": {"name": "Iron Shovel", "description": "Made for digging dirt.", "icon": "tool/ironShovel", "max_stack": 1, "use_time": 20, "tool_power": {"shovel": 40}, "damage": 4, "knockback": 2, "drop_size": 32},
+        "dirt_block": {"name": "Dirt Block", "description": "Place it to build.", "icon": "tile/dirt/0", "max_stack": 1024, "places": "dirt", "drop_size": 16},
+        "stone_block": {"name": "Stone Block", "description": "Place it to build.", "icon": "tile/stone/0", "max_stack": 1024, "places": "stone", "drop_size": 16},
+        "oak_log": {"name": "Oak Log", "description": "Place it to build.", "icon": "tile/oakLog/0", "max_stack": 1024, "places": "oak_log", "drop_size": 16}
     }
 }

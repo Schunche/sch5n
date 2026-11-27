@@ -3,11 +3,14 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sch5n.client.render.batch import rgba
 from sch5n.client.render.text import Anchor, TextStyle
 from sch5n.game.inventory import HOTBAR_SIZE
+from sch5n.math.rect import Rect
 
 if TYPE_CHECKING:
     from sch5n.client.assets import ClientAssets
@@ -16,6 +19,80 @@ if TYPE_CHECKING:
     from sch5n.client.style import Style
     from sch5n.client.ui import InventoryLayout
     from sch5n.game.inventory import Inventory, ItemStack
+
+
+TOOLTIP_PADDING = 10
+TOOLTIP_GAP = 4
+"""Pixels between tooltip lines."""
+TOOLTIP_OFFSET = (18, 18)
+"""Where the tooltip sits relative to the mouse."""
+TOOLTIP_TITLE_SIZE = 16
+TOOLTIP_TEXT_SIZE = 14
+TOOLTIP_RADIUS = 6
+
+
+class LineKind(StrEnum):
+    """How a tooltip line looks."""
+
+    TITLE = "title"
+    TEXT = "text"
+    STAT = "stat"
+
+
+@dataclass(frozen=True, slots=True)
+class TooltipLine:
+    """One line of an item tooltip."""
+
+    text: str
+    kind: LineKind = LineKind.TEXT
+
+
+def item_tooltip(stack: ItemStack, tick_rate: int) -> list[TooltipLine]:
+    """Describe a hovered item: name, description and what it does.
+
+    Returns:
+        list[TooltipLine]: The lines, title first.
+
+    """
+    item = stack.item
+    spec = item.spec
+    lines = [TooltipLine(stack.display_name, LineKind.TITLE)]
+    if spec.description:
+        lines.append(TooltipLine(spec.description))
+    lines.extend(
+        TooltipLine(f"{kind.capitalize()} power {power}", LineKind.STAT)
+        for kind, power in spec.tool_power.items()
+    )
+    if item.is_tool:
+        seconds = spec.use_time / tick_rate
+        lines.append(TooltipLine(f"Swings in {seconds:.2f} s", LineKind.STAT))
+    if item.is_stackable:
+        lines.append(
+            TooltipLine(f"Stacks up to {spec.max_stack}", LineKind.STAT)
+        )
+    return lines
+
+
+def tooltip_rect(
+    size: tuple[float, float],
+    mouse: tuple[float, float],
+    screen: tuple[float, float],
+) -> Rect:
+    """Place a tooltip of `size` next to the mouse, inside the screen.
+
+    It flips to the other side of the mouse where it would not fit.
+
+    Returns:
+        Rect: The tooltip's rectangle.
+
+    """
+    w, h = size
+    x, y = mouse[0] + TOOLTIP_OFFSET[0], mouse[1] + TOOLTIP_OFFSET[1]
+    if x + w > screen[0]:
+        x = mouse[0] - TOOLTIP_OFFSET[0] - w
+    if y + h > screen[1]:
+        y = mouse[1] - TOOLTIP_OFFSET[1] - h
+    return Rect(max(0.0, x), max(0.0, y), w, h)
 
 
 class Hud:
@@ -103,6 +180,55 @@ class Hud:
                         color=rgba(style.color("text")),
                     ),
                 )
+
+    def draw_tooltip(
+        self,
+        batch: SpriteBatch,
+        lines: list[TooltipLine],
+        mouse: tuple[float, float],
+        screen: tuple[float, float],
+    ) -> None:
+        """Draw a tooltip panel next to the mouse."""
+        style = self.style
+        styles = {
+            LineKind.TITLE: TextStyle(
+                TOOLTIP_TITLE_SIZE, rgba(style.color("accent"))
+            ),
+            LineKind.TEXT: TextStyle(
+                TOOLTIP_TEXT_SIZE, rgba(style.color("text"))
+            ),
+            LineKind.STAT: TextStyle(
+                TOOLTIP_TEXT_SIZE, rgba(style.color("text_dim"))
+            ),
+        }
+        sizes = [
+            self.text.measure(line.text, styles[line.kind].size)
+            for line in lines
+        ]
+        width = max(w for w, _ in sizes) + 2 * TOOLTIP_PADDING
+        height = (
+            sum(h for _, h in sizes)
+            + TOOLTIP_GAP * (len(lines) - 1)
+            + 2 * TOOLTIP_PADDING
+        )
+        rect = tooltip_rect((width, height), mouse, screen)
+        box = (rect.x, rect.y, rect.w, rect.h)
+        batch.shape(box, rgba(style.color("panel")), radius=TOOLTIP_RADIUS)
+        batch.shape(
+            box,
+            rgba(style.color("button_border")),
+            radius=TOOLTIP_RADIUS,
+            border=1,
+        )
+        y = rect.y + TOOLTIP_PADDING
+        for line, (_, h) in zip(lines, sizes, strict=True):
+            self.text.draw(
+                batch,
+                line.text,
+                (rect.x + TOOLTIP_PADDING, y),
+                styles[line.kind],
+            )
+            y += h + TOOLTIP_GAP
 
     def draw_cursor_stack(
         self,

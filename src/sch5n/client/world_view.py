@@ -556,7 +556,7 @@ class WorldRenderer:
                     self._draw_name(player)
 
 
-def load_world(app: App) -> TileMap:
+def load_start_map(app: App) -> TileMap:
     """Load the map chosen on the command line, or the default one.
 
     Returns:

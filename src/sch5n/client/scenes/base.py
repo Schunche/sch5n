@@ -58,8 +58,11 @@ class Scene:
     def render(self) -> None:
         """Draw a frame."""
 
-    def leave(self) -> None:
-        """End what the scene runs, like a game, before the main menu."""
+    def leave(self, *, save: bool = True) -> None:
+        """End what the scene runs, like a game, before the main menu.
+
+        `save` keeps what changed, like a world; off throws it away.
+        """
 
     def tick_backdrop(self) -> None:
         """Advance while a menu opened from this scene is shown."""

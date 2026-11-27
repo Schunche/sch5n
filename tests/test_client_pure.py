@@ -6,6 +6,7 @@ import pytest
 
 from sch5n.client.assets import frame_files
 from sch5n.client.camera import MAX_ZOOM, Camera
+from sch5n.client.hud import LineKind, TooltipLine, item_tooltip, tooltip_rect
 from sch5n.client.render.atlas import (
     AtlasBuilder,
     next_power_of_two,
@@ -22,7 +23,8 @@ from sch5n.client.ui import (
     hit_button,
 )
 from sch5n.game.config import AnimationClip, GameConfig, load_model
-from sch5n.game.content import load_animations, load_ui
+from sch5n.game.content import Content, load_animations, load_ui
+from sch5n.game.inventory import ItemStack
 from sch5n.utility import path
 
 ATLAS_WIDTH = 256
@@ -220,3 +222,26 @@ def test_player_frames_are_real_sprites() -> None:
     ((frame_height, frame_width),) = sizes
     assert frame_width >= width
     assert frame_height >= height
+
+
+def test_item_tooltips(content: Content) -> None:
+    """Tooltips name the item, describe it and list what it does."""
+    shovel = item_tooltip(ItemStack(content.items["iron_shovel"]), 60)
+    assert shovel[0] == TooltipLine("Iron Shovel", LineKind.TITLE)
+    texts = [line.text for line in shovel]
+    assert content.items["iron_shovel"].spec.description in texts
+    assert "Shovel power 40" in texts
+    assert any(text.startswith("Swings in") for text in texts)
+
+    dirt = item_tooltip(ItemStack(content.items["dirt_block"], 5), 60)
+    assert dirt[0].text == "Dirt Block (x5)"
+    assert "Stacks up to 1024" in [line.text for line in dirt]
+
+
+def test_tooltip_stays_on_screen() -> None:
+    """Near the right and bottom edges the tooltip flips to the other side."""
+    screen, mouse = (800, 600), (10.0, 10.0)
+    assert tooltip_rect((100, 50), mouse, screen).x > mouse[0]
+    flipped = tooltip_rect((100, 50), (790, 590), screen)
+    assert flipped.right <= screen[0]
+    assert flipped.bottom <= screen[1]

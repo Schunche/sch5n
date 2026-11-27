@@ -15,13 +15,13 @@ from sch5n.client.render.text import Anchor, TextStyle
 from sch5n.client.scenes.base import Scene
 from sch5n.client.ui import Button, aligned_rect, draw_panel, hit_button
 from sch5n.client.window import KeyEvent, MouseButtonEvent
-from sch5n.client.world_view import WorldRenderer, load_world
+from sch5n.client.world_view import WorldRenderer, load_start_map
 from sch5n.game.config import MenuBackground
 from sch5n.game.session import Game, GameSetup, TickInput
 from sch5n.math.rect import Rect
 lazy from sch5n.client.scenes.multiplayer import MultiplayerScene
-lazy from sch5n.client.scenes.play import PlayScene
 lazy from sch5n.client.scenes.settings import SettingsScene
+lazy from sch5n.client.scenes.worlds import WorldsScene
 
 if TYPE_CHECKING:
     from sch5n.client.app import App
@@ -77,7 +77,7 @@ class MenuWorld:
         self.app = app
         self.game = Game(
             app.content,
-            load_world(app),
+            load_start_map(app),
             GameSetup(host_player=False),
         )
         bounds = self.game.tilemap.bounds() or (0, 0, 1, 1)
@@ -172,7 +172,7 @@ class MainMenu(Scene):
         """Start the game, open settings or quit."""
         match button_id:
             case "singleplayer":
-                self.app.switch(PlayScene.singleplayer(self.app))
+                self.app.switch(WorldsScene(self.app, back=self))
             case "multiplayer":
                 self.app.switch(MultiplayerScene(self.app, back=self))
             case "settings":

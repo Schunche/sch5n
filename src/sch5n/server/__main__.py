@@ -8,8 +8,10 @@ import logging
 import signal
 import sys
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING
 
+from sch5n.error.exceptions import ParseError
 from sch5n.game.config import GameMode
 from sch5n.game.content import Content
 from sch5n.game.session import GameSetup
@@ -20,6 +22,7 @@ from sch5n.net.protocol import DEFAULT_PORT
 from sch5n.server.server import Server
 from sch5n.utility import path
 from sch5n.world.io import DEFAULT_MAP, load_tilemap, map_file
+from sch5n.world.save import World, load_world, user_worlds_dir, world_path
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -51,13 +54,21 @@ def parse_arguments(argv: Sequence[str] | None) -> argparse.Namespace:
         help=f"TCP port (default: {DEFAULT_PORT}, 0 picks a free one)",
     )
     parser.add_argument(
+        "--name",
+        default="sch5n server",
+        help="shown to players; the world is saved under this name",
+    )
+    parser.add_argument(
         "--map",
         type=map_file,
         default=map_file(DEFAULT_MAP),
-        help="map name or file",
+        help="map name or file a new world starts from",
     )
     parser.add_argument(
-        "--name", default="sch5n server", help="shown to players"
+        "--worlds-dir",
+        type=Path,
+        default=None,
+        help="where worlds are saved (default: your user data directory)",
     )
     parser.add_argument(
         "--game-mode",
@@ -105,12 +116,23 @@ def main(argv: Sequence[str] | None = None) -> None:
         console.setLevel(logging.INFO)
 
     content = Content.load(path.DATA_DIR)
-    tilemap = load_tilemap(args.map, content.blocks)
+    save_path = world_path(args.worlds_dir or user_worlds_dir(), args.name)
+    if save_path.exists():
+        try:
+            world = load_world(save_path, content)
+        except ParseError as error:
+            LOGGER.error("%s", error)
+            sys.exit(1)
+        LOGGER.info("Continuing the world saved in %s", save_path)
+    else:
+        world = World(args.name, load_tilemap(args.map, content.blocks), {})
+        LOGGER.info("New world from %s", args.map.stem)
     server = Server(
         content,
-        tilemap,
+        world.tilemap,
         GameSetup(mode=args.game_mode, seed=args.seed),
         name=args.name,
+        inventories=world.inventories,
     )
     try:
         port = server.listen(args.host, args.port, announce=not args.no_lan)
@@ -118,9 +140,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         LOGGER.error("Cannot listen on port %s: %s", args.port, error)
         sys.exit(1)
     LOGGER.info(
-        "Playing %s. Players join with this computer's address and port %s."
-        " Press Ctrl+C to stop.",
-        args.map.stem,
+        "Players join with this computer's address and port %s. Press"
+        " Ctrl+C to stop and save.",
         port,
     )
     try:
@@ -132,6 +153,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     finally:
         server.close()
         finish_closing()
+        server.save(save_path)
     LOGGER.info("Stopped")
 
 

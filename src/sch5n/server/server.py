@@ -39,8 +39,11 @@ from sch5n.net.protocol import (
     decode_client_message,
     encode_chunks,
 )
+from sch5n.world.save import save_world
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from sch5n.game.content import Content
     from sch5n.game.inventory import Inventory, Slot
     from sch5n.game.player import Player
@@ -159,10 +162,13 @@ class Server:
         tilemap: TileMap,
         setup: GameSetup = SERVER_SETUP,
         name: str = "sch5n server",
+        inventories: dict[str, Inventory] | None = None,
     ) -> None:
         """Start the game. Nobody can join over the network until `listen`.
 
         `setup.host_player` is ignored: every player joins as a client.
+        Players named in `inventories`, from a saved world, get theirs back
+        when they join.
         """
         self.content = content
         self.name = name
@@ -172,6 +178,8 @@ class Server:
             tilemap,
             replace(setup, host_player=False),
         )
+        if inventories:
+            self.game.restore_inventories(inventories)
         self.fingerprint = content_fingerprint(content)
         self.clients: list[_Client] = []
         self.listener: Listener | None = None
@@ -417,6 +425,10 @@ class Server:
                 client.sent_inventory = state
         for client in self.clients:
             client.connection.flush()
+
+    def save(self, path: Path) -> None:
+        """Save the world, with every player's inventory, as `self.name`."""
+        save_world(path, self.name, self.game.tilemap, self.game.inventories())
 
     def stop_listening(self) -> None:
         """Stop accepting and announcing. Connected players stay."""

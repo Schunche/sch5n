@@ -27,6 +27,7 @@ from sch5n.client.scenes.settings import (
     Page,
     SettingsScene,
 )
+from sch5n.client.scenes.worlds import WorldsScene
 from sch5n.client.window import (
     CharEvent,
     KeyEvent,
@@ -34,13 +35,18 @@ from sch5n.client.window import (
     ScrollEvent,
     WindowError,
 )
+from sch5n.client.world_view import load_start_map
 from sch5n.game.config import Settings
+from sch5n.net.client import ClientSession
+from sch5n.server.server import Server
+from sch5n.world.save import list_worlds, load_world
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from sch5n.client.scenes.base import Scene
     from sch5n.client.scenes.settings import Row
+    from sch5n.client.ui import Button
 
 RED = (255, 0, 0)
 MIN_BACKGROUND_STD = 10
@@ -61,9 +67,16 @@ def app(tmp_path_factory: pytest.TempPathFactory) -> Iterator[App]:
         App: The application.
 
     """
-    settings = tmp_path_factory.mktemp("user") / "settings.json"
+    user = tmp_path_factory.mktemp("user")
     try:
-        application = App(Options(hidden=True, seed=0, settings_file=settings))
+        application = App(
+            Options(
+                hidden=True,
+                seed=0,
+                settings_file=user / "settings.json",
+                worlds_dir=user / "worlds",
+            )
+        )
     except (WindowError, moderngl.Error, glfw.GLFWError) as e:
         # No display, or no OpenGL 3.3 (e.g. a server, or Linux without
         # xvfb-run): rendering cannot be tested here.
@@ -647,3 +660,93 @@ def test_resizing_keeps_the_view_and_the_layout(app: App) -> None:
         app.screen = original
         play.update_layout()
         play.leave()
+
+
+def footer_button(settings: SettingsScene, button_id: str) -> Button:
+    """Find a button in the settings footer.
+
+    Returns:
+        Button: The button.
+
+    """
+    return next(b for b in settings.buttons if b.id == button_id)
+
+
+def test_worlds_are_saved_unless_asked_not_to(app: App) -> None:
+    """Save & Quit keeps changes; Quit Without Saving throws them away."""
+    stone = app.content.blocks.id_of("stone")
+    worlds = WorldsScene(app, back=MainMenu(app))
+    worlds.name.text = ""
+    for char in "Test world":
+        worlds.on_event(CharEvent(char))
+    worlds.on_event(press(glfw.KEY_ENTER))
+    play = app.pending_scene
+    assert isinstance(play, PlayScene)
+    assert play.server is not None
+
+    # Build something, then save and quit from the in-game settings.
+    play.server.game.tilemap.set(0, -40, stone)
+    settings = SettingsScene(app, back=play, in_game=True)
+    settings.on_event(click(footer_button(settings, "menu").rect.center))
+    assert isinstance(app.pending_scene, MainMenu)
+
+    # The world is listed, and has the block.
+    worlds = WorldsScene(app, back=MainMenu(app))
+    assert [w.name for w in worlds.worlds][:1] == ["Test world"]
+    worlds.on_event(click(worlds.world_buttons[0].rect.center))
+    again = app.pending_scene
+    assert isinstance(again, PlayScene)
+    assert again.server is not None
+    assert again.server.game.tilemap.get(0, -40) == stone
+
+    # This time, quit without saving: the change is gone next time.
+    again.server.game.tilemap.set(1, -40, stone)
+    settings = SettingsScene(app, back=again, in_game=True)
+    settings.on_event(click(footer_button(settings, "discard").rect.center))
+    world = load_world(worlds.worlds[0].path, app.content)
+    assert world.tilemap.get(0, -40) == stone
+    assert world.tilemap.get(1, -40) != stone
+
+    # A name in use is refused.
+    worlds = WorldsScene(app, back=MainMenu(app))
+    worlds.name.text = "Test world"
+    worlds.create()
+    assert "already exists" in worlds.message
+
+
+def test_guests_save_a_copy(app: App) -> None:
+    """Players in someone else's game can keep the world on their computer."""
+    host = Server(app.content, load_start_map(app), name="Host's world")
+    guest_session = ClientSession(
+        host.connect_local(), app.content, "Guest", app.options.game_mode
+    )
+    host.step()
+    guest_session.poll()
+    guest = PlayScene(app, guest_session)
+    settings = SettingsScene(app, back=guest, in_game=True)
+    ids = [b.id for b in settings.buttons]
+    assert "copy" in ids
+    assert "discard" not in ids
+    settings.on_event(click(footer_button(settings, "copy").rect.center))
+    assert "Host's world" in settings.message
+
+    saved = next(w for w in list_worlds(app.worlds_dir) if "Host" in w.name)
+    world = load_world(saved.path, app.content)
+    assert len(world.tilemap) == len(host.game.tilemap)
+    # Kept under the name the player plays single player games with.
+    assert app.settings.player_name in world.inventories
+    guest.leave()
+    host.close()
+
+
+def test_hovered_items_show_a_tooltip(app: App) -> None:
+    """In the open inventory, hovering an item describes it."""
+    play = PlayScene.singleplayer(app)
+    play.inventory_open = True
+    slot = play.inventory_layout.slot_rect(0).center
+    empty = play.inventory_layout.slot_rect(20).center
+    assert play.hovered_stack(slot) is not None
+    assert play.hovered_stack(empty) is None
+    play.inventory_open = False
+    assert play.hovered_stack(slot) is None
+    play.leave()

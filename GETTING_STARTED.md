@@ -57,7 +57,8 @@ for example to your Documents.
 
 ## 3. Play
 
-In the main menu, click **Singleplayer**.
+In the main menu, click **Singleplayer**. Type a name for a new world and
+click **Create**, or click one of your saved worlds to continue it.
 
 | Input | Action |
 | --- | --- |
@@ -66,9 +67,20 @@ In the main menu, click **Singleplayer**.
 | Left mouse button | Use the item in your hand: dig dirt with the shovel, mine stone with the pickaxe, chop trees with the axe |
 | Right mouse button | Place the block in your hand |
 | Mouse wheel, 1 to 0 | Choose a hotbar slot |
-| Tab | Open the inventory. Left click picks up or swaps items, right click takes half or puts one down |
+| Tab | Open the inventory. Point at an item to see what it does. Left click picks up or swaps items, right click takes half or puts one down |
 | Esc | Close the inventory, open the settings |
 | F3 | Show technical information |
+
+### Saving
+
+Press **Esc** and click **Save & Quit** to save your world and go back to
+the main menu, or **Quit Without Saving** to throw away what you did since
+the last save. Closing the game window saves too.
+
+Worlds are kept in your user folder, so they stay when you update the game:
+
+- **Windows:** `C:\Users\<you>\AppData\Local\Schunche\sch5n\worlds`
+- **Linux:** `~/.local/share/sch5n/worlds`
 
 ### Settings
 
@@ -103,6 +115,9 @@ Everyone needs the same version of the game.
    address into **Server address** and click **Join**.
 
 When the player who opened the game quits, the game ends for everyone.
+The world is theirs: it is saved on their computer. Anyone else can keep a
+copy: press **Esc** and click **Save World Copy**. The copy appears under
+**Singleplayer**, with your inventory, to play on your own or open to LAN.
 
 Windows may ask whether Python may use the network the first time. Allow it
 on **private networks**, or others can't join.
@@ -118,7 +133,8 @@ play.bat server
 ```
 
 On Linux: `./play.sh server`. It shows the port players need. Close it with
-**Ctrl+C**. Players join through **Multiplayer**, like above.
+**Ctrl+C**; it saves the world and continues it the next time it starts.
+Players join through **Multiplayer**, like above.
 
 To play with friends over the internet instead, the server's router must
 forward TCP port 47315 to the server computer, and the others join with the
@@ -152,20 +168,23 @@ On **Linux**, in the terminal:
 ```
 
 Maps are in `assets/base/maps`. Editing a map name that doesn't exist yet,
-like `play.bat edit mymap`, starts a new, empty map. To play it, type
-`play.bat client --map mymap`.
+like `play.bat edit mymap`, starts a new, empty map. To play on it, start
+the game with `play.bat client --map mymap` and create a new world under
+**Singleplayer**: new worlds start from that map.
 
 ## Updating
 
 Download the new ZIP and extract it, just like the first time. You can delete
-the old folder. Your settings are kept, as they live in your user folder.
+the old folder. Your settings and worlds are kept, as they live in your user
+folder.
 Maps you made are inside the old folder's `assets/base/maps`: copy them over
 first.
 
 ## Removing the game
 
 1. Delete the game folder.
-2. Optionally, delete your settings (see [Settings](#settings) for where).
+2. Optionally, delete your settings and worlds (see [Settings](#settings)
+   and [Saving](#saving) for where).
 3. Optionally, remove what the launcher downloaded. On Windows, delete the
    `uv` folders in `C:\Users\<you>\AppData\Local` and
    `C:\Users\<you>\AppData\Roaming`, and `uv.exe` in

@@ -29,6 +29,7 @@ from sch5n.game.content import (
 from sch5n.log.logger import LOGGER
 from sch5n.net.connection import finish_closing
 from sch5n.utility import path
+from sch5n.world.save import user_worlds_dir
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -57,6 +58,8 @@ class Options:
     settings_file: Path | None = None
     """Where user settings are read and saved. Defaults to the per-user
     config directory."""
+    worlds_dir: Path | None = None
+    """Where worlds are saved. Defaults to the per-user data directory."""
 
 
 class App:
@@ -70,6 +73,7 @@ class App:
             self.options.settings_file or path.user_settings_file()
         )
         self.settings = load_settings(path.DATA_DIR, self.settings_file)
+        self.worlds_dir = self.options.worlds_dir or user_worlds_dir()
         self.keybinds = Keybinds(self.settings.keybinds)
         self.ui = Style(load_ui(path.DATA_DIR), self.settings.theme)
         self.animations = load_animations(path.DATA_DIR)

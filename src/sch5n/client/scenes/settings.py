@@ -337,22 +337,46 @@ class SettingsScene(Scene):
         )
         self.scroll = self.table.clamp_scroll(self.scroll)
 
-        entries = [("reset", "Reset Page"), ("back", "Back")]
-        if self.in_game:
-            if self.hosted_game is not None:
-                entries.append(("lan", "Open to LAN"))
-            entries.append(("menu", "Main Menu"))
-        size = (FOOTER_BUTTON_WIDTH, self.app.ui.button.height)
-        total = len(entries) * size[0] + (len(entries) - 1) * FOOTER_GAP
-        x = (w - total) / 2
-        y = self.panel.bottom + (PANEL_BOTTOM_MARGIN - size[1]) / 2
-        self.buttons = [
-            Button(
-                button_id,
-                label,
-                aligned_rect((x + i * (size[0] + FOOTER_GAP), y), size),
+        entries = [
+            ("reset", "Reset Page"),
+            ("back", "Back"),
+            *self._game_entries(),
+        ]
+        font = self.app.ui.button.font_size
+        widths = [
+            max(
+                FOOTER_BUTTON_WIDTH, self.app.text.measure(label, font)[0] + 32
             )
-            for i, (button_id, label) in enumerate(entries)
+            for _, label in entries
+        ]
+        height = self.app.ui.button.height
+        total = sum(widths) + (len(entries) - 1) * FOOTER_GAP
+        x = (w - total) / 2
+        y = self.panel.bottom + (PANEL_BOTTOM_MARGIN - height) / 2
+        self.buttons = []
+        for (button_id, label), width in zip(entries, widths, strict=True):
+            self.buttons.append(
+                Button(button_id, label, aligned_rect((x, y), (width, height)))
+            )
+            x += width + FOOTER_GAP
+
+    def _game_entries(self) -> list[tuple[str, str]]:
+        """Footer buttons for the game behind, if opened from one.
+
+        Returns:
+            list[tuple[str, str]]: Button ids and labels.
+
+        """
+        back = self.back
+        if not self.in_game or not isinstance(back, PlayScene):
+            return []
+        if back.server is None:
+            return [("copy", "Save World Copy"), ("menu", "Main Menu")]
+        entries = [("lan", "Open to LAN")] if back.can_open_to_lan else []
+        return [
+            *entries,
+            ("menu", "Save & Quit"),
+            ("discard", "Quit Without Saving"),
         ]
 
     @property
@@ -482,6 +506,12 @@ class SettingsScene(Scene):
             case "menu":
                 self.back.leave()
                 self.app.switch(MainMenu(self.app))
+            case "discard":
+                self.back.leave(save=False)
+                self.app.switch(MainMenu(self.app))
+            case "copy" if isinstance(self.back, PlayScene):
+                name = self.back.save_copy()
+                self.message = f"Saved a copy as {name!r}, under Singleplayer"
             case _:
                 pass
 

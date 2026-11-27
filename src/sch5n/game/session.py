@@ -165,6 +165,23 @@ class Game:
         if player.name:
             self._departed[player.name] = player.inventory
 
+    def inventories(self) -> dict[str, Inventory]:
+        """Inventories of every named player, present or gone, by name.
+
+        Returns:
+            dict[str, Inventory]: What a saved world keeps.
+
+        """
+        kept = dict(self._departed)
+        for player in self.players.values():
+            if player.name:
+                kept[player.name] = player.inventory
+        return kept
+
+    def restore_inventories(self, inventories: dict[str, Inventory]) -> None:
+        """Give returning players these inventories, by name, on joining."""
+        self._departed.update(inventories)
+
     def _spawn_point(
         self, preferred: tuple[float, float]
     ) -> tuple[float, float]:

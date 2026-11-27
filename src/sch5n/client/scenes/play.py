@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 import glfw
 
 from sch5n.client.camera import Camera
-from sch5n.client.hud import Hud
+from sch5n.client.hud import Hud, item_tooltip
 from sch5n.client.keybinds import Action, Context
 from sch5n.client.render.batch import rgba
 from sch5n.client.render.text import TextStyle
@@ -24,7 +24,7 @@ from sch5n.client.window import (
     KeyEvent,
     MouseButtonEvent,
 )
-from sch5n.client.world_view import WorldRenderer, load_world
+from sch5n.client.world_view import WorldRenderer, load_start_map
 from sch5n.game.inventory import HOTBAR_SIZE
 from sch5n.game.session import GameSetup, TickInput
 from sch5n.log.logger import LOGGER
@@ -32,14 +32,17 @@ from sch5n.net.client import ClientSession, SessionState
 from sch5n.net.discovery import lan_addresses
 from sch5n.net.protocol import DEFAULT_PORT, InventoryAction
 from sch5n.server.server import Server
+from sch5n.world.save import World, save_world, unique_name, world_path
 lazy from sch5n.client.scenes.menu import MainMenu
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from sch5n.client.app import App
     from sch5n.client.window import Event
+    from sch5n.game.inventory import ItemStack
     from sch5n.game.player import Player
     from sch5n.net.client import ClientWorld
-    from sch5n.world.tilemap import TileMap
 
 NOTICE_TICKS = 600
 """How long a notice, like the LAN address, stays on screen."""
@@ -81,6 +84,8 @@ class PlayScene(Scene):
         self.notice_ticks = 0
         self._jump_requested = False
         self._left = False
+        self.save_path: Path | None = None
+        """Where leaving saves the hosted world."""
         player = self.world.player
         if player is not None:
             self.camera.center_on(player.body.center)
@@ -90,20 +95,34 @@ class PlayScene(Scene):
 
     @classmethod
     def singleplayer(
-        cls, app: App, tilemap: TileMap | None = None
+        cls,
+        app: App,
+        world: World | None = None,
+        save_path: Path | None = None,
     ) -> PlayScene:
         """Start a game served by a server inside this one.
+
+        Args:
+            app: The application.
+            world: The world to play. `None` plays the map chosen on the
+                command line, or the default one.
+            save_path: Where leaving saves the world. `None` never saves.
 
         Returns:
             PlayScene: The scene.
 
         """
         settings = app.settings
+        if world is None:
+            world = World(
+                f"{settings.player_name}'s world", load_start_map(app), {}
+            )
         server = Server(
             app.content,
-            tilemap if tilemap is not None else load_world(app),
+            world.tilemap,
             GameSetup(mode=app.options.game_mode, seed=app.options.seed),
-            name=f"{settings.player_name}'s world",
+            name=world.name,
+            inventories=world.inventories,
         )
         session = ClientSession(
             server.connect_local(),
@@ -113,7 +132,9 @@ class PlayScene(Scene):
         )
         server.step()
         session.poll()
-        return cls(app, session, server)
+        scene = cls(app, session, server)
+        scene.save_path = save_path
+        return scene
 
     @property
     def player(self) -> Player | None:
@@ -167,15 +188,55 @@ class PlayScene(Scene):
         self.notice = text
         self.notice_ticks = NOTICE_TICKS
 
-    def leave(self) -> None:
-        """Disconnect, and stop the server if this game hosts one."""
+    def leave(self, *, save: bool = True) -> None:
+        """Disconnect, and stop the server if this game hosts one.
+
+        A hosted world is saved unless `save` is off. Closing the window
+        leaves this way too, saving.
+        """
         if self._left:
             return
         self._left = True
         self.session.close()
         if self.server is not None:
             self.server.close("The host left the game")
+            if save:
+                self.save()
         self.app.cancel_at_exit(self.leave)
+
+    def save(self) -> Path | None:
+        """Save the hosted world where it was loaded from.
+
+        Returns:
+            Path | None: The file, `None` if this game saves nowhere.
+
+        """
+        if self.server is None or self.save_path is None:
+            return None
+        self.server.save(self.save_path)
+        return self.save_path
+
+    def save_copy(self) -> str:
+        """Save the world this client sees to this computer, as a new world.
+
+        Guests keep a full copy of the server's world, so they can save it
+        without asking. Their own inventory is saved with it, under their
+        own name from the settings (the server may have changed it), as
+        that is who plays the copy in single player.
+
+        Returns:
+            str: The new world's name.
+
+        """
+        directory = self.app.worlds_dir
+        name = unique_name(directory, self.world.server_name)
+        save_world(
+            world_path(directory, name),
+            name,
+            self.world.tilemap,
+            {self.app.settings.player_name: self.world.inventory},
+        )
+        return name
 
     def _build_hud(self) -> None:
         """Size the HUD from the current GUI settings."""
@@ -376,11 +437,36 @@ class PlayScene(Scene):
             for button in self.buttons:
                 button.draw(batch, app.text, app.ui, mouse)
             self.hud.draw_cursor_stack(batch, inventory, mouse)
+            self._draw_tooltip(mouse)
         if self.notice_ticks:
             self._draw_notice()
         if self.debug:
             self._draw_debug()
         app.draw_cursor()
+
+    def hovered_stack(self, mouse: tuple[float, float]) -> ItemStack | None:
+        """Find the stack under the mouse in the open inventory.
+
+        Returns:
+            ItemStack | None: The stack, `None` over an empty slot, outside
+            the inventory, or while the cursor holds a stack.
+
+        """
+        inventory = self.world.inventory
+        if not self.inventory_open or inventory.cursor is not None:
+            return None
+        slot = self.inventory_layout.slot_at(mouse, hotbar_only=False)
+        return None if slot is None else inventory[slot]
+
+    def _draw_tooltip(self, mouse: tuple[float, float]) -> None:
+        stack = self.hovered_stack(mouse)
+        if stack is not None:
+            self.hud.draw_tooltip(
+                self.app.batch,
+                item_tooltip(stack, self.app.tick_rate),
+                mouse,
+                self.app.screen,
+            )
 
     def _draw_notice(self) -> None:
         app = self.app

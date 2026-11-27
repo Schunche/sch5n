@@ -64,6 +64,8 @@ class ItemSpec(_Model):
 
     name: str
     icon: str
+    description: str = ""
+    """Shown when the item is hovered in the inventory."""
     max_stack: int = 1024
     use_time: int = 30
     """Ticks between uses."""

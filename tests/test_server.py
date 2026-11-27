@@ -42,11 +42,13 @@ from sch5n.net.protocol import (
 )
 from sch5n.server.__main__ import main as server_main
 from sch5n.server.server import HELLO_TIMEOUT_TICKS, MAX_PLAYERS, Server
+from sch5n.world.save import load_world, world_path
 from sch5n.world.tilemap import TileMap
 from tests.test_session import flat_world
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
     from pydantic import BaseModel
 
@@ -496,20 +498,30 @@ def test_bad_frames_disconnect(server: Server, payload: bytes) -> None:
     assert not server.clients
 
 
-def test_port_in_use(server: Server, content: Content) -> None:
+def test_port_in_use(server: Server, content: Content, tmp_path: Path) -> None:
     """A taken port is an error, and the CLI exits with an error code."""
     port = server.listen("127.0.0.1", 0, announce=False)
     other = Server(content, flat_world(content))
     with pytest.raises(OSError, match=r"."):
         other.listen("127.0.0.1", port, announce=False)
     with pytest.raises(SystemExit) as stopped:
-        server_main(["--host", "127.0.0.1", "--port", str(port), "--no-lan"])
+        server_main([
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(port),
+            "--no-lan",
+            "--worlds-dir",
+            str(tmp_path),
+        ])
     assert stopped.value.code == 1
 
 
-def test_dedicated_server_runs() -> None:
-    """`sch5n server` serves for a while and stops cleanly."""
-    server_main([
+def test_dedicated_server_runs_and_keeps_its_world(
+    tmp_path: Path, content: Content, caplog: pytest.LogCaptureFixture
+) -> None:
+    """`sch5n server` serves, saves when it stops, and continues later."""
+    arguments = [
         "--host",
         "127.0.0.1",
         "--port",
@@ -517,7 +529,19 @@ def test_dedicated_server_runs() -> None:
         "--no-lan",
         "--ticks",
         "3",
-    ])
+        "--name",
+        "Test world",
+        "--worlds-dir",
+        str(tmp_path),
+    ]
+    server_main(arguments)
+    saved = world_path(tmp_path, "Test world")
+    assert saved.exists()
+    world = load_world(saved, content)
+    assert world.name == "Test world"
+    with caplog.at_level(logging.INFO, logger="sch5n"):
+        server_main(arguments)
+    assert "Continuing the world" in caplog.text
 
 
 def loaded_gui_modules() -> list[str]:

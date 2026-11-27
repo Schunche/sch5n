@@ -149,3 +149,29 @@ def test_stone_drops_a_stone_block(game: Game, content: Content) -> None:
     stones = [s for s in game.inventory if s and s.item.name == "stone_block"]
     assert sum(s.amount for s in stones) == 1
     assert stones[0].item.spec.places == "stone"
+
+
+TILE = 32
+MIN_JUMP_TILES = 2.1
+"""A held jump must clear a two block step."""
+MAX_JUMP_TILES = 2.6
+MAX_WALK_TILES_PER_SECOND = 5.0
+
+
+def test_jump_height_and_walk_speed(content: Content) -> None:
+    """A held jump clears two blocks but not three; walking is moderate."""
+    game = Game(content, flat_world(content), GameSetup(seed=1, spawn=(0, 0)))
+    body = game.player.body
+    ground = body.y
+    game.tick(TickInput(jump=True, jump_held=True))
+    top = ground
+    for _ in range(120):
+        game.tick(TickInput(jump_held=True))
+        top = min(top, body.y)
+    assert MIN_JUMP_TILES < (ground - top) / TILE < MAX_JUMP_TILES
+
+    run(game, 120, move_x=1)
+    x = body.x
+    run(game, 30, move_x=1)
+    tiles_per_second = (body.x - x) / 30 * content.game.tick_rate / TILE
+    assert tiles_per_second < MAX_WALK_TILES_PER_SECOND

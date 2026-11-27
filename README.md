@@ -51,7 +51,9 @@ wall in the way, the server's version wins. Breaking blocks, items and
 other players still arrive with the lag. F3 shows how many inputs are on
 their way and how often a prediction was corrected.
 
-- **Singleplayer** runs a server inside the game, connected in memory.
+- **Singleplayer** lists your saved worlds and creates new ones (from the
+  `--map` map, or `map1`), then runs a server inside the game, connected
+  in memory.
 - **Open to LAN** (Esc in a singleplayer game) makes that server accept
   players from the network and announce itself there (mDNS / zeroconf). The
   address to join is shown in the game and on the F3 screen. A singleplayer
@@ -66,8 +68,21 @@ their way and how often a prediction was corrected.
       sch5n server --port 47315 --map map1 --name "My server"
       sch5n server --no-lan   # do not announce it on the local network
 
-  Ctrl+C stops it. Port 47315 is the default; players on other networks
-  need it forwarded on the server's router.
+  Ctrl+C stops and saves it. The world is saved under the server's name
+  and continued on the next start; `--map` only seeds a new one, and
+  `--worlds-dir` saves elsewhere. Port 47315 is the default; players on
+  other networks need it forwarded on the server's router.
+
+#### Saving
+
+Worlds are saved with their blocks and every player's inventory (players
+get theirs back by name), in your user data directory:
+`~/.local/share/sch5n/worlds` on Linux,
+`C:\Users\<you>\AppData\Local\Schunche\sch5n\worlds` on Windows. The
+host's in-game settings have **Save & Quit** and **Quit Without Saving**;
+closing the window saves too. Guests get **Save World Copy**, which saves
+the world as they see it (their copy is complete and up to date) as a new
+world of their own, with their inventory.
 
 Players who leave and come back with the same name get their inventory
 back while the server runs. Clients must run the same game version and
