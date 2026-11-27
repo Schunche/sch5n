@@ -9,7 +9,10 @@
             "wall_slide": {"path": "mob/player/wall_slide", "frame_ticks": 12, "loop": true},
             "land": {"path": "mob/player/land", "frame_ticks": 4, "loop": false},
             "run_start": {"path": "mob/player/run_start", "frame_ticks": 5, "loop": false},
-            "run_stop": {"path": "mob/player/run_stop", "frame_ticks": 7, "loop": false}
+            "run_stop": {"path": "mob/player/run_stop", "frame_ticks": 7, "loop": false},
+            "dig_hold": {"path": "mob/player/dig_hold", "frame_ticks": 10, "loop": false},
+            "dig_step": {"path": "mob/player/dig_step", "frame_ticks": 10, "loop": false},
+            "dig_press": {"path": "mob/player/dig_press", "frame_ticks": 10, "loop": false}
         }
     },
     "tool_use": {
@@ -19,7 +22,26 @@
             "rig": "mob/player/rig.json",
             "swing": [-100, 55],
             "wrist": [-90, -15],
-            "grip": [0.15, 0.85]
+            "grip": [0.15, 0.85],
+            "styles": {
+                "axe": [
+                    {"at": 0.0, "arm": "back", "item": 200, "behind": true},
+                    {"at": 0.5, "arm": "back", "item": 195, "behind": true},
+                    {"at": 0.62, "arm": "back_short", "item": 165, "behind": true, "scale": 0.8},
+                    {"at": 0.7, "arm": "toward", "item": 110, "scale": 0.45},
+                    {"at": 0.78, "arm": "front_short", "item": 40, "scale": 0.8},
+                    {"at": 0.86, "arm": "forward", "item": 0},
+                    {"at": 1.0, "arm": "forward", "item": 15}
+                ],
+                "shovel": [
+                    {"at": 0.0, "arm": "down_forward", "item": 75, "body": "dig_hold"},
+                    {"at": 0.18, "arm": "down", "item": 90, "body": "dig_hold"},
+                    {"at": 0.38, "arm": "down", "item": 90, "body": "dig_step"},
+                    {"at": 0.6, "arm": "down", "item": 90, "body": "dig_press"},
+                    {"at": 0.8, "arm": "down_forward", "item": 60, "body": "dig_hold"},
+                    {"at": 1.0, "arm": "down_forward", "item": 70, "body": "dig_hold"}
+                ]
+            }
         }
     },
     "transitions": {

@@ -79,6 +79,7 @@ class ClientAssets:
     ) -> None:
         """Load and pack all textures."""
         self.textures_dir = textures_dir
+        self.animations = animations
         self.colorkey = animations.transparent_color
         builder: AtlasBuilder[Key] = AtlasBuilder(width=1024)
 
@@ -203,12 +204,32 @@ class ClientAssets:
             if not len(arms) == len(rig.arm.angles) == len(rig.arm.hands):
                 msg = f"{mob}: rig describes another number of arm poses"
                 raise ValueError(msg)
+            if rig.arm.names and len(rig.arm.names) != len(arms):
+                msg = f"{mob}: rig names another number of arm poses"
+                raise ValueError(msg)
+            self._check_styles(mob, rig)
             for (owner, action), animation in self.mobs.items():
                 if owner != mob:
                     continue
                 shoulders = rig.shoulders.get(action, ())
                 if len(shoulders) != len(animation.frames):
                     msg = f"{mob}/{action}: rig has no shoulder per frame"
+                    raise ValueError(msg)
+
+    def _check_styles(self, mob: str, rig: Rig) -> None:
+        """Make sure keyframed swings use arm and body poses that exist.
+
+        Raises:
+            ValueError: A keyframe names an unknown pose.
+
+        """
+        for kind, keys in self.animations.tool_use[mob].styles.items():
+            for key in keys:
+                if key.arm not in rig.arm.names:
+                    msg = f"{mob} {kind} swing: unknown arm pose {key.arm!r}"
+                    raise ValueError(msg)
+                if key.body is not None and (mob, key.body) not in self.mobs:
+                    msg = f"{mob} {kind} swing: unknown body pose {key.body!r}"
                     raise ValueError(msg)
 
     def load_image(

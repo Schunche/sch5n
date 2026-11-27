@@ -230,7 +230,7 @@ def test_item_tooltips(content: Content) -> None:
     assert shovel[0] == TooltipLine("Iron Shovel", LineKind.TITLE)
     texts = [line.text for line in shovel]
     assert content.items["iron_shovel"].spec.description in texts
-    assert "Shovel power 40" in texts
+    assert "Shovel power 50" in texts
     assert any(text.startswith("Swings in") for text in texts)
 
     dirt = item_tooltip(ItemStack(content.items["dirt_block"], 5), 60)

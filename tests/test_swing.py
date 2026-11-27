@@ -6,16 +6,20 @@ from __future__ import annotations
 import itertools
 import math
 
+import pydantic
 import pytest
 
 from sch5n.client.assets import frame_files
 from sch5n.client.render.image import load_rgba
 from sch5n.client.world_view import (
+    SwingFrame,
     SwingMoment,
     held_item_pose,
     swing_direction,
+    swing_frame,
+    tool_kind,
 )
-from sch5n.game.config import Rig, load_model
+from sch5n.game.config import Rig, SwingKey, ToolUseConfig, load_model
 from sch5n.game.content import AIR, Content, ItemDef, load_animations
 from sch5n.game.inventory import ItemStack
 from sch5n.game.session import Game, GameSetup, TickInput
@@ -23,6 +27,11 @@ from sch5n.utility import path
 from sch5n.world.tilemap import TileMap
 
 TILE = 32
+
+FORESHORTENED = 0.5
+"""Item size while the axe points at the viewer, at most."""
+DOWN = 90
+"""Item direction straight down."""
 
 
 @pytest.fixture
@@ -201,8 +210,10 @@ def test_arm_follows_the_item(rig: Rig) -> None:
         for p in range(11)
     ]
     assert arms == sorted(arms)
-    assert arms[0] == 0
-    assert arms[-1] == len(rig.arm.angles) - 1
+    names = [rig.arm.names[arm] for arm in arms]
+    assert names[0] == "overhead"
+    assert names[-1] == "down_forward"
+    assert set(names) <= set(tool_use.overhead_arms)
 
 
 @pytest.mark.parametrize("progress", [0.0, 0.3, 0.7, 1.0])
@@ -252,3 +263,65 @@ def test_tool_is_held_across_the_fist(rig: Rig) -> None:
     # Held across the fist: never in line with the arm while winding up.
     arm = swing_direction(tool_use, 0.0)
     assert abs(start - arm) == pytest.approx(abs(tool_use.wrist[0]))
+
+
+def frames(kind: str) -> list[SwingFrame]:
+    """Sample a tool kind's keyframed swing.
+
+    Returns:
+        list[SwingFrame]: The swing at 21 points from start to end.
+
+    """
+    keys = load_animations(path.DATA_DIR).tool_use["player"].styles[kind]
+    return [swing_frame(keys, p / 20) for p in range(21)]
+
+
+def test_tools_swing_their_own_way(content: Content) -> None:
+    """Pickaxes swing overhead; axes and shovels have their own swings."""
+    styles = load_animations(path.DATA_DIR).tool_use["player"].styles
+    assert tool_kind(content.items["copper_pickaxe"]) not in styles
+    assert tool_kind(content.items["copper_axe"]) == "axe"
+    assert tool_kind(content.items["iron_shovel"]) == "shovel"
+    assert tool_kind(content.items["dirt_block"]) is None
+
+
+def test_axe_chops_by_turning() -> None:
+    """The axe winds up behind the turned away body, then whips through.
+
+    Seen from the side, it points at the viewer midway, so it looks small.
+    """
+    chop = frames("axe")
+    assert chop[0].behind
+    assert chop[0].arm == "back"
+    assert not chop[-1].behind
+    assert chop[-1].arm == "forward"
+    assert min(f.scale for f in chop) < FORESHORTENED
+    sides = [f.behind for f in chop]
+    # Behind first, then in front: one switch, as the body turns once.
+    assert sides == sorted(sides, reverse=True)
+
+
+def test_shovel_is_stepped_on() -> None:
+    """The shovel goes straight down, gets stepped on, then levered."""
+    dig = frames("shovel")
+    bodies = [f.body for f in dig]
+    assert bodies[0] == "dig_hold"
+    step, press = bodies.index("dig_step"), bodies.index("dig_press")
+    assert 0 < step < press
+    assert all(f.item == pytest.approx(DOWN) for f in dig[step : press + 1])
+    assert dig[-1].body == "dig_hold"
+
+
+def test_keyframes_blend_the_item() -> None:
+    """Between keyframes the item turns smoothly; the arm switches."""
+    keys = (
+        SwingKey(at=0, arm="back", item=180),
+        SwingKey(at=1, arm="forward", item=0, scale=0.5),
+    )
+    quarter = swing_frame(keys, 0.25)
+    assert quarter.item == pytest.approx(135)
+    assert quarter.scale == pytest.approx(0.875)
+    assert quarter.arm == "back"
+    assert swing_frame(keys, 0.75).arm == "forward"
+    with pytest.raises(pydantic.ValidationError):
+        ToolUseConfig(armless="a", arm="b", rig="c", styles={"axe": keys[:1]})

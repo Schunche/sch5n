@@ -417,6 +417,29 @@ class Transition(_Model):
     """Clip played in between; it must not loop."""
 
 
+MIN_SWING_KEYS = 2
+"""A swing needs at least its start and its end."""
+
+
+class SwingKey(_Model):
+    """One keyframe of a swing."""
+
+    at: float = Field(ge=0, le=1)
+    """When, as a fraction of the swing."""
+    arm: str
+    """Arm pose, by its name in the rig."""
+    item: float
+    """Direction the item points, from grip to head: degrees clockwise
+    from straight forward."""
+    behind: bool = False
+    """The arm and item are behind the body, as when it turns away."""
+    scale: float = Field(default=1.0, gt=0)
+    """Item size, smaller when it points at the viewer."""
+    body: str | None = None
+    """Body pose (a clip of the mob) shown while standing, like stepping
+    onto a shovel. `None` keeps the current animation."""
+
+
 class ToolUseConfig(_Model):
     """How a mob swings items.
 
@@ -439,12 +462,48 @@ class ToolUseConfig(_Model):
     grip: tuple[float, float] = (0.15, 0.85)
     """Where the hand holds an item image, as a fraction of its size. Item
     images point up and forward (45 degrees) from the grip."""
+    overhead_arms: tuple[str, ...] = (
+        "overhead",
+        "up",
+        "forward",
+        "down_forward",
+    )
+    """Arm poses of the overhead swing, picked by the arm's direction."""
+    styles: dict[str, tuple[SwingKey, ...]] = Field(default_factory=dict)
+    """Swings of tool kinds that are not overhead, like the axe's chop:
+    keyframes over the swing. Other items swing overhead."""
+
+    @field_validator("styles")
+    @classmethod
+    def _keys_in_order(
+        cls, styles: dict[str, tuple[SwingKey, ...]]
+    ) -> dict[str, tuple[SwingKey, ...]]:
+        """Check that keyframes run from 0 to 1 in order.
+
+        Returns:
+            dict[str, tuple[SwingKey, ...]]: The styles.
+
+        Raises:
+            ValueError: A style's keyframes are out of order.
+
+        """
+        for kind, keys in styles.items():
+            times = [key.at for key in keys]
+            if len(times) < MIN_SWING_KEYS or (times[0], times[-1]) != (0, 1):
+                msg = f"{kind}: keyframes must run from 0 to 1"
+                raise ValueError(msg)
+            if times != sorted(times):
+                msg = f"{kind}: keyframes must be in order"
+                raise ValueError(msg)
+        return styles
 
 
 class ArmRig(_Model):
     """Front arm poses: their shoulder, hand positions and directions."""
 
     shoulder: tuple[float, float]
+    names: tuple[str, ...] = ()
+    """Name of each pose, for swing keyframes."""
     angles: tuple[float, ...]
     """Direction of each pose, degrees clockwise from straight forward."""
     hands: tuple[tuple[float, float], ...]

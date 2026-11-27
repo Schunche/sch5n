@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Protocol
 
 import numpy as np
@@ -18,9 +18,12 @@ from sch5n.client.render.batch import (
 )
 from sch5n.client.render.text import Anchor, TextStyle
 from sch5n.game.mining import durability_fraction
+from sch5n.game.player import Action
 from sch5n.world.io import DEFAULT_MAP, load_tilemap, map_file
 from sch5n.world.tilemap import CHUNK_SHIFT, CHUNK_SIZE
 
+HALFWAY = 0.5
+"""Keyframe blend at which discrete parts, like the arm pose, switch."""
 STREAK_THICKNESS = 2
 STREAK_OPACITY = 0.55
 STREAK_WOBBLE = 3.0
@@ -41,7 +44,8 @@ if TYPE_CHECKING:
     from sch5n.client.render.atlas import Region
     from sch5n.client.render.batch import RGBA, SpriteBatch
     from sch5n.game.ambient import Ambience, Cloud
-    from sch5n.game.config import Rig, ToolUseConfig
+    from sch5n.game.config import Rig, SwingKey, ToolUseConfig
+    from sch5n.game.content import ItemDef
     from sch5n.game.floating_item import FloatingItem
     from sch5n.game.player import Player, Swing
     from sch5n.math.rect import Rect
@@ -141,6 +145,8 @@ class HeldItemPose:
     """Top left of the arm image."""
     item_rect: tuple[float, float, float, float]
     item_transform: Transform
+    behind: bool = False
+    """Draw the arm and item behind the body."""
 
 
 def _eased(progress: float) -> float:
@@ -191,10 +197,75 @@ class SwingMoment:
     facing_left: bool
 
 
+@dataclass(frozen=True, slots=True)
+class SwingFrame:
+    """A moment of a keyframed swing, between two of its keyframes."""
+
+    arm: str
+    item: float
+    scale: float
+    behind: bool
+    body: str | None
+
+
+def swing_frame(keys: Sequence[SwingKey], progress: float) -> SwingFrame:
+    """Interpolate a keyframed swing.
+
+    The item's direction and size blend between keyframes; the arm pose,
+    the side of the body and the body pose switch halfway.
+
+    Returns:
+        SwingFrame: The swing at `progress`.
+
+    """
+    progress = min(max(progress, 0.0), 1.0)
+    index = next(
+        (i for i in range(1, len(keys)) if progress <= keys[i].at),
+        len(keys) - 1,
+    )
+    start, end = keys[index - 1], keys[index]
+    span = end.at - start.at
+    f = (progress - start.at) / span if span > 0 else 1.0
+    near = start if f < HALFWAY else end
+    return SwingFrame(
+        arm=near.arm,
+        item=start.item + (end.item - start.item) * f,
+        scale=start.scale + (end.scale - start.scale) * f,
+        behind=near.behind,
+        body=near.body,
+    )
+
+
+def tool_kind(item: ItemDef) -> str | None:
+    """Tell the kind of tool an item is, like `axe`, for its swing.
+
+    Returns:
+        str | None: The first tool kind it has power for, if any.
+
+    """
+    return next(iter(item.spec.tool_power), None)
+
+
+def overhead_arms(rig: Rig, tool_use: ToolUseConfig) -> list[int]:
+    """Arm poses the overhead swing chooses from.
+
+    Returns:
+        list[int]: Indices of the poses.
+
+    """
+    if not rig.arm.names:
+        return list(range(len(rig.arm.angles)))
+    return [
+        i
+        for i, name in enumerate(rig.arm.names)
+        if name in tool_use.overhead_arms
+    ]
+
+
 def held_item_pose(
     rig: Rig, tool_use: ToolUseConfig, moment: SwingMoment
 ) -> HeldItemPose:
-    """Place the arm and the item for a moment of a swing.
+    """Place the arm and the item for a moment of an overhead swing.
 
     Returns:
         HeldItemPose: Positions relative to the body sprite's top left.
@@ -202,24 +273,67 @@ def held_item_pose(
     """
     angle = swing_direction(tool_use, moment.progress)
     arm = min(
-        range(len(rig.arm.angles)),
+        overhead_arms(rig, tool_use),
         key=lambda i: abs(rig.arm.angles[i] - angle),
     )
+    return place_item(
+        rig,
+        tool_use,
+        moment,
+        Hold(arm, item_direction(tool_use, moment.progress)),
+    )
+
+
+def keyframe_pose(
+    rig: Rig, tool_use: ToolUseConfig, moment: SwingMoment, frame: SwingFrame
+) -> HeldItemPose:
+    """Place the arm and the item for a moment of a keyframed swing.
+
+    Returns:
+        HeldItemPose: Positions relative to the body sprite's top left.
+
+    """
+    hold = Hold(rig.arm.names.index(frame.arm), frame.item, frame.scale)
+    pose = place_item(rig, tool_use, moment, hold)
+    return replace(pose, behind=frame.behind)
+
+
+@dataclass(frozen=True, slots=True)
+class Hold:
+    """How the arm holds the item at a moment."""
+
+    arm: int
+    """Index of the arm pose."""
+    direction: float
+    """Where the item points, degrees clockwise from straight forward."""
+    scale: float = 1.0
+    """Item size factor, around the grip."""
+
+
+def place_item(
+    rig: Rig, tool_use: ToolUseConfig, moment: SwingMoment, hold: Hold
+) -> HeldItemPose:
+    """Put the arm pose on the shoulder and the item in its hand.
+
+    Returns:
+        HeldItemPose: Positions relative to the body sprite's top left.
+
+    """
     dx = moment.shoulder[0] - rig.arm.shoulder[0]
     dy = moment.shoulder[1] - rig.arm.shoulder[1]
-    hand_x, hand_y = rig.arm.hands[arm]
+    hand_x, hand_y = rig.arm.hands[hold.arm]
     grip_x, grip_y = tool_use.grip
     # Item images point up and forward (-45 degrees) from the grip.
-    rotation = math.radians(item_direction(tool_use, moment.progress) + 45)
+    rotation = math.radians(hold.direction + 45)
     if moment.facing_left:
         # Everything is mirrored around the sprite's middle.
         dx = -dx
         hand_x = moment.frame_width - hand_x
         grip_x = 1 - grip_x
         rotation = -rotation
-    size = moment.item_size
+    size = moment.item_size * hold.scale
     return HeldItemPose(
-        arm=arm,
+        arm=hold.arm,
         arm_offset=(dx, dy),
         item_rect=(
             dx + hand_x - grip_x * size,
@@ -285,17 +399,28 @@ class PlayerRenderer:
             msg = "No tool use configured for the player"
             raise RuntimeError(msg)
         rig = self.assets.rigs["player"]
-        armless = self.assets.armless["player", animator.clip]
-        index = armless.frame_index(animator.age)
+        keys = self.tool_use.styles.get(tool_kind(swing.item) or "")
+        frame = None if keys is None else swing_frame(keys, swing.progress)
+        clip = animator.clip
+        index = None
+        if frame is not None and frame.body and player.action is Action.IDLE:
+            # Standing still, the whole body joins in, like stepping on a
+            # shovel; on the move the legs keep running.
+            clip, index = frame.body, 0
+        armless = self.assets.armless["player", clip]
+        if index is None:
+            index = armless.frame_index(animator.age)
         body = armless.frames[index]
         moment = SwingMoment(
             progress=swing.progress,
-            shoulder=rig.shoulders[animator.clip][index],
+            shoulder=rig.shoulders[clip][index],
             frame_width=body.width,
             item_size=swing.item.spec.drop_size,
             facing_left=player.facing_left,
         )
-        return body, held_item_pose(rig, self.tool_use, moment)
+        if frame is None:
+            return body, held_item_pose(rig, self.tool_use, moment)
+        return body, keyframe_pose(rig, self.tool_use, moment, frame)
 
     def _draw_swinging(
         self,
@@ -304,7 +429,10 @@ class PlayerRenderer:
         animator: Animator,
         corner: tuple[int, int],
     ) -> None:
-        """Body without its front arm, then the item, then the arm."""
+        """Body without its front arm, then the item, then the arm.
+
+        When they are behind the body, the item and arm come first.
+        """
         swing = player.swing
         if swing is None:
             return
@@ -312,9 +440,10 @@ class PlayerRenderer:
         atlas = self.assets.atlas
         x, y = corner
         mirror = Transform(flip_x=player.facing_left)
-        batch.sprite(
-            atlas, (x, y, body.width, body.height), body, transform=mirror
-        )
+        if not pose.behind:
+            batch.sprite(
+                atlas, (x, y, body.width, body.height), body, transform=mirror
+            )
         ix, iy, iw, ih = pose.item_rect
         batch.sprite(
             self.assets.atlas_smooth,
@@ -330,6 +459,10 @@ class PlayerRenderer:
             arm,
             transform=mirror,
         )
+        if pose.behind:
+            batch.sprite(
+                atlas, (x, y, body.width, body.height), body, transform=mirror
+            )
 
 
 def draw_floating_items(
