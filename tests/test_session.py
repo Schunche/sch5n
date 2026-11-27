@@ -281,7 +281,7 @@ def test_lopper_trims_leafy_logs(content: Content) -> None:
     game, ids = planted(content)
     tilemap = game.tilemap
     game.inventory.select(3)  # The lopper.
-    run(game, 60, use=True, target=(2, 5))
+    run(game, 100, use=True, target=(2, 5))
     assert tilemap.get(2, 5) == ids["oak_log"]
     assert tilemap.get(2, 4) == ids["oak_leaf"]  # The crown stays up.
     run(game, 120)

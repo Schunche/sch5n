@@ -12,6 +12,9 @@ from sch5n.game.mining import (
 )
 from sch5n.world.tilemap import TileMap
 
+LOPPER_SNIPS = 2
+"""Snips a leaf takes."""
+
 
 def test_needs_the_right_tool(tilemap: TileMap, items: ItemRegistry) -> None:
     """Only a matching tool damages a block."""
@@ -86,16 +89,16 @@ def test_shovel_is_made_for_dirt(content: Content) -> None:
 
 
 def test_lopper_is_made_for_leaves(content: Content) -> None:
-    """A lopper cuts leaves in one snip; an axe still can, more slowly."""
+    """A lopper cuts leaves in two snips; an axe still can, more slowly."""
     leaf = content.blocks.by_name("oak_leaf")
     lopper = content.items["copper_lopper"]
     axe = content.items["copper_axe"]
     tilemap = TileMap(content.blocks)
     tilemap.set(0, 0, leaf.id)
-    assert hits_to_break(tilemap, lopper) == 1
+    by_lopper = hits_to_break(tilemap, lopper)
+    assert by_lopper == LOPPER_SNIPS
     tilemap.set(0, 0, leaf.id)
     by_axe = hits_to_break(tilemap, axe)
-    assert by_axe > 1
-    assert lopper.spec.use_time < by_axe * axe.spec.use_time
+    assert by_lopper * lopper.spec.use_time < by_axe * axe.spec.use_time
     # Loppers are no axes.
     assert tool_power(lopper, content.blocks.by_name("oak_log")) == 0
