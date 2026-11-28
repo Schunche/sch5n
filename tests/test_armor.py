@@ -6,7 +6,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from sch5n.game.crafting import crafted
-from sch5n.game.inventory import ARMOR_PARTS, Inventory, ItemStack
+from sch5n.game.inventory import (
+    ARMOR_PARTS,
+    HOTBAR_SIZE,
+    Inventory,
+    ItemStack,
+)
 from sch5n.game.session import Game, GameSetup, TickInput
 from sch5n.net.protocol import InventoryAction
 from sch5n.world.save import inventory_from_json, inventory_to_json
@@ -139,3 +144,70 @@ def test_the_bed_is_saved(content: Content) -> None:
         inventory_to_json(inventory), content.items, 10
     )
     assert again.home == (4, 7)
+
+
+def test_quick_move_swaps_between_hotbar_and_the_rest(
+    content: Content,
+) -> None:
+    """A shift click sends a stack to the other part of the inventory."""
+    inventory = Inventory(30)
+    inventory.slots[0] = ItemStack(content.items["stick"], 5)
+    inventory.slots[HOTBAR_SIZE + 3] = ItemStack(content.items["stick"], 4)
+    inventory.quick_move(0)
+    assert inventory[0] is None
+    moved = inventory[HOTBAR_SIZE + 3]
+    assert moved is not None
+    assert moved.amount == 9  # ruff: ignore[magic-value-comparison]
+    inventory.quick_move(HOTBAR_SIZE + 3)
+    assert inventory[HOTBAR_SIZE + 3] is None
+    assert inventory[0] is not None
+
+
+def test_quick_move_wears_armor_and_fills_chests(content: Content) -> None:
+    """Armor goes on if its place is free; a chest takes anything."""
+    inventory = Inventory(30)
+    inventory.slots[HOTBAR_SIZE] = ItemStack(content.items["iron_helmet"])
+    inventory.quick_move(HOTBAR_SIZE)
+    assert inventory.armor[0] is not None
+    assert inventory[HOTBAR_SIZE] is None
+    inventory.slots[1] = ItemStack(content.items["stick"], 3)
+    chest = Inventory(27)
+    inventory.quick_move(1, chest)
+    assert inventory[1] is None
+    taken = chest[0]
+    assert taken is not None
+    assert taken.amount == 3  # ruff: ignore[magic-value-comparison]
+    inventory.take_from(chest, 0)
+    assert chest[0] is None
+    assert inventory[0] is not None
+    inventory.quick_move(99)
+    inventory.take_from(chest, 99)
+
+
+def test_shift_click_through_the_server(content: Content) -> None:
+    """The server moves stacks for shift clicks, in the inventory and chest."""
+    from sch5n.server.server import Server  # ruff: ignore[import-outside-top-level]
+    from tests.test_server import join, step  # ruff: ignore[import-outside-top-level]
+
+    server = Server(
+        content, flat_world(content), GameSetup(seed=1, spawn=(0, 0))
+    )
+    alice = join(server, content)
+    player = next(iter(server.game.players.values()))
+    player.inventory.slots[HOTBAR_SIZE] = stack(content, "copper_helmet")
+    alice.inventory(InventoryAction.QUICK_MOVE, HOTBAR_SIZE)
+    step(server, [alice], 2)
+    assert player.inventory.armor[HEAD] is not None
+    server.game.tilemap.set(1, 9, content.blocks.id_of("chest"))
+    player.inventory.slots[1] = stack(content, "stick", 4)
+    alice.open_chest(1, 9)
+    step(server, [alice], 2)
+    alice.inventory(InventoryAction.QUICK_MOVE, 1)
+    step(server, [alice], 2)
+    chest = server.game.chest_at(1, 9)
+    assert chest is not None
+    assert chest[0] is not None
+    alice.click_chest(0, quick=True)
+    step(server, [alice], 2)
+    assert chest[0] is None
+    assert player.inventory[1] is not None

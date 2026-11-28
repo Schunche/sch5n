@@ -510,7 +510,8 @@ class PlayScene(Scene):
             return slot is not None
         self.mouse.cancel()
         right = event.button == glfw.MOUSE_BUTTON_RIGHT
-        self.session.click_chest(slot, right=right)
+        quick = bool(event.mods & glfw.MOD_SHIFT) and not right
+        self.session.click_chest(slot, right=right, quick=quick)
         return True
 
     def _try_open_chest(self, event: MouseButtonEvent) -> bool:

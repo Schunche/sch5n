@@ -543,10 +543,14 @@ class ClientSession:
         if self.state is SessionState.PLAYING:
             self.connection.send(ChestOpen(x=x, y=y))
 
-    def click_chest(self, index: int, *, right: bool = False) -> None:
+    def click_chest(
+        self, index: int, *, right: bool = False, quick: bool = False
+    ) -> None:
         """Click a slot of the open chest."""
         if self.state is SessionState.PLAYING:
-            self.connection.send(ChestClick(index=index, right=right))
+            self.connection.send(
+                ChestClick(index=index, right=right, quick=quick)
+            )
 
     def close_chest(self) -> None:
         """Close the open chest."""

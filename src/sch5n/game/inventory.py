@@ -375,6 +375,56 @@ class Inventory:  # ruff: ignore[too-many-public-methods]
 
         return stack
 
+    def _add_between(self, stack: ItemStack, start: int, stop: int) -> None:
+        """Put as much of a stack as fits into slots `[start, stop)`."""
+        places = range(start, min(stop, len(self.slots)))
+        for index in places:
+            slot = self.slots[index]
+            if stack.amount and slot is not None and slot.can_merge(stack):
+                moved = min(slot.room, stack.amount)
+                slot.amount += moved
+                stack.amount -= moved
+        for index in places:
+            if stack.amount and self.slots[index] is None:
+                self.slots[index] = ItemStack(stack.item, stack.amount)
+                stack.amount = 0
+
+    def quick_move(self, index: int, chest: Inventory | None = None) -> None:
+        """Send a stack where it most likely goes, like a shift click.
+
+        Into the open chest if there is one. Otherwise armor goes on if its
+        place is free, and anything else swaps between the hotbar and the
+        rest of the inventory.
+        """
+        if not 0 <= index < len(self.slots):
+            return
+        stack = self.slots[index]
+        if stack is None:
+            return
+        part = stack.item.spec.armor
+        if chest is not None:
+            chest.add(stack)
+        elif part is not None and self.armor[ARMOR_PARTS.index(part)] is None:
+            self.armor[ARMOR_PARTS.index(part)] = stack
+            stack.amount = 0
+        elif index < HOTBAR_SIZE:
+            self._add_between(stack, HOTBAR_SIZE, len(self.slots))
+        else:
+            self._add_between(stack, 0, HOTBAR_SIZE)
+        if stack.amount == 0:
+            self.slots[index] = None
+
+    def take_from(self, other: Inventory, index: int) -> None:
+        """Move a stack of another inventory, like a chest, into this one."""
+        if not 0 <= index < len(other.slots):
+            return
+        stack = other.slots[index]
+        if stack is None:
+            return
+        self.add(stack)
+        if stack.amount == 0:
+            other.slots[index] = None
+
     def consume_held(self, amount: int = 1) -> None:
         """Remove items from the held stack."""
         if self.cursor is not None:

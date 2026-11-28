@@ -66,6 +66,10 @@ class InventoryMouse:
             self._last = None
             self.session.inventory(InventoryAction.STOW_CRAFTING, slot - size)
             return
+        if event.mods & glfw.MOD_SHIFT and left:
+            self._last = None
+            self.session.inventory(InventoryAction.QUICK_MOVE, slot)
+            return
         now = self.clock()
         last, self._last = self._last, (slot, now) if left else None
         if (

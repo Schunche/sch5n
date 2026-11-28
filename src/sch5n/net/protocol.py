@@ -95,6 +95,9 @@ class InventoryAction(StrEnum):
     """Craft as much as possible into the inventory."""
     STOW_CRAFTING = "stow_crafting"
     """Move slot `index` of the crafting grid into the inventory."""
+    QUICK_MOVE = "quick_move"
+    """Shift click slot `index`: into the open chest, onto the body, or
+    between the hotbar and the rest."""
     ARMOR_CLICK = "armor_click"
     """Wear or take off armor: click slot `index` of the armor slots."""
     SPREAD = "spread"
@@ -140,6 +143,8 @@ class ChestClick(_Message):
     type: Literal["chest_click"] = "chest_click"
     index: int = Field(ge=0)
     right: bool = False
+    quick: bool = False
+    """Take the whole stack into the inventory, like a shift click."""
 
 
 class ChestClose(_Message):

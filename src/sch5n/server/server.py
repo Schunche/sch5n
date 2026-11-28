@@ -466,8 +466,8 @@ class Server:
                 inventory.left_click(index)
             case InventoryAction.RIGHT_CLICK if 0 <= index < len(inventory):
                 inventory.right_click(index)
-            case InventoryAction.ARMOR_CLICK:
-                inventory.armor_click(index)
+            case InventoryAction.QUICK_MOVE | InventoryAction.ARMOR_CLICK:
+                self._move_or_wear(client, inventory, message)
             case (
                 InventoryAction.CRAFTING_LEFT_CLICK
                 | InventoryAction.CRAFTING_RIGHT_CLICK
@@ -486,6 +486,15 @@ class Server:
                 self.game.return_cursor_stack(player)
             case _:
                 _kick(client, "Invalid inventory slot")
+
+    def _move_or_wear(
+        self, client: _Client, inventory: Inventory, message: InventoryMessage
+    ) -> None:
+        """Shift click a slot, or click an armor slot."""
+        if message.action is InventoryAction.ARMOR_CLICK:
+            inventory.armor_click(message.index)
+        else:
+            inventory.quick_move(message.index, self._reachable_chest(client))
 
     def _reachable_chest(self, client: _Client) -> Inventory | None:
         """Find the chest a player has open, if it is in reach.
@@ -520,6 +529,9 @@ class Server:
             _kick(client, "Invalid chest slot")
             return
         inventory = self.game.players[client.player_id].inventory
+        if message.quick:
+            inventory.take_from(chest, message.index)
+            return
         chest.cursor, inventory.cursor = inventory.cursor, None
         if message.right:
             chest.right_click(message.index)

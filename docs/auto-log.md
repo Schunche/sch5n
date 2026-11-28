@@ -301,3 +301,12 @@ Work done on the `claude/auto` branch, newest last.
   `assets/textures/tool/{tin,lead,silver,tungsten}_{pickaxe,axe,shovel}.png`.
 - Loppers stay copper and iron only.
 - Tests: `tests/test_crafting.py`.
+
+## Shift click
+
+- Shift + left click on an inventory slot: with a chest open the stack goes
+  into the chest, armor goes on if its slot is free, anything else swaps
+  between the hotbar and the rest. Shift + left click on a chest slot takes
+  the stack. (`InventoryAction.QUICK_MOVE`, `ChestClick.quick`,
+  `Inventory.quick_move/take_from`.)
+- Tests: `tests/test_armor.py`, `tests/test_render.py`.

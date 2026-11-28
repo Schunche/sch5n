@@ -1574,3 +1574,32 @@ def test_torch_lifts_the_night(app: App) -> None:
     after = draw(app, play).astype(int).sum(axis=2)
     assert after.sum() > before.sum()
     play.leave()
+
+
+def test_shift_click_moves_a_stack_and_armor_slots_click(app: App) -> None:
+    """Shift click sends a hotbar stack down; a click wears armor."""
+    play = PlayScene.singleplayer(app)
+    play.inventory_open = True
+    server = play.server
+    assert server is not None
+    inventory = server.game.players[play.world.local_id].inventory
+    inventory.slots[0] = None
+    inventory.slots[1] = ItemStack(app.content.items["stick"], 3)
+    inventory.cursor = ItemStack(app.content.items["iron_helmet"])
+    play.tick()
+
+    def click(pos: tuple[float, float], mods: int = 0) -> None:
+        for action in (glfw.PRESS, glfw.RELEASE):
+            play.on_event(
+                MouseButtonEvent(glfw.MOUSE_BUTTON_LEFT, action, mods, pos)
+            )
+        play.tick()
+
+    click(play.armor_layout.slot_rect(0).center)
+    assert play.world.inventory.armor[0] is not None
+    assert play.world.inventory.cursor is None
+    click(play.inventory_layout.slot_rect(1).center, glfw.MOD_SHIFT)
+    world = play.world.inventory
+    assert world[1] is None
+    assert any(s and s.item.name == "stick" for s in world.slots[10:])
+    play.leave()
