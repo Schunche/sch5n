@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from sch5n.game.content import Content
     from sch5n.world.tilemap import TileMap
 
-PROTOCOL_VERSION = 8
+PROTOCOL_VERSION = 9
 """Raised whenever messages change incompatibly."""
 MAX_CLIENT_FRAME = 4096
 """Largest message a client may send, in bytes."""
@@ -95,6 +95,8 @@ class InventoryAction(StrEnum):
     """Craft as much as possible into the inventory."""
     STOW_CRAFTING = "stow_crafting"
     """Move slot `index` of the crafting grid into the inventory."""
+    ARMOR_CLICK = "armor_click"
+    """Wear or take off armor: click slot `index` of the armor slots."""
     SPREAD = "spread"
     """Share the cursor stack evenly among `slots`. See
     `Inventory.spread`."""
@@ -269,6 +271,7 @@ class InventoryState(_Message):
     cursor: StackState | None
     selected: int
     crafting: list[StackState | None]
+    armor: list[StackState | None] = []
     stations: list[str] = []
     """Crafting stations in reach, which some recipes need."""
 

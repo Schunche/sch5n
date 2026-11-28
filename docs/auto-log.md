@@ -215,3 +215,21 @@ Work done on the `claude/auto` branch, newest last.
   (slime 2, zombie 1) and `Game._pick_kind` chooses one.
 - Placeholder art to replace: `assets/textures/mob/zombie.png`,
   `assets/textures/item/cloth.png`.
+
+## Armor
+
+- Items can be armor (`armor` body part: head/chest/legs, `defense` points
+  in `data/items.json`). Nine pieces: cloth (cap, tunic, pants; from zombie
+  cloth), copper and iron (helmet, chestplate, leggings; from ingots), with
+  crafting recipes.
+- `Inventory.armor` holds the worn pieces, `armor_click` wears/removes with
+  the cursor (only into the right slot), `soften` takes 6% of damage per
+  defense point (max 80%, min 1 damage). Armor protects against creature
+  touches, not hunger. Saved with the inventory, synced in `InventoryState`,
+  new `InventoryAction.ARMOR_CLICK` (protocol version 9).
+- Client: three armor slots at the right end of the crafting row, with a
+  "Defense n" label and tooltips. Armor is not drawn on the player yet.
+- Placeholder art to replace: `assets/textures/item/{cloth,copper,iron}_*`
+  armor icons (`cloth_cap`, `cloth_tunic`, `cloth_pants`, `*_helmet`,
+  `*_chestplate`, `*_leggings`).
+- Tests: `tests/test_armor.py`.

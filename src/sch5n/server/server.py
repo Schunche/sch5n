@@ -184,6 +184,7 @@ def inventory_state(inventory: Inventory) -> InventoryState:
         cursor=_stack_state(inventory.cursor),
         selected=inventory.selected,
         crafting=[_stack_state(slot) for slot in inventory.crafting],
+        armor=[_stack_state(slot) for slot in inventory.armor],
         stations=sorted(inventory.stations),
     )
 
@@ -465,6 +466,8 @@ class Server:
                 inventory.left_click(index)
             case InventoryAction.RIGHT_CLICK if 0 <= index < len(inventory):
                 inventory.right_click(index)
+            case InventoryAction.ARMOR_CLICK:
+                inventory.armor_click(index)
             case (
                 InventoryAction.CRAFTING_LEFT_CLICK
                 | InventoryAction.CRAFTING_RIGHT_CLICK

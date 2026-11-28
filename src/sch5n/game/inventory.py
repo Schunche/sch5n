@@ -19,6 +19,11 @@ CRAFTING_SIDE = 2
 """Slots along one side of the crafting grid a player carries."""
 MAX_CRAFTING_SIDE = 3
 """The largest grid, like at a crafting bench."""
+ARMOR_PARTS = ("head", "chest", "legs")
+"""What the armor slots hold, in order."""
+DEFENSE_PERCENT = 6
+"""Share of damage each defense point takes away."""
+MAX_DEFENSE_PERCENT = 80
 
 
 @dataclass(slots=True)
@@ -69,7 +74,7 @@ class ItemStack:
 type Slot = ItemStack | None
 
 
-class Inventory:
+class Inventory:  # ruff: ignore[too-many-public-methods]
     """A fixed number of slots plus the stack held by the cursor.
 
     The first `HOTBAR_SIZE` slots form the hotbar.
@@ -89,6 +94,8 @@ class Inventory:
         self.cursor: Slot = None
         self.crafting: list[Slot] = [None] * CRAFTING_SIDE**2
         """The square crafting grid, row by row."""
+        self.armor: list[Slot] = [None] * len(ARMOR_PARTS)
+        """What is worn, one slot for each of `ARMOR_PARTS`."""
         self.selected: int = 0
         self.vitals = Vitals()
         self.stations: frozenset[str] = frozenset()
@@ -191,9 +198,38 @@ class Inventory:
         copied = Inventory(len(self))
         copied.slots = [stack_copy(s) for s in self.slots]
         copied.crafting = [stack_copy(s) for s in self.crafting]
+        copied.armor = [stack_copy(s) for s in self.armor]
         copied.cursor = stack_copy(self.cursor)
         copied.selected = self.selected
         return copied
+
+    @property
+    def defense(self) -> int:
+        """Defense points of everything worn."""
+        return sum(s.item.spec.defense for s in self.armor if s is not None)
+
+    def soften(self, damage: int) -> int:
+        """Take the worn armor into account for a blow.
+
+        Returns:
+            int: The damage that gets through, at least 1.
+
+        """
+        percent = min(self.defense * DEFENSE_PERCENT, MAX_DEFENSE_PERCENT)
+        return max(1, round(damage * (100 - percent) / 100))
+
+    def armor_click(self, index: int) -> None:
+        """Wear or take off a piece of armor with the cursor.
+
+        A piece goes only into the slot of its body part. The piece worn
+        there comes onto the cursor.
+        """
+        if not 0 <= index < len(self.armor):
+            return
+        cursor = self.cursor
+        if cursor is not None and cursor.item.spec.armor != ARMOR_PARTS[index]:
+            return
+        self._swap(self.armor, index)
 
     def locate(self, index: int) -> tuple[list[Slot], int] | None:
         """Find a slot numbered through the inventory, then the grid.

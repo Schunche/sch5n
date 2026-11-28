@@ -606,7 +606,7 @@ class Game:
         """
         if self.setup.mode is GameMode.ADMIN:
             return
-        player.vitals.health -= damage
+        player.vitals.health -= player.inventory.soften(damage)
         if player.vitals.health <= 0:
             player.vitals.restore()
             player.deaths += 1

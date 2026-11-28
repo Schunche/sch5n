@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TYPE_CHECKING, Annotated, Self
+from typing import TYPE_CHECKING, Annotated, Literal, Self
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -142,6 +142,10 @@ class ItemSpec(_Model):
     """Legacy names accepted when loading saved inventories."""
     food: int = Field(default=0, ge=0)
     """Hunger points eating it restores. Zero means it is not food."""
+    armor: Literal["head", "chest", "legs"] | None = None
+    """The part of the body it is worn on, if it is armor."""
+    defense: int = Field(default=0, ge=0)
+    """Defense points it adds while worn."""
 
 
 class ItemsFile(_Model):

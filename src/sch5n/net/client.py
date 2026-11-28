@@ -369,6 +369,7 @@ class ClientWorld:
             slots = [_stack(self.content, slot) for slot in state.slots]
             cursor = _stack(self.content, state.cursor)
             crafting = [_stack(self.content, slot) for slot in state.crafting]
+            armor = [_stack(self.content, slot) for slot in state.armor]
         except KeyError as error:
             msg = f"Unknown item {error}"
             raise ProtocolError(msg) from error
@@ -379,6 +380,8 @@ class ClientWorld:
         inventory.slots = slots
         inventory.cursor = cursor
         inventory.crafting = crafting
+        if len(armor) == len(inventory.armor):
+            inventory.armor = armor
         inventory.stations = frozenset(state.stations)
         inventory.select(state.selected)
 

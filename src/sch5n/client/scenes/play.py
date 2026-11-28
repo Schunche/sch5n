@@ -74,6 +74,10 @@ NOTICE_SIZE = 16
 DEATH_TICKS = 180
 """How long the death screen stays."""
 DEATH_SIZE = 48
+ARMOR_LABEL = TextStyle(
+    size=14, color=(220, 220, 230, 255), anchor=Anchor.BOTTOM_RIGHT
+)
+"""Style of the text above the armor slots."""
 CHEST_COLUMNS = 9
 """Slots per row in an open chest."""
 CARET_TICKS = 30
@@ -297,7 +301,23 @@ class PlayScene(Scene):
             inventory.columns, inventory.size, app.settings.gui_size, app.ui
         )
         self._lay_out_crafting()
+        self._lay_out_armor()
         self._lay_out_chest()
+
+    def _lay_out_armor(self) -> None:
+        """Place the armor slots at the right end of the crafting row."""
+        layout = self.inventory_layout
+        step = layout.slot_size + layout.padding
+        count = len(self.world.inventory.armor)
+        self.armor_layout = replace(
+            layout,
+            columns=count,
+            slot_count=count,
+            origin=(
+                layout.origin[0] + (layout.columns - count) * step,
+                self.crafting_layout.slot_rect(0).y,
+            ),
+        )
 
     def _lay_out_chest(self) -> None:
         """Place the grid of an open chest right of the inventory."""
@@ -375,6 +395,7 @@ class PlayScene(Scene):
             return True
         return self.inventory_open and (
             self.crafting_layout.bounds().contains_point(*pos)
+            or self.armor_layout.bounds(hotbar_only=False).contains_point(*pos)
             or self.book.contains(pos)
             or hit_button(self.buttons, pos) is not None
         )
@@ -421,7 +442,7 @@ class PlayScene(Scene):
             if event.button == glfw.MOUSE_BUTTON_LEFT:
                 self.session.inventory(InventoryAction.SELECT, slot)
             return True
-        if self._click_chest(event):
+        if self._click_chest(event) or self._click_armor(event):
             return True
         slot = self._slot_under(event.pos)
         if slot is not None:
@@ -460,6 +481,20 @@ class PlayScene(Scene):
         if self.world.chest is None:
             return None
         return self.chest_layout.slot_at(pos, hotbar_only=False)
+
+    def _click_armor(self, event: MouseButtonEvent) -> bool:
+        """Wear or take off armor with a click on an armor slot.
+
+        Returns:
+            bool: Whether the click hit an armor slot.
+
+        """
+        slot = self.armor_layout.slot_at(event.pos, hotbar_only=False)
+        if slot is None or event.button not in BUTTONS:
+            return slot is not None
+        self.mouse.cancel()
+        self.session.inventory(InventoryAction.ARMOR_CLICK, slot)
+        return True
 
     def _click_chest(self, event: MouseButtonEvent) -> bool:
         """Click a slot of the open chest.
@@ -717,6 +752,7 @@ class PlayScene(Scene):
                 crafted(inventory, app.content),
                 mouse,
             )
+            self._draw_armor(mouse)
             self._draw_chest(mouse)
             self.book.draw(batch, app.text, app.ui, self.hud, inventory)
             self._draw_station()
@@ -756,6 +792,28 @@ class PlayScene(Scene):
             ),
             (vitals.health, MAX_HEALTH),
             (vitals.hunger, MAX_HUNGER),
+        )
+
+    def _draw_armor(self, mouse: tuple[float, float]) -> None:
+        """Draw the worn armor, and what is defended."""
+        layout = self.armor_layout
+        armor = self.world.inventory.armor
+        hovered = layout.slot_at(mouse, hotbar_only=False)
+        for index, stack in enumerate(armor):
+            self.hud.draw_slot(
+                self.app.batch,
+                layout.slot_rect(index),
+                stack,
+                layout.border,
+                SlotLook(hovered=index == hovered, selected=False, alpha=1.0),
+            )
+        first = layout.slot_rect(0)
+        defense = self.world.inventory.defense
+        self.app.text.draw(
+            self.app.batch,
+            f"Defense {defense}",
+            (first.x - self.app.ui.outer_padding, first.bottom),
+            ARMOR_LABEL,
         )
 
     def _draw_chest(self, mouse: tuple[float, float]) -> None:
@@ -808,6 +866,13 @@ class PlayScene(Scene):
         slot = self.crafting_layout.slot_at(mouse)
         if slot is not None:
             return inventory.crafting[slot]
+        slot = self.armor_layout.slot_at(mouse, hotbar_only=False)
+        if slot is not None:
+            return inventory.armor[slot]
+        return self._hovered_result(mouse)
+
+    def _hovered_result(self, mouse: tuple[float, float]) -> ItemStack | None:
+        inventory = self.world.inventory
         if self.crafting_layout.on_result(mouse):
             return crafted(inventory, self.app.content)
         return None

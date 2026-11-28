@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 
 from sch5n.error.exceptions import ParseError
 from sch5n.game.inventory import (
+    ARMOR_PARTS,
     CRAFTING_SIDE,
     MAX_CRAFTING_SIDE,
     Inventory,
@@ -180,6 +181,7 @@ def inventory_to_json(inventory: Inventory) -> dict[str, Json]:
         "selected": inventory.selected,
         "slots": [_slot_to_json(slot) for slot in inventory],
         "crafting": [_slot_to_json(slot) for slot in inventory.crafting],
+        "armor": [_slot_to_json(slot) for slot in inventory.armor],
         "health": inventory.vitals.health,
         "hunger": inventory.vitals.hunger,
     }
@@ -230,6 +232,12 @@ def inventory_from_json(
         inventory.resize_crafting(MAX_CRAFTING_SIDE)
     for index, slot in enumerate(crafting[: len(inventory.crafting)]):
         inventory.crafting[index] = _slot_from_json(slot, items)
+    armor = data.get("armor", [])
+    if isinstance(armor, list):
+        for index, slot in enumerate(armor[: len(inventory.armor)]):
+            stack = _slot_from_json(slot, items)
+            if stack is None or stack.item.spec.armor == ARMOR_PARTS[index]:
+                inventory.armor[index] = stack
     selected = data.get("selected", 0)
     inventory.select(selected if isinstance(selected, int) else 0)
     health, hunger = data.get("health"), data.get("hunger")

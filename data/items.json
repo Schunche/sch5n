@@ -39,6 +39,15 @@
         "iron_ingot": {"name": "Iron Ingot", "description": "Smelted from iron ore.", "icon": "item/iron_ingot", "drop_size": 16},
         "slime_ball": {"name": "Slime Ball", "description": "Sticky goo from a slime.", "icon": "item/slime_ball", "drop_size": 16},
         "cloth": {"name": "Cloth", "description": "Rags from a zombie.", "icon": "item/cloth", "drop_size": 16},
+        "cloth_cap": {"name": "Cloth Cap", "description": "Worn on the head: 1 defense. Put it in an armor slot of the inventory.", "icon": "item/cloth_cap", "drop_size": 16, "max_stack": 1, "armor": "head", "defense": 1},
+        "cloth_tunic": {"name": "Cloth Tunic", "description": "Worn on the chest: 1 defense. Put it in an armor slot of the inventory.", "icon": "item/cloth_tunic", "drop_size": 16, "max_stack": 1, "armor": "chest", "defense": 1},
+        "cloth_pants": {"name": "Cloth Pants", "description": "Worn on the legs: 1 defense. Put it in an armor slot of the inventory.", "icon": "item/cloth_pants", "drop_size": 16, "max_stack": 1, "armor": "legs", "defense": 1},
+        "copper_helmet": {"name": "Copper Helmet", "description": "Worn on the head: 1 defense. Put it in an armor slot of the inventory.", "icon": "item/copper_helmet", "drop_size": 16, "max_stack": 1, "armor": "head", "defense": 1},
+        "copper_chestplate": {"name": "Copper Chestplate", "description": "Worn on the chest: 2 defense. Put it in an armor slot of the inventory.", "icon": "item/copper_chestplate", "drop_size": 16, "max_stack": 1, "armor": "chest", "defense": 2},
+        "copper_leggings": {"name": "Copper Leggings", "description": "Worn on the legs: 1 defense. Put it in an armor slot of the inventory.", "icon": "item/copper_leggings", "drop_size": 16, "max_stack": 1, "armor": "legs", "defense": 1},
+        "iron_helmet": {"name": "Iron Helmet", "description": "Worn on the head: 2 defense. Put it in an armor slot of the inventory.", "icon": "item/iron_helmet", "drop_size": 16, "max_stack": 1, "armor": "head", "defense": 2},
+        "iron_chestplate": {"name": "Iron Chestplate", "description": "Worn on the chest: 3 defense. Put it in an armor slot of the inventory.", "icon": "item/iron_chestplate", "drop_size": 16, "max_stack": 1, "armor": "chest", "defense": 3},
+        "iron_leggings": {"name": "Iron Leggings", "description": "Worn on the legs: 2 defense. Put it in an armor slot of the inventory.", "icon": "item/iron_leggings", "drop_size": 16, "max_stack": 1, "armor": "legs", "defense": 2},
         "apple": {"name": "Apple", "description": "Fruit from an oak. Eat it to feel less hungry.", "icon": "item/apple", "drop_size": 16, "food": 5}
     }
 }
