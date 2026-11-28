@@ -101,7 +101,7 @@ or too large is disconnected, the server goes on.
 
 Health and hunger are shown at the bottom (the saved world keeps them). Eat
 food (apples) by holding the left mouse button with it in hand. At night
-slimes, zombies and bats come out, and rarely the King Slime; torches keep
+slimes, zombies, bats and arrow-shooting skeletons come out, and rarely the King Slime (swords hit hardest; a bow shoots arrows at the cursor while you hold the left mouse button); torches keep
 them away and light the dark. Defeated creatures drop slime balls (torches),
 cloth (armor, beds) and more. Smelt ore at a furnace (stand next to it) and craft
 tools and armor of copper, iron and the other metals; wear armor in the three
