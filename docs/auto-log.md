@@ -439,3 +439,9 @@ Work done on the `claude/auto` branch, newest last.
   player is safe for 3 seconds. The same bot dies 5 to 18 times; real
   players who fight, build and light torches do far better.
 - The boss test waits longer for its rarer spawn chance.
+
+## Boss helpers
+
+- At half health the King Slime calls two slimes to its sides, once, and
+  says so in chat. Helpers are ordinary slimes and may exceed the usual
+  creature cap. No new art.

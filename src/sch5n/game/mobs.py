@@ -147,6 +147,8 @@ class Mob:
         """Horizontal push from a hit, fading away."""
         self.age = 0
         self.shoot_wait = SHOOT_EVERY // 2
+        self.summoned = False
+        """Whether a boss has already called its helpers."""
         """Ticks until a ranged creature may shoot again."""
 
     def hit(self, damage: int, from_x: float) -> bool:

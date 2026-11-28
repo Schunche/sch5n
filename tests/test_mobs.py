@@ -325,3 +325,25 @@ def test_admins_shrug_off_falls(content: Content) -> None:
     """Admins take no fall damage."""
     game = make_game(content, GameMode.ADMIN)
     assert drop_from(game, 20) == 0
+
+
+def test_the_boss_calls_slimes_once_at_half_health(content: Content) -> None:
+    """Below half health the king slime brings two slimes, only once."""
+    from sch5n.game.session import BOSS  # ruff: ignore[import-outside-top-level]
+
+    game = make_game(content)
+    boss = Mob(KINDS[BOSS], (game.player.body.x + 8 * TILE, GROUND - 100))
+    game.mobs[900] = boss
+    game.tick(TickInput())
+    assert len(game.mobs) == 1
+    boss.health = boss.kind.health // 2
+    game.tick(TickInput())
+    assert sorted(m.kind.name for m in game.mobs.values()) == [
+        "king_slime",
+        "slime",
+        "slime",
+    ]
+    game.mobs = {900: boss}
+    game.tick(TickInput())
+    assert len(game.mobs) == 1
+    assert any("calls for help" in text for text in game.announcements)

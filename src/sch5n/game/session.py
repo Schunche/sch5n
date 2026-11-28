@@ -124,6 +124,8 @@ BAT_LIFT = (4, 9)
 ARROW_SPEED = 7.0
 """Pixels per tick the arrows of creatures fly at."""
 BOSS = "king_slime"
+HELPER = "slime"
+"""What a boss calls at half health."""
 BOSS_CHANCE = 0.04
 """Chance per try, at night, that the boss comes, if none is around."""
 RESPAWN_SAFE_TICKS = 180
@@ -789,6 +791,19 @@ class Game:
             if mob.hit(max(1, damage), player.body.center[0]):
                 self._mob_died(mob_id)
 
+    def _boss_summons(self, boss: Mob) -> None:
+        """Call slimes to the boss's side once, at half health."""
+        if boss.health > boss.kind.health // 2:
+            return
+        boss.summoned = True
+        size = self.config.tile_size
+        x, y = boss.body.x, boss.body.y
+        for side in (-1, 1):
+            helper = Mob(KINDS[HELPER], (x + side * 2 * size, y))
+            self.mobs[self._next_mob] = helper
+            self._next_mob += 1
+        self.announcements.append("The King Slime calls for help")
+
     def _mob_died(self, mob_id: int) -> None:
         mob = self.mobs.pop(mob_id)
         if mob.kind.boss:
@@ -841,6 +856,8 @@ class Game:
             mob.tick(self.tilemap, self.config.physics, size, target)
             if mob.kind.ranged and nearest is not None:
                 self._mob_shoots(mob, nearest)
+            if mob.kind.boss and not mob.summoned:
+                self._boss_summons(mob)
             gone = mob.body.y > self.void_y or (
                 nearest is None
                 or math.dist(nearest.body.center, mob.body.center)
