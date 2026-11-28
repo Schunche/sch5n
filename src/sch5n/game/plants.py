@@ -158,6 +158,7 @@ class Garden:
         y = self.tilemap.surface_y(x, -SKY_ROWS, bottom)
         if y is None or self.rng.random() >= SPREAD_CHANCE:
             return
+        self._smother(x, y + 1)
         ground = blocks.get(self.tilemap.get(x, y))
         if ground is None or self.tilemap.get(x, y - 1) != AIR:
             return
@@ -172,3 +173,11 @@ class Garden:
             ):
                 self.tilemap.set(x, y, grass.id)
                 return
+
+    def _smother(self, x: int, y: int) -> None:
+        """Turn grass that has a solid block on top back into dirt."""
+        cover = self.tilemap.blocks.get(self.tilemap.get(x, y))
+        if cover is not None and cover.spec.spreads_onto:
+            self.tilemap.set(
+                x, y, self.tilemap.blocks.id_of(cover.spec.spreads_onto[0])
+            )

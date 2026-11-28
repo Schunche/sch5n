@@ -539,3 +539,16 @@ def test_grass_needs_a_neighbour(content: Content) -> None:
     game = Game(content, tilemap, GameSetup(seed=1, spawn=(0, 0)))
     run(game, GRASS_TICKS)
     assert tilemap.get(0, 10) == content.blocks.id_of("dirt")
+
+
+def test_covered_grass_turns_back_to_dirt(content: Content) -> None:
+    """Grass under a solid block dies; the grass on top stays."""
+    tilemap = flat_world(content)
+    grass = content.blocks.id_of("grass")
+    dirt = content.blocks.id_of("dirt")
+    tilemap.set(0, 10, grass)
+    tilemap.set(0, 9, dirt)  # Someone built on the grass.
+    game = Game(content, tilemap, GameSetup(seed=1, spawn=(0, 0)))
+    run(game, GRASS_TICKS * 4)
+    assert tilemap.get(0, 10) == dirt
+    assert tilemap.get(0, 9) == grass
