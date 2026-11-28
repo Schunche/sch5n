@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import secrets
 import time
 from typing import TYPE_CHECKING
 
@@ -24,6 +25,7 @@ from sch5n.error.exceptions import ParseError
 from sch5n.game.config import Settings
 from sch5n.math.rect import Rect
 from sch5n.net.protocol import MAX_NAME_LENGTH as MAX_PLAYER_NAME_LENGTH
+from sch5n.world.generator import WorldSpec, generate
 from sch5n.world.save import (
     MAX_NAME_LENGTH,
     World,
@@ -128,6 +130,9 @@ class WorldsScene(Scene):
         self.confirming: int | None = None
         """The world whose deletion awaits a second click."""
         self.buttons: list[Button] = []
+        self.generated = False
+        """Whether a new world is generated (biomes, trees, ores) instead of
+        loaded from the start map."""
         self.message = ""
         self.ticks = 0
         self.update_layout()
@@ -233,7 +238,17 @@ class WorldsScene(Scene):
                 (FOOTER_WIDTH, button_height),
             ),
         )
-        self.buttons = [create, back]
+        terrain = Button(
+            "terrain",
+            f"Terrain: {"Generated" if self.generated else "Start map"}",
+            Rect(
+                left + inner / 2 + PADDING / 2,
+                self.player_name.rect.y,
+                inner / 2 - PADDING / 2,
+                FIELD_HEIGHT,
+            ),
+        )
+        self.buttons = [create, terrain, back]
 
     def play(self, world: WorldInfo) -> None:
         """Load a saved world and play it."""
@@ -289,7 +304,14 @@ class WorldsScene(Scene):
         if world_path(directory, name).exists():
             self.message = f"A world called {name!r} already exists"
             return
-        world = World(name, load_start_map(self.app), {})
+        if self.generated:
+            spec = WorldSpec(left=-150, right=150, bottom=160, home=0)
+            tilemap = generate(
+                self.app.content.blocks, spec, secrets.randbelow(2**32)
+            )
+        else:
+            tilemap = load_start_map(self.app)
+        world = World(name, tilemap, {})
         self.app.switch(
             PlayScene.singleplayer(
                 self.app, world, world_path(directory, name)
@@ -334,6 +356,9 @@ class WorldsScene(Scene):
         match button_id:
             case "create":
                 self.create()
+            case "terrain":
+                self.generated = not self.generated
+                self.layout()
             case "back":
                 self.app.switch(self.back)
             case str() if button_id.startswith("world:"):

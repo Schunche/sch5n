@@ -56,6 +56,9 @@ class WorldSpec:
     bottom: int = 160
     trees: bool = True
     """Whether trees stand on the surface."""
+    home: int | None = None
+    """A column in the plains where players start; the left edge if not
+    given."""
 
     def contains(self, x: int, y: int) -> bool:
         """Whether a tile is inside the world.
@@ -232,7 +235,7 @@ class _Generator:
     def grow_surface(self) -> None:
         """Give every stretch of world its biome: ground cover and trees."""
         spec = self.spec
-        bands = biome_bands(spec.left, spec.right, self.rng)
+        bands = biome_bands(spec.left, spec.right, self.rng, spec.home)
         trees = 0
         for band in bands:
             self.cover(band)

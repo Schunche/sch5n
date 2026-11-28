@@ -1679,3 +1679,19 @@ def test_the_minimap_toggles_and_draws(app: App) -> None:
     play.on_event(KeyEvent(glfw.KEY_M, glfw.PRESS, 0))
     assert not play.minimap_open
     play.leave()
+
+
+def test_the_worlds_screen_can_generate_terrain(app: App) -> None:
+    """The terrain button switches to a generated world with ores."""
+    worlds = WorldsScene(app, back=MainMenu(app))
+    terrain = next(b for b in worlds.buttons if b.id == "terrain")
+    assert "Start map" in terrain.label
+    worlds.on_event(click(terrain.rect.center))
+    assert worlds.generated
+    worlds.on_event(press(glfw.KEY_ENTER))
+    play = app.pending_scene
+    assert isinstance(play, PlayScene)
+    assert play.server is not None
+    tiles = play.server.game.tilemap
+    assert tiles.chunks
+    assert tiles.get(0, -1) == 0

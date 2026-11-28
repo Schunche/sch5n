@@ -388,3 +388,11 @@ Work done on the `claude/auto` branch, newest last.
   other players green, you yellow. It is one small texture updated per frame
   while shown.
 - Tests: `tests/test_minimap.py`, `tests/test_render.py`.
+
+## Generated worlds from the Worlds screen
+
+- A "Terrain" button next to the player name toggles between the start map
+  and a generated world (biomes, trees, ores) for new worlds.
+- `biome_bands` and `WorldSpec` take a `home` column that is always plains,
+  so the spawn at x = 0 never lands in a desert or on snow.
+- No new art.

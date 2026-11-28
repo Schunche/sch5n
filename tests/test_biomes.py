@@ -96,3 +96,15 @@ def test_a_player_can_stand_in_a_generated_world(content: Content) -> None:
     for _ in range(200):
         game.tick(TickInput())
     assert game.player.body.y < 0
+
+
+def test_the_home_stretch_is_plains() -> None:
+    """Players start in plains, wherever home lies."""
+    for seed in range(20):
+        bands = biome_bands(-WIDTH, WIDTH, np.random.default_rng(seed), 0)
+        assert bands[0][0] == -WIDTH
+        assert bands[-1][1] == WIDTH
+        home = next(b for s, e, b in bands if s <= 0 < e)
+        assert home.name == "plains"
+        for (_, _, biome), (_, _, other) in pairwise(bands):
+            assert biome.name != other.name
