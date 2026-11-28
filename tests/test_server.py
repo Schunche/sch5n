@@ -1247,3 +1247,32 @@ def test_a_furnace_works_for_the_client_that_opened_it(
     made = alice.world.chest[2] if alice.world.chest else None
     assert made is not None
     assert made.item.name == "tin_ingot"
+
+
+def test_shift_click_sorts_ore_and_fuel_into_the_furnace(
+    server: Server, content: Content
+) -> None:
+    """Ore goes to the input, fuel to the fuel slot, junk stays put."""
+    alice = join(server, content, "alice")
+    player = next(iter(server.game.players.values()))
+    x = int(player.body.center[0] // content.game.tile_size) + 1
+    tile = (x, SURFACE - 1)
+    server.game.tilemap.set(*tile, content.blocks.id_of("furnace"))
+    step(server, [alice])
+    inventory = player.inventory
+    inventory.slots[0] = ItemStack(content.items["stick"], 4)
+    inventory.slots[1] = ItemStack(content.items["tin_ore"], 2)
+    inventory.slots[2] = ItemStack(content.items["dirt_block"], 3)
+    alice.open_chest(*tile)
+    step(server, [alice], 2)
+    for slot in range(3):
+        alice.inventory(InventoryAction.QUICK_MOVE, slot)
+    step(server, [alice], 2)
+    furnace = server.game.chest_at(*tile)
+    assert furnace is not None
+    assert furnace.slots[0] is not None
+    assert furnace.slots[0].item.name == "tin_ore"
+    assert furnace.slots[1] is not None
+    assert furnace.slots[1].item.name == "stick"
+    assert furnace.slots[2] is None
+    assert inventory.slots[2] is not None

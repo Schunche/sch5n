@@ -25,6 +25,7 @@ from sch5n.game.config import MAX_PLAYERS
 from sch5n.game.crafting import craft, craft_all, fill_recipe
 from sch5n.game.inventory import MAX_CRAFTING_SIDE
 from sch5n.game.session import Game, GameSetup, TickInput
+from sch5n.game.smelting import FUEL, INPUT
 from sch5n.log.logger import LOGGER
 from sch5n.net.connection import Listener, SocketConnection, local_pair
 from sch5n.net.discovery import Announcer
@@ -63,7 +64,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from sch5n.game.content import Content
-    from sch5n.game.inventory import Inventory, Slot
+    from sch5n.game.inventory import Inventory, ItemStack, Slot
     from sch5n.game.player import Player
     from sch5n.net.connection import Connection
     from sch5n.net.protocol import ClientMessage, ServerMessage
@@ -544,7 +545,42 @@ class Server:
         if message.action is InventoryAction.ARMOR_CLICK:
             inventory.armor_click(message.index)
         else:
-            inventory.quick_move(message.index, self._reachable_chest(client))
+            chest = self._reachable_chest(client)
+            span = None
+            if chest is not None and self._smelter_open(client):
+                stack = (
+                    inventory.slots[message.index]
+                    if 0 <= message.index < len(inventory)
+                    else None
+                )
+                span = self._smelter_span(stack)
+                if span is None:
+                    return
+            inventory.quick_move(message.index, chest, span)
+
+    def _smelter_open(self, client: _Client) -> bool:
+        if client.chest is None:
+            return False
+        block = self.game.content.blocks.get(
+            self.game.tilemap.get(*client.chest)
+        )
+        return block is not None and block.spec.smelter
+
+    def _smelter_span(self, stack: ItemStack | None) -> tuple[int, int] | None:
+        """Choose the furnace slots a stack may be shift clicked into.
+
+        Returns:
+            tuple[int, int] | None: Half-open slot range, `None` if the
+            furnace takes no such thing.
+
+        """
+        if stack is None:
+            return None
+        if stack.item.name in self.game.content.smelting:
+            return (INPUT, INPUT + 1)
+        if stack.item.spec.fuel > 0:
+            return (FUEL, FUEL + 1)
+        return None
 
     def _reachable_chest(self, client: _Client) -> Inventory | None:
         """Find the chest a player has open, if it is in reach.

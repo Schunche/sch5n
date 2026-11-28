@@ -71,7 +71,7 @@ def needs_of(recipe: RecipeSpec, content: Content) -> tuple[Need, ...]:
 
 
 def entries(content: Content) -> list[Entry]:
-    """Prepare every recipe.
+    """Prepare every recipe, then what a furnace makes.
 
     Returns:
         list[Entry]: One entry per recipe, in the order of the file.
@@ -88,6 +88,15 @@ def entries(content: Content) -> list[Entry]:
             recipe.station or "",
         )
         for recipe in content.recipes
+    ] + [
+        Entry(
+            content.items[smelt.result.item],
+            smelt.result.amount,
+            (Need((content.items[smelt.input],), 1),),
+            "",
+            "furnace",
+        )
+        for smelt in content.smelting.values()
     ]
 
 

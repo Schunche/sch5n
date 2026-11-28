@@ -526,7 +526,7 @@ class PlayScene(Scene):
                 self.book.open = not self.book.open
             case _:
                 index = self.book.entry_at(pos)
-                if index is not None:
+                if index is not None and index < len(self.app.content.recipes):
                     self.session.inventory(
                         InventoryAction.FILL_RECIPE_ALL
                         if shift

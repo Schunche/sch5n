@@ -375,7 +375,7 @@ class Inventory:  # ruff: ignore[too-many-public-methods]
 
         return stack
 
-    def _add_between(self, stack: ItemStack, start: int, stop: int) -> None:
+    def add_between(self, stack: ItemStack, start: int, stop: int) -> None:
         """Put as much of a stack as fits into slots `[start, stop)`."""
         places = range(start, min(stop, len(self.slots)))
         for index in places:
@@ -389,10 +389,16 @@ class Inventory:  # ruff: ignore[too-many-public-methods]
                 self.slots[index] = ItemStack(stack.item, stack.amount)
                 stack.amount = 0
 
-    def quick_move(self, index: int, chest: Inventory | None = None) -> None:
+    def quick_move(
+        self,
+        index: int,
+        chest: Inventory | None = None,
+        span: tuple[int, int] | None = None,
+    ) -> None:
         """Send a stack where it most likely goes, like a shift click.
 
-        Into the open chest if there is one. Otherwise armor goes on if its
+        Into the open chest if there is one, within the slots `[start,
+        stop)` of `span` if given. Otherwise armor goes on if its
         place is free, and anything else swaps between the hotbar and the
         rest of the inventory.
         """
@@ -402,15 +408,17 @@ class Inventory:  # ruff: ignore[too-many-public-methods]
         if stack is None:
             return
         part = stack.item.spec.armor
-        if chest is not None:
+        if chest is not None and span is not None:
+            chest.add_between(stack, *span)
+        elif chest is not None:
             chest.add(stack)
         elif part is not None and self.armor[ARMOR_PARTS.index(part)] is None:
             self.armor[ARMOR_PARTS.index(part)] = stack
             stack.amount = 0
         elif index < HOTBAR_SIZE:
-            self._add_between(stack, HOTBAR_SIZE, len(self.slots))
+            self.add_between(stack, HOTBAR_SIZE, len(self.slots))
         else:
-            self._add_between(stack, 0, HOTBAR_SIZE)
+            self.add_between(stack, 0, HOTBAR_SIZE)
         if stack.amount == 0:
             self.slots[index] = None
 

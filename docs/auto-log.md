@@ -557,5 +557,6 @@ Todo: nothing left from this list.
   `Content.smelting` by input item); the nine station recipes (8 ores and the
   baked apple) left the grid recipes. Protocol 12 (the content fingerprint
   includes smelting). `Inventory` may now have fewer than 10 slots.
-- The recipe book does not list smelting yet. Shift click puts items into
-  the first free slot, so put the ore in first.
+- The recipe book lists what a furnace makes after the other recipes
+  (labelled Furnace); clicking those does nothing. Shift click sends ore to
+  the input slot and fuel to the fuel slot of an open furnace.
