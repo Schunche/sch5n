@@ -148,6 +148,7 @@ class PlayScene(Scene):
             name=world.name,
             inventories=world.inventories,
         )
+        server.host = settings.player_name
         session = ClientSession(
             server.connect_local(),
             app.content,

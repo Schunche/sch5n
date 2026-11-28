@@ -1,5 +1,8 @@
 # Copyright (c) 2026 Schunche
-"""Chat commands: `/help`, `/players`, `/recipes` and `/me`.
+"""Chat commands that need no knowledge of the connections.
+
+These are `/help`, `/players`, `/recipes` and `/me`. The server itself
+handles the host's `/kick`, `/mute` and `/unmute`.
 
 Commands run on the server. Each returns the lines to show only to the
 one who typed it, or a line to tell everyone.
@@ -19,6 +22,7 @@ MAX_RECIPE_LINES = 6
 """Most recipes `/recipes` lists at once."""
 HELP = (
     "Commands: /help, /players, /recipes <item>, /me <action>",
+    "The host also has /kick, /mute and /unmute <player>.",
     "T or Enter opens the chat, Esc closes it.",
 )
 

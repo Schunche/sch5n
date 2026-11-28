@@ -68,3 +68,10 @@ Work done on the `claude/auto` branch, newest last.
   `/me` to everyone. Unknown commands get a hint.
 - Next ideas: a graphical recipe book, saving vitals with worlds, grass
   reverting when covered, a server-side mute/kick for hosts.
+
+## Host moderation
+
+- `Server.host` names the player who may use `/kick`, `/mute` and
+  `/unmute <player>`; a hosted single player game sets it to the host's
+  display name. Muted players are told so and cannot speak; kicked players
+  see "Kicked by the host". Dedicated servers have no host, so nobody can.

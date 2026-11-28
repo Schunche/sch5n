@@ -93,6 +93,7 @@ class _Client:
     ack: int | None = None
     """`seq` of the newest input applied."""
     sent_inventory: InventoryState | None = None
+    muted: bool = False
     chat_limit: RateLimit = field(default_factory=RateLimit)
     ended: bool = False
     """The client left, or the server sent it away."""
@@ -103,6 +104,10 @@ def _reject(client: _Client, reason: str) -> None:
     client.ended = True
     client.connection.send(Reject(reason=reason))
     client.connection.close(reason)
+
+
+def _tell(client: _Client, text: str) -> None:
+    client.connection.send(ChatMessage(kind=ChatKind.SYSTEM, text=text))
 
 
 def _kick(client: _Client, reason: str) -> None:
@@ -231,6 +236,8 @@ class Server:
             self.game.restore_inventories(inventories)
         self.fingerprint = content_fingerprint(content)
         self.clients: list[_Client] = []
+        self.host = ""
+        """Name of the player who may kick and mute, empty for nobody."""
         self.chat_log: deque[ChatMessage] = deque(maxlen=CHAT_HISTORY)
         """Everything said lately, oldest first. New players get it."""
         self.listener: Listener | None = None
@@ -361,10 +368,42 @@ class Server:
         if text.startswith("/"):
             self._command(client, text)
             return
+        if client.muted:
+            _tell(client, "You are muted.")
+            return
         LOGGER.info("<%s> %s", client.name, text)
         self.broadcast(ChatMessage(sender=client.name, text=text))
 
+    def _moderate(self, client: _Client, command: str, who: str) -> None:
+        """Kick, mute or unmute a player, if the sender is the host."""
+        if not self.host or client.name != self.host:
+            _tell(client, "Only the host can do that.")
+            return
+        wanted = " ".join(who.split()).lower()
+        target = next(
+            (
+                c
+                for c in self.clients
+                if c.player_id is not None and c.name.lower() == wanted
+            ),
+            None,
+        )
+        if target is None:
+            _tell(client, f"Nobody is called {who!r}.")
+        elif target is client:
+            _tell(client, "You cannot do that to yourself.")
+        elif command == "kick":
+            _kick(target, "Kicked by the host")
+        else:
+            target.muted = command == "mute"
+            done = "muted" if target.muted else "unmuted"
+            self.say(f"{target.name} was {done}")
+
     def _command(self, client: _Client, text: str) -> None:
+        command, _, argument = text.removeprefix("/").partition(" ")
+        if command.lower() in {"kick", "mute", "unmute"}:
+            self._moderate(client, command.lower(), argument)
+            return
         names = [c.name for c in self.clients if c.player_id is not None]
         result = run_command(text, client.name, names, self.content)
         for line in result.private:

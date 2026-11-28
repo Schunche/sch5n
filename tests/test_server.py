@@ -983,3 +983,34 @@ def test_chat_commands(server: Server, content: Content) -> None:
     theirs = [m.text for m in bob.chat if m.kind is ChatKind.SYSTEM]
     assert theirs == ["* alice waves"]
     assert not [m for m in bob.chat if m.kind is ChatKind.CHAT]
+
+
+def test_the_host_can_mute_and_kick(server: Server, content: Content) -> None:
+    """Only the host moderates; muted players cannot speak."""
+    server.host = "alice"
+    alice = join(server, content, "alice")
+    bob = join(server, content, "bob")
+    step(server, [alice, bob])
+    bob.say("/mute alice")
+    step(server, [alice, bob], 2)
+    assert any("Only the host" in m.text for m in bob.chat)
+    alice.say("/mute BOB")
+    step(server, [alice, bob], 2)
+    assert any(m.text == "bob was muted" for m in bob.chat)
+    bob.say("hello?")
+    step(server, [alice, bob], 2)
+    assert any(m.text == "You are muted." for m in bob.chat)
+    assert not [m for m in alice.chat if m.kind is ChatKind.CHAT]
+    alice.say("/unmute bob")
+    bob.say("hi")
+    step(server, [alice, bob], 2)
+    assert ("chat", "bob", "hi") in lines(alice)
+    alice.say("/kick nobody")
+    alice.say("/kick alice")
+    alice.say("/kick bob")
+    step(server, [alice, bob], 3)
+    assert bob.state is SessionState.CLOSED
+    assert bob.error == "Kicked by the host"
+    assert ("leave", "bob", "") in lines(alice)
+    assert any("Nobody is called" in m.text for m in alice.chat)
+    assert alice.state is SessionState.PLAYING
