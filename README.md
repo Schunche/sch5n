@@ -107,7 +107,13 @@ cloth (armor, beds) and more. Smelt ore at a furnace (stand next to it) and craf
 tools and armor of copper, iron and the other metals; wear armor in the three
 slots next to the crafting grid. A bed (right click it) sets where you respawn.
 Worlds made by `python -m sch5n.world` have plains, desert and snow biomes,
-trees, and one ore of every pair; use one with `--map <name>`.
+trees, and one ore of every pair; use one with `--map <name>`, or pick
+"Terrain: Generated" on the Worlds screen to start a fresh one. Falls of more
+than 7 tiles hurt (one health per extra tile; admins are immune). Rain falls
+on about a third of the days and stops under a roof. Short tips appear for
+new players (turn them off with `show_hints` in the settings file). Sound
+effects are generated placeholders that follow the master and effects
+volume; music is not implemented.
 
 ### Controls
 
