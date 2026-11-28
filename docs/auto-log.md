@@ -420,5 +420,13 @@ Work done on the `claude/auto` branch, newest last.
 - The client world records the block changes of each snapshot
   (`tile_changes`); the play scene plays break, place and hit sounds for
   changes within 24 tiles, a hurt sound on damage and a chat sound on new
-  messages. "craft" is synthesized but not wired yet.
+  messages. A craft sound plays when the crafting result is taken.
 - Music is not implemented; the music slider still has no effect.
+
+## Tips for new players
+
+- `client/hints.py`: one tip at a time at the top of the screen, each once
+  per session, for the controls (first 20 s), the first unarmed night and
+  after a death. `Settings.show_hints` (default on) turns them off; there
+  is no settings screen toggle yet.
+- No new art.

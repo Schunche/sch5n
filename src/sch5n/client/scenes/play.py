@@ -15,6 +15,7 @@ import glfw
 
 from sch5n.client.camera import Camera
 from sch5n.client.chat import ChatBox
+from sch5n.client.hints import Hints, Situation
 from sch5n.client.hud import (
     Hud,
     SlotLook,
@@ -57,7 +58,7 @@ from sch5n.client.world_view import (
 )
 from sch5n.game.config import GameMode
 from sch5n.game.crafting import crafted
-from sch5n.game.daylight import DAY_SECONDS, phase
+from sch5n.game.daylight import DAY_SECONDS, daylight, phase
 from sch5n.game.session import GameSetup, TickInput
 from sch5n.game.vitals import MAX_HEALTH, MAX_HUNGER
 from sch5n.log.logger import LOGGER
@@ -91,6 +92,9 @@ MOB_DOT = (230, 60, 60)
 PLAYER_DOT = (80, 220, 110)
 SELF_DOT = (250, 240, 120)
 HURT_FLASH_TICKS = 12
+HINT_Y = 48
+NIGHT_BELOW = 0.35
+"""Daylight under which the night tip is given."""
 SOUND_RANGE = 24
 """Tiles from the player within which block changes make sound."""
 HURT_FLASH_ALPHA = 0.3
@@ -149,6 +153,7 @@ class PlayScene(Scene):
         self.book = RecipeBook(app.content)
         self._chat_seen = 0
         self._chat_sounded = 0
+        self.hints = Hints(app.tick_rate)
         self._skip_char = False
         """Ignore the character typed by the key that opened the chat."""
         self.ticks = 0
@@ -479,6 +484,8 @@ class PlayScene(Scene):
         elif self.crafting_layout.on_result(event.pos):
             if event.button in BUTTONS:
                 shift = event.mods & glfw.MOD_SHIFT
+                if crafted(self.world.inventory, self.app.content):
+                    self.app.audio.play("craft", self.app.settings)
                 self.session.inventory(
                     InventoryAction.CRAFT_ALL
                     if shift
@@ -679,6 +686,7 @@ class PlayScene(Scene):
         if self.notice_ticks:
             self.notice_ticks -= 1
         self._watch_deaths()
+        self._tick_hints()
         if self.death_ticks:
             self.death_ticks -= 1
         player = self.player
@@ -687,6 +695,40 @@ class PlayScene(Scene):
                 player.body.center,
                 app.content.game.camera.smoothing / app.tick_rate,
             )
+
+    def _tick_hints(self) -> None:
+        """Let the tips follow what the player is doing."""
+        player = self.player
+        if player is None or not self.app.settings.show_hints:
+            return
+        rate = self.app.tick_rate
+        armed = any(
+            stack is not None and stack.item.name.endswith("_sword")
+            for stack in self.world.inventory.slots
+        )
+        self.hints.tick(
+            Situation(
+                seconds_played=self.ticks / rate,
+                night=daylight(phase(self.world.clock, rate)) < NIGHT_BELOW,
+                deaths=player.deaths,
+                armed=armed,
+            )
+        )
+
+    def _draw_hints(self) -> None:
+        app = self.app
+        if not self.hints.text:
+            return
+        app.text.draw(
+            app.batch,
+            self.hints.text,
+            (app.screen[0] / 2, HINT_Y),
+            TextStyle(
+                size=NOTICE_SIZE,
+                color=rgba(app.ui.color("accent")),
+                anchor=Anchor.CENTER,
+            ),
+        )
 
     def _watch_deaths(self) -> None:
         """Show the death screen when the server counts another death."""
@@ -834,6 +876,7 @@ class PlayScene(Scene):
             self._draw_notice()
         self._draw_vitals()
         self._draw_boss()
+        self._draw_hints()
         if self.minimap_open:
             self._draw_minimap()
         self._draw_hurt()

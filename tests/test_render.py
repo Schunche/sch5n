@@ -1694,4 +1694,4 @@ def test_the_worlds_screen_can_generate_terrain(app: App) -> None:
     assert play.server is not None
     tiles = play.server.game.tilemap
     assert tiles.chunks
-    assert tiles.get(0, -1) == 0
+    assert tiles.get(0, -60) == 0

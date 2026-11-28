@@ -239,6 +239,8 @@ class Settings(_Model):
     cursor_color: Color | None = None
     """`None` uses the operating system cursor with the cursor image. A
     color hides it and draws the cursor image tinted with this color."""
+    show_hints: bool = True
+    """Whether new players are given short tips."""
     master_volume: int = Field(default=100, ge=0, le=100)
     music_volume: int = Field(default=70, ge=0, le=100)
     effects_volume: int = Field(default=80, ge=0, le=100)
