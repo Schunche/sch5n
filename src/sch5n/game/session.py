@@ -117,6 +117,8 @@ FADE_CHANCE = 0.004
 DESPAWN_TILES = 48
 """Creatures farther than this from every player vanish."""
 PLAYER_KNOCK = 3.0
+BAT_LIFT = (4, 9)
+"""Rows above the ground where flying creatures appear, fewest and most."""
 BOSS = "king_slime"
 BOSS_CHANCE = 0.04
 """Chance per try, at night, that the boss comes, if none is around."""
@@ -685,7 +687,10 @@ class Game:
         if surface is None:
             return
         kind = kind or self._pick_kind()
-        top = (surface * size) - kind.size[1]
+        lift = (
+            int(rng.integers(BAT_LIFT[0], BAT_LIFT[1])) if kind.flying else 0
+        )
+        top = ((surface - lift) * size) - kind.size[1]
         mob = Mob(kind, (column * size + (size - kind.size[0]) / 2, top))
         lit = self.tilemap.region(
             column - LIT_SAFE,
@@ -698,7 +703,7 @@ class Game:
         wide = -(-kind.size[0] // size)
         high = -(-kind.size[1] // size)
         if self.tilemap.any_solid(
-            column, surface - high, column + wide, surface
+            column, surface - lift - high, column + wide, surface - lift
         ):
             return
         self.mobs[self._next_mob] = mob

@@ -242,3 +242,30 @@ def test_the_boss_comes_once_and_drops_a_lot(content: Content) -> None:
         for f in game.floating_items
     )
     assert any("fell" in text for text in game.announcements)
+
+
+def test_bats_fly_to_the_player_without_falling(content: Content) -> None:
+    """A bat hovers in the air and closes in on a player in sight."""
+    bat = KINDS["bat"]
+    assert bat.flying
+    game = make_game(content)
+    start = (game.player.body.x + 6 * TILE, GROUND - 6 * TILE)
+    mob = Mob(bat, start)
+    game.mobs[700] = mob
+    for _ in range(20):
+        game.tick(TickInput())
+        game.player.vitals.health = MAX_HEALTH
+    assert mob.body.y < GROUND - bat.size[1] - 2 * TILE  # still in the air
+    gap = abs(mob.body.center[0] - game.player.body.center[0])
+    assert gap < 6 * TILE
+
+
+def test_a_bat_bite_is_light(content: Content) -> None:
+    """A bat touching the player takes one health."""
+    bat = KINDS["bat"]
+    game = make_game(content)
+    mob = Mob(bat, (game.player.body.x, game.player.body.y))
+    game.mobs[701] = mob
+    before = game.player.vitals.health
+    game.tick(TickInput())
+    assert game.player.vitals.health == before - bat.damage

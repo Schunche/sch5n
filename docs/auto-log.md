@@ -310,3 +310,11 @@ Work done on the `claude/auto` branch, newest last.
   the stack. (`InventoryAction.QUICK_MOVE`, `ChestClick.quick`,
   `Inventory.quick_move/take_from`.)
 - Tests: `tests/test_armor.py`, `tests/test_render.py`.
+
+## Bats
+
+- `bat` (16x12, 4 health, bite 1, fast, sees 20 tiles) flutters through the
+  air towards players at night: no gravity, a gentle bob. It spawns 4-8 rows
+  above the ground, drops a leaf now and then. Kinds gained `flying`.
+- Placeholder art to replace: `assets/textures/mob/bat.png`.
+- Tests: `tests/test_mobs.py`.

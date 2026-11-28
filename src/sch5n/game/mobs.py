@@ -37,6 +37,8 @@ class MobKind:
     drop_amount: int = 1
     boss: bool = False
     """Bosses show a health bar."""
+    flying: bool = False
+    """It flutters through the air, with no gravity."""
 
     @property
     def display_name(self) -> str:
@@ -68,6 +70,19 @@ KINDS = {
         drop="cloth",
         drop_chance=0.5,
     ),
+    "bat": MobKind(
+        name="bat",
+        size=(16, 12),
+        health=4,
+        speed=0.9,
+        jump=0.0,
+        damage=1,
+        sight=20.0,
+        drop="leaf",
+        drop_chance=0.1,
+        weight=2,
+        flying=True,
+    ),
     "king_slime": MobKind(
         name="king_slime",
         size=(96, 72),
@@ -84,6 +99,9 @@ KINDS = {
     ),
 }
 """Every kind by name; each has a texture `mob/<name>.png`."""
+FLUTTER_RATE = 0.25
+FLUTTER_SIZE = 0.6
+"""How fast and how far a flying creature bobs."""
 HURT_TICKS = 12
 """Ticks a mob flashes after being hit."""
 KNOCK_DECAY = 0.85
@@ -105,6 +123,7 @@ class Mob:
         """Ticks left of the flash after a hit."""
         self.knock = 0.0
         """Horizontal push from a hit, fading away."""
+        self.age = 0
 
     def hit(self, damage: int, from_x: float) -> bool:
         """Take damage and get pushed away from `from_x`.
@@ -120,6 +139,34 @@ class Mob:
         self.body.vy = -2.5
         return self.health <= 0
 
+    def _flutter(
+        self,
+        tilemap: TileMap,
+        tile_size: int,
+        target: tuple[float, float] | None,
+    ) -> None:
+        """Fly towards the target, bobbing up and down, or drift about."""
+        body = self.body
+        self.age += 1
+        vx = vy = 0.0
+        if target is not None:
+            reach = self.kind.sight * tile_size
+            dx = target[0] - body.center[0]
+            dy = target[1] - body.center[1]
+            if abs(dx) < reach and abs(dy) < reach:
+                dist = math.hypot(dx, dy) or 1.0
+                vx = dx / dist * self.kind.speed
+                vy = dy / dist * self.kind.speed
+                self.facing_left = vx < 0
+        vy += math.sin(self.age * FLUTTER_RATE) * FLUTTER_SIZE
+        body.vy = vy
+        move_and_collide(body, vx + self.knock, vy, tilemap, tile_size)
+        self.knock *= KNOCK_DECAY
+        if abs(self.knock) < 0.05:  # ruff: ignore[magic-value-comparison]
+            self.knock = 0.0
+        if self.hurt:
+            self.hurt -= 1
+
     def tick(
         self,
         tilemap: TileMap,
@@ -129,6 +176,9 @@ class Mob:
     ) -> None:
         """Advance one tick, walking towards `target` if there is one."""
         body = self.body
+        if self.kind.flying:
+            self._flutter(tilemap, tile_size, target)
+            return
         walk = 0.0
         if target is not None:
             cx = body.center[0]
