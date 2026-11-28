@@ -986,6 +986,27 @@ def test_chat_commands(server: Server, content: Content) -> None:
     assert not [m for m in bob.chat if m.kind is ChatKind.CHAT]
 
 
+def test_whispers_reach_only_their_target(
+    server: Server, content: Content
+) -> None:
+    """/msg is private, works with spaced names and refuses bad targets."""
+    alice = join(server, content, "alice")
+    bob = join(server, content, "bob smith")
+    carol = join(server, content, "carol")
+    step(server, [alice, bob, carol])
+    alice.say("/msg Bob Smith psst")
+    alice.say("/msg nobody hello")
+    alice.say("/msg alice me")
+    alice.say("/msg carol")
+    step(server, [alice, bob, carol], 2)
+    assert ("chat", "alice (private)", "psst") in lines(bob)
+    assert all(m.text != "psst" for m in carol.chat)
+    mine = [m.text for m in alice.chat if m.kind is ChatKind.SYSTEM]
+    assert "To bob smith: psst" in mine
+    assert mine.count("Use /msg <player> <text>.") == 2  # ruff: ignore[magic-value-comparison]
+    assert "You cannot whisper to yourself." in mine
+
+
 def test_the_host_can_mute_and_kick(server: Server, content: Content) -> None:
     """Only the host moderates; muted players cannot speak."""
     server.host = "alice"

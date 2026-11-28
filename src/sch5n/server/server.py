@@ -422,6 +422,34 @@ class Server:
             done = "muted" if target.muted else "unmuted"
             self.say(f"{target.name} was {done}")
 
+    def _whisper(self, client: _Client, argument: str) -> None:
+        """Tell one player something in private: `/msg <player> <text>`."""
+        if client.muted:
+            _tell(client, "You are muted.")
+            return
+        words = " ".join(argument.split())
+        lowered = words.lower()
+        names = sorted(
+            (c for c in self.clients if c.player_id is not None),
+            key=lambda c: len(c.name),
+            reverse=True,
+        )
+        target = next(
+            (c for c in names if lowered.startswith(c.name.lower() + " ")),
+            None,
+        )
+        text = sanitize(words[len(target.name) :]) if target else ""
+        if target is None or not text:
+            _tell(client, "Use /msg <player> <text>.")
+        elif target is client:
+            _tell(client, "You cannot whisper to yourself.")
+        else:
+            LOGGER.info("<%s> to %s: %s", client.name, target.name, text)
+            target.connection.send(
+                ChatMessage(sender=f"{client.name} (private)", text=text)
+            )
+            _tell(client, f"To {target.name}: {text}")
+
     def _set_time(self, client: _Client, argument: str) -> None:
         """Set the time of day, if the sender is the host."""
         if not self.host or client.name != self.host:
@@ -441,6 +469,9 @@ class Server:
             return
         if command.lower() == "time":
             self._set_time(client, argument)
+            return
+        if command.lower() in {"msg", "w", "whisper", "tell"}:
+            self._whisper(client, argument)
             return
         names = [c.name for c in self.clients if c.player_id is not None]
         result = run_command(text, client.name, names, self.content)

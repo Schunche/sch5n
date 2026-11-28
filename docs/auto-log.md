@@ -322,3 +322,7 @@ Work done on the `claude/auto` branch, newest last.
 ## Hurt flash
 
 - Taking damage flashes the screen red for 12 ticks (`PlayScene.hurt_ticks`); joining with less than full health does not. Test in `tests/test_render.py`.
+
+## Whispers
+
+- `/msg <player> <text>` (also /w, /whisper, /tell) sends a private line; the receiver sees "name (private)", the sender a "To ..." line. Works with spaces in names, respects mute. Test in `tests/test_server.py`.
