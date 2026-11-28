@@ -59,3 +59,12 @@ Work done on the `claude/auto` branch, newest last.
   already grew on grass.
 - Tests in `tests/test_session.py` and `tests/test_world_io.py`.
 - Not done: grass reverting to dirt when covered.
+
+## Chat commands and a text recipe book
+
+- `sch5n.game.commands`: `/help`, `/players`, `/recipes <item>` (lists the
+  recipes that make a matching item, shaped ones as grid size and key),
+  `/me <action>`. They run on the server, answers go only to the sender,
+  `/me` to everyone. Unknown commands get a hint.
+- Next ideas: a graphical recipe book, saving vitals with worlds, grass
+  reverting when covered, a server-side mute/kick for hosts.

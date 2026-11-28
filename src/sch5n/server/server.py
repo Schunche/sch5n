@@ -20,6 +20,7 @@ from sch5n.game.chat import (
     RateLimit,
     sanitize,
 )
+from sch5n.game.commands import run_command
 from sch5n.game.config import MAX_PLAYERS
 from sch5n.game.crafting import craft, craft_all
 from sch5n.game.inventory import MAX_CRAFTING_SIDE
@@ -357,8 +358,21 @@ class Server:
                 )
             )
             return
+        if text.startswith("/"):
+            self._command(client, text)
+            return
         LOGGER.info("<%s> %s", client.name, text)
         self.broadcast(ChatMessage(sender=client.name, text=text))
+
+    def _command(self, client: _Client, text: str) -> None:
+        names = [c.name for c in self.clients if c.player_id is not None]
+        result = run_command(text, client.name, names, self.content)
+        for line in result.private:
+            client.connection.send(
+                ChatMessage(kind=ChatKind.SYSTEM, text=line)
+            )
+        if result.public:
+            self.say(result.public)
 
     def _inventory(self, client: _Client, message: InventoryMessage) -> None:
         if client.player_id is None:

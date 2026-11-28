@@ -964,3 +964,22 @@ def test_vitals_reach_the_client_and_deaths_are_announced(
     server.game.announcements.append("alice starved")
     step(server, [alice], 2)
     assert ("system", "", "alice starved") in lines(alice)
+
+
+def test_chat_commands(server: Server, content: Content) -> None:
+    """Commands answer only the sender; /me is for everyone."""
+    alice = join(server, content, "alice")
+    bob = join(server, content, "bob")
+    step(server, [alice, bob])
+    alice.say("/players")
+    alice.say("/recipes stone pickaxe")
+    alice.say("/nope")
+    alice.say("/me waves")
+    step(server, [alice, bob], 2)
+    mine = [m.text for m in alice.chat if m.kind is ChatKind.SYSTEM]
+    assert "2 online: alice, bob" in mine
+    assert any(t.startswith("Stone Pickaxe:") for t in mine)
+    assert any("Unknown command /nope" in t for t in mine)
+    theirs = [m.text for m in bob.chat if m.kind is ChatKind.SYSTEM]
+    assert theirs == ["* alice waves"]
+    assert not [m for m in bob.chat if m.kind is ChatKind.CHAT]
