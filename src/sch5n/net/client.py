@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from sch5n.game.ambient import Ambience
+from sch5n.game.chat import CHAT_HISTORY, MAX_CHAT_LENGTH, sanitize
 from sch5n.game.config import DEFAULT_PORT, MAX_PORT
 from sch5n.game.floating_item import FloatingItem
 from sch5n.game.inventory import (
@@ -39,6 +40,8 @@ from sch5n.net.connection import SocketConnection
 from sch5n.net.protocol import (
     MAX_SERVER_FRAME,
     PROTOCOL_VERSION,
+    ChatMessage,
+    ChatSend,
     Goodbye,
     Hello,
     InputMessage,
@@ -391,6 +394,10 @@ class ClientSession:
         """Why the session closed, for the player."""
         self.world: ClientWorld | None = None
         self._seq = 0
+        self.chat: deque[ChatMessage] = deque(maxlen=CHAT_HISTORY)
+        """Chat lines received, oldest first."""
+        self.chat_count = 0
+        """Lines received so far; tells the screen something new came."""
         connection.send(
             Hello(
                 protocol=PROTOCOL_VERSION,
@@ -414,6 +421,9 @@ class ClientSession:
                 self.world.apply_snapshot(message)
             case InventoryState() if self.world is not None:
                 self.world.apply_inventory(message)
+            case ChatMessage() if self.world is not None:
+                self.chat.append(message)
+                self.chat_count += 1
             case Reject() | Goodbye():
                 self._end(message.reason or "Disconnected")
             case _:
@@ -466,6 +476,13 @@ class ClientSession:
             self.connection.send(
                 InventoryMessage(action=action, index=index, slots=slots)
             )
+
+    def say(self, text: str) -> None:
+        """Say something in chat. Empty text is not sent."""
+        text = sanitize(text, MAX_CHAT_LENGTH)
+        if text and self.state is SessionState.PLAYING:
+            self.connection.send(ChatSend(text=text))
+            self.connection.flush()
 
     def close(self) -> None:
         """Leave the game."""

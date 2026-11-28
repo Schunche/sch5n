@@ -14,6 +14,12 @@ from dataclasses import dataclass, field, replace
 from itertools import starmap
 from typing import TYPE_CHECKING
 
+from sch5n.game.chat import (
+    CHAT_HISTORY,
+    ChatKind,
+    RateLimit,
+    sanitize,
+)
 from sch5n.game.config import MAX_PLAYERS
 from sch5n.game.crafting import craft, craft_all
 from sch5n.game.inventory import MAX_CRAFTING_SIDE
@@ -25,6 +31,8 @@ from sch5n.net.protocol import (
     MAX_CLIENT_FRAME,
     MAX_NAME_LENGTH,
     PROTOCOL_VERSION,
+    ChatMessage,
+    ChatSend,
     Goodbye,
     Hello,
     InputMessage,
@@ -84,6 +92,7 @@ class _Client:
     ack: int | None = None
     """`seq` of the newest input applied."""
     sent_inventory: InventoryState | None = None
+    chat_limit: RateLimit = field(default_factory=RateLimit)
     ended: bool = False
     """The client left, or the server sent it away."""
 
@@ -219,6 +228,8 @@ class Server:
             self.game.restore_inventories(inventories)
         self.fingerprint = content_fingerprint(content)
         self.clients: list[_Client] = []
+        self.chat_log: deque[ChatMessage] = deque(maxlen=CHAT_HISTORY)
+        """Everything said lately, oldest first. New players get it."""
         self.listener: Listener | None = None
         self.announcer: Announcer | None = None
 
@@ -315,6 +326,37 @@ class Server:
         LOGGER.info(
             "%s joined from %s", client.name, client.connection.address
         )
+        for line in self.chat_log:
+            client.connection.send(line)
+        self.broadcast(ChatMessage(kind=ChatKind.JOIN, sender=client.name))
+
+    def broadcast(self, message: ChatMessage) -> None:
+        """Show a line of chat to every joined player, and remember it."""
+        self.chat_log.append(message)
+        for client in self.clients:
+            if client.player_id is not None and not client.ended:
+                client.connection.send(message)
+
+    def say(self, text: str) -> None:
+        """Announce something to everyone, as the server."""
+        text = sanitize(text)
+        if text:
+            self.broadcast(ChatMessage(kind=ChatKind.SYSTEM, text=text))
+
+    def _chat(self, client: _Client, message: ChatSend) -> None:
+        text = sanitize(message.text)
+        if not text:
+            return
+        if not client.chat_limit.allow(self.game.ticks):
+            client.connection.send(
+                ChatMessage(
+                    kind=ChatKind.SYSTEM,
+                    text="You are sending messages too fast.",
+                )
+            )
+            return
+        LOGGER.info("<%s> %s", client.name, text)
+        self.broadcast(ChatMessage(sender=client.name, text=text))
 
     def _inventory(self, client: _Client, message: InventoryMessage) -> None:
         if client.player_id is None:
@@ -363,6 +405,8 @@ class Server:
                 client.inputs.append(message)
             case InventoryMessage() if joined:
                 self._inventory(client, message)
+            case ChatSend() if joined:
+                self._chat(client, message)
             case Goodbye():
                 client.ended = True
                 client.connection.reason = message.reason or "Left"
@@ -386,18 +430,22 @@ class Server:
 
     def _drop_closed(self) -> None:
         remaining: list[_Client] = []
+        left: list[str] = []
         for client in self.clients:
             if not client.connection.closed:
                 remaining.append(client)
                 continue
             if client.player_id is not None:
                 self.game.remove_player(client.player_id)
+                left.append(client.name)
                 LOGGER.info(
                     "%s left (%s)",
                     client.name,
                     client.connection.reason or "disconnected",
                 )
         self.clients = remaining
+        for name in left:
+            self.broadcast(ChatMessage(kind=ChatKind.LEAVE, sender=name))
 
     def _step_players(self) -> None:
         """Step each player once per input its client sent.

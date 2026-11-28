@@ -13,6 +13,12 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from sch5n.game.chat import (
+    CHAT_BURST,
+    CHAT_REFILL_TICKS,
+    MAX_CHAT_LENGTH,
+    ChatKind,
+)
 from sch5n.game.config import DEFAULT_PORT, GameMode
 from sch5n.game.content import AIR
 from sch5n.game.inventory import ItemStack
@@ -28,6 +34,7 @@ from sch5n.net.discovery import Announcer, Browser, lan_addresses
 from sch5n.net.protocol import (
     MAX_CLIENT_FRAME,
     PROTOCOL_VERSION,
+    ChatSend,
     Hello,
     InputMessage,
     InventoryAction,
@@ -854,3 +861,90 @@ def test_inputs_out_of_order_are_refused(server: Server) -> None:
     server.step()
     assert connection.receive()[-1].type == "bye"
     assert connection.closed
+
+
+# Chat.
+
+
+def lines(session: ClientSession) -> list[tuple[str, str, str]]:
+    """Describe a session's chat as kind, sender and text.
+
+    Returns:
+        list[tuple[str, str, str]]: The lines, oldest first.
+
+    """
+    return [(m.kind.value, m.sender, m.text) for m in session.chat]
+
+
+def test_chat_is_broadcast_by_the_server(
+    server: Server, content: Content
+) -> None:
+    """Everyone sees what a player says, under the server's name for them."""
+    alice = join(server, content, "alice")
+    bob = join(server, content, "bob")
+    step(server, [alice, bob])
+    alice.say("hello   there")
+    step(server, [alice, bob], 2)
+    assert ("chat", "alice", "hello there") in lines(alice)
+    assert ("chat", "alice", "hello there") in lines(bob)
+    assert ("join", "bob", "") in lines(alice)
+
+
+def test_chat_is_cleaned_and_limited(server: Server, content: Content) -> None:
+    """Control characters go, long text is cut, blank text is dropped."""
+    alice = join(server, content)
+    dirty = "a\x00b\x1b[31m" + chr(0x202E) + "x" * 500
+    alice.connection.send(ChatSend(text=dirty))
+    alice.connection.send(ChatSend(text=" \t\n "))
+    step(server, [alice], 2)
+    said = [m for m in alice.chat if m.kind is ChatKind.CHAT]
+    assert len(said) == 1
+    assert len(said[0].text) == MAX_CHAT_LENGTH
+    assert said[0].text.startswith("ab[31m")
+    assert all(c.isprintable() for c in said[0].text)
+
+
+def test_chat_cannot_be_spoofed(server: Server, content: Content) -> None:
+    """Clients cannot send join messages or choose the sender."""
+    alice = join(server, content)
+    with pytest.raises(ProtocolError):
+        decode_client_message(
+            b'{"type": "chat", "text": "hi", "sender": "server"}'
+        )
+    with pytest.raises(ProtocolError):
+        decode_client_message(b'{"type": "chat_message", "text": "hi"}')
+    step(server, [alice])
+
+
+def test_chat_is_rate_limited(server: Server, content: Content) -> None:
+    """A flood is dropped, and the sender is told."""
+    alice = join(server, content)
+    for number in range(CHAT_BURST + 3):
+        alice.say(f"spam {number}")
+    step(server, [alice], 2)
+    said = [m for m in alice.chat if m.kind is ChatKind.CHAT]
+    assert len(said) == CHAT_BURST
+    assert any(m.kind is ChatKind.SYSTEM for m in alice.chat)
+    step(server, [alice], CHAT_REFILL_TICKS)
+    alice.say("again")
+    step(server, [alice], 2)
+    assert ("chat", "alice", "again") in lines(alice)
+
+
+def test_leaving_is_announced_and_history_is_given(
+    server: Server, content: Content
+) -> None:
+    """Players see who left; newcomers see what was said before."""
+    alice = join(server, content, "alice")
+    bob = join(server, content, "bob")
+    alice.say("first")
+    step(server, [alice, bob], 2)
+    bob.close()
+    step(server, [alice], 2)
+    assert ("leave", "bob", "") in lines(alice)
+    carol = join(server, content, "carol")
+    step(server, [carol])
+    assert ("chat", "alice", "first") in lines(carol)
+    server.say("restart \x07soon")
+    step(server, [alice, carol], 2)
+    assert ("system", "", "restart soon") in lines(carol)

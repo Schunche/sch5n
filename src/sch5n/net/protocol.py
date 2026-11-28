@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Annotated, Literal
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
+from sch5n.game.chat import ChatKind
 from sch5n.game.config import MAX_NAME_LENGTH
 from sch5n.world.tilemap import CHUNK_SIZE, Chunk
 
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
     from sch5n.game.content import Content
     from sch5n.world.tilemap import TileMap
 
-PROTOCOL_VERSION = 4
+PROTOCOL_VERSION = 5
 """Raised whenever messages change incompatibly."""
 MAX_CLIENT_FRAME = 4096
 """Largest message a client may send, in bytes."""
@@ -111,6 +112,13 @@ class InventoryMessage(_Message):
     index: int = 0
     slots: tuple[int, ...] = Field(default=(), max_length=MAX_SPREAD)
     """Slots numbered through the inventory, then the crafting grid."""
+
+
+class ChatSend(_Message):
+    """A player says something. The server cleans and limits the text."""
+
+    type: Literal["chat"] = "chat"
+    text: str
 
 
 class Goodbye(_Message):
@@ -222,12 +230,22 @@ class InventoryState(_Message):
     crafting: list[StackState | None]
 
 
+class ChatMessage(_Message):
+    """A line of chat, sent to everyone it concerns."""
+
+    type: Literal["chat_message"] = "chat_message"
+    kind: ChatKind = ChatKind.CHAT
+    sender: str = ""
+    """Name of the speaking player, or of the one who joined or left."""
+    text: str = ""
+
+
 type ClientMessage = Annotated[
-    Hello | InputMessage | InventoryMessage | Goodbye,
+    Hello | InputMessage | InventoryMessage | ChatSend | Goodbye,
     Field(discriminator="type"),
 ]
 type ServerMessage = Annotated[
-    Welcome | Reject | Snapshot | InventoryState | Goodbye,
+    Welcome | Reject | Snapshot | InventoryState | ChatMessage | Goodbye,
     Field(discriminator="type"),
 ]
 type Message = ClientMessage | ServerMessage
