@@ -17,9 +17,9 @@ None.
 
 ### Priority list from the user (do first, in this order)
 
-Done: recipe book click fills the grid (shift: all sets), ladders, zoom.
-Todo: a separate smelting interface, four armor
-slots (helmet, chestplate, leggings, boots), grass plant drops and planting
+Done: recipe book click fills the grid (shift: all sets), ladders, zoom,
+four armor slots.
+Todo: a separate smelting interface, grass plant drops and planting
 on dirt or grass, grass blocks under a solid block turn to dirt.
 
 ## Multiplayer chat
@@ -524,3 +524,12 @@ on dirt or grass, grass blocks under a solid block turn to dirt.
   0.5x, 1x, 2x and 3x (`ZOOM_LEVELS`), whole numbers or halves so pixel art
   stays sharp. They are the `ZOOM_IN` / `ZOOM_OUT` actions of the game
   context and can be rebound.
+
+## Boots
+
+- A fourth armor slot, `feet` (slots: head, chest, legs, feet), with boots
+  for all nine sets (`*_boots`, same defense as the leggings, a 2x2 ring of
+  the material: `M M / M M`). Older saves load with an empty feet slot.
+  Placeholder art to replace: `assets/textures/item/*_boots.png` (the lower
+  part of each leggings icon). The tips are hidden while the inventory is
+  open.

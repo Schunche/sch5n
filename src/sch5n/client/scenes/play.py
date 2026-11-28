@@ -747,7 +747,7 @@ class PlayScene(Scene):
 
     def _draw_hints(self) -> None:
         app = self.app
-        if not self.hints.text:
+        if not self.hints.text or self.inventory_open:
             return
         app.text.draw(
             app.batch,

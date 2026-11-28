@@ -90,6 +90,15 @@
         {"pattern": ["II", "IS", " S"], "key": {"I": "iron_ingot", "S": "stick"}, "result": {"item": "iron_axe"}},
         {"pattern": ["I", "S", "S"], "key": {"I": "iron_ingot", "S": "stick"}, "result": {"item": "iron_shovel"}},
         {"pattern": ["I I", " S ", "S S"], "key": {"I": "iron_ingot", "S": "stick"}, "result": {"item": "iron_lopper"}},
+        {"pattern": ["M M", "M M"], "key": {"M": "cloth"}, "result": {"item": "cloth_boots"}},
+        {"pattern": ["M M", "M M"], "key": {"M": "copper_ingot"}, "result": {"item": "copper_boots"}},
+        {"pattern": ["M M", "M M"], "key": {"M": "iron_ingot"}, "result": {"item": "iron_boots"}},
+        {"pattern": ["M M", "M M"], "key": {"M": "tin_ingot"}, "result": {"item": "tin_boots"}},
+        {"pattern": ["M M", "M M"], "key": {"M": "lead_ingot"}, "result": {"item": "lead_boots"}},
+        {"pattern": ["M M", "M M"], "key": {"M": "silver_ingot"}, "result": {"item": "silver_boots"}},
+        {"pattern": ["M M", "M M"], "key": {"M": "tungsten_ingot"}, "result": {"item": "tungsten_boots"}},
+        {"pattern": ["M M", "M M"], "key": {"M": "gold_ingot"}, "result": {"item": "gold_boots"}},
+        {"pattern": ["M M", "M M"], "key": {"M": "platinum_ingot"}, "result": {"item": "platinum_boots"}},
         {"pattern": ["S S", "SSS", "S S"], "key": {"S": "stick"}, "result": {"item": "ladder", "amount": 3}},
         {"ingredients": ["apple", "stick"], "station": "furnace", "result": {"item": "baked_apple"}}
     ]

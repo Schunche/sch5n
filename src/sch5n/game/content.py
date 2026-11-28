@@ -152,7 +152,7 @@ class ItemSpec(_Model):
     """Health an arrow shot with it takes away."""
     shot_speed: float = Field(default=9.0, gt=0)
     """Pixels per tick the arrow leaves at."""
-    armor: Literal["head", "chest", "legs"] | None = None
+    armor: Literal["head", "chest", "legs", "feet"] | None = None
     """The part of the body it is worn on, if it is armor."""
     defense: int = Field(default=0, ge=0)
     """Defense points it adds while worn."""

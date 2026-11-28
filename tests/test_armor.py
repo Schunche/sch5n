@@ -211,3 +211,19 @@ def test_shift_click_through_the_server(content: Content) -> None:
     step(server, [alice], 2)
     assert chest[0] is None
     assert player.inventory[1] is not None
+
+
+def test_boots_fill_the_fourth_slot(content: Content) -> None:
+    """Every set has boots; they are worn in the feet slot."""
+    assert ARMOR_PARTS[-1] == "feet"
+    for material in ("cloth", "copper", "iron", "tin", "platinum"):
+        boots = content.items[f"{material}_boots"]
+        assert boots.spec.armor == "feet"
+        assert boots.spec.defense > 0
+    inventory = Inventory(10)
+    inventory.cursor = ItemStack(content.items["iron_boots"])
+    inventory.armor_click(0)
+    assert inventory.armor[-1] is None
+    inventory.armor_click(len(ARMOR_PARTS) - 1)
+    assert inventory.armor[-1] is not None
+    assert inventory.defense == content.items["iron_boots"].spec.defense

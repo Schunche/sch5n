@@ -19,7 +19,7 @@ CRAFTING_SIDE = 2
 """Slots along one side of the crafting grid a player carries."""
 MAX_CRAFTING_SIDE = 3
 """The largest grid, like at a crafting bench."""
-ARMOR_PARTS = ("head", "chest", "legs")
+ARMOR_PARTS = ("head", "chest", "legs", "feet")
 """What the armor slots hold, in order."""
 DEFENSE_PERCENT = 6
 """Share of damage each defense point takes away."""
