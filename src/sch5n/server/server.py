@@ -47,6 +47,7 @@ from sch5n.net.protocol import (
     ItemState,
     MobState,
     PlayerState,
+    ProjectileState,
     Reject,
     Snapshot,
     StackState,
@@ -724,6 +725,17 @@ class Server:
                     health=mob.health,
                 )
                 for mob in game.mobs.values()
+            ],
+            projectiles=[
+                ProjectileState(
+                    item=arrow.item,
+                    x=arrow.x,
+                    y=arrow.y,
+                    vx=arrow.vx,
+                    vy=arrow.vy,
+                    hostile=arrow.hostile,
+                )
+                for arrow in game.projectiles.values()
             ],
             tiles=changes,
             damage=[(x, y, left) for (x, y), left in tilemap.damage.items()],

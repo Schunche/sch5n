@@ -107,6 +107,8 @@
         "tungsten_sword": {"name": "Tungsten Sword", "description": "Strikes creatures hard.", "icon": "tool/tungsten_sword", "max_stack": 1, "use_time": 24, "tool_power": {"sword": 10}, "damage": 11, "knockback": 4, "drop_size": 32},
         "gold_sword": {"name": "Gold Sword", "description": "Strikes creatures hard.", "icon": "tool/gold_sword", "max_stack": 1, "use_time": 22, "tool_power": {"sword": 10}, "damage": 12, "knockback": 4, "drop_size": 32},
         "platinum_sword": {"name": "Platinum Sword", "description": "Strikes creatures hard.", "icon": "tool/platinum_sword", "max_stack": 1, "use_time": 22, "tool_power": {"sword": 10}, "damage": 14, "knockback": 4, "drop_size": 32},
+        "arrow": {"name": "Arrow", "description": "Ammunition for a bow.", "icon": "item/arrow", "drop_size": 16},
+        "bow": {"name": "Bow", "description": "Hold the left mouse button to shoot arrows at the cursor.", "icon": "item/bow", "max_stack": 1, "use_time": 28, "ammo": "arrow", "shot_damage": 5, "shot_speed": 9.0, "drop_size": 32},
         "apple": {"name": "Apple", "description": "Fruit from an oak. Eat it to feel less hungry.", "icon": "item/apple", "drop_size": 16, "food": 5}
     }
 }

@@ -62,6 +62,7 @@ if TYPE_CHECKING:
     from sch5n.game.floating_item import FloatingItem
     from sch5n.game.mobs import Mob
     from sch5n.game.player import Player, Swing
+    from sch5n.game.projectiles import Projectile
     from sch5n.math.rect import Rect
     from sch5n.math.vector import IntTuple2
     from sch5n.world.tilemap import Chunk, TileMap
@@ -656,6 +657,22 @@ def draw_floating_items(
         )
 
 
+def draw_projectiles(
+    batch: SpriteBatch, assets: ClientAssets, arrows: Mapping[int, Projectile]
+) -> None:
+    """Queue arrows in flight, turned the way they fly."""
+    for arrow in arrows.values():
+        region = assets.items[arrow.item]
+        w, h = region.width, region.height
+        batch.sprite(
+            assets.atlas,
+            (arrow.x - w / 2, arrow.y - h / 2, w, h),
+            region,
+            WHITE,
+            Transform(rotation=arrow.angle),
+        )
+
+
 HURT_TINT = (1.0, 0.45, 0.45, 1.0)
 """Color multiplied onto a creature that was just hit."""
 
@@ -819,6 +836,11 @@ class WorldView(Protocol):
         ...
 
     @property
+    def projectiles(self) -> Mapping[int, Projectile]:
+        """Arrows in flight."""
+        ...
+
+    @property
     def mobs(self) -> Mapping[int, Mob]:
         """Hostile creatures by id."""
         ...
@@ -965,6 +987,7 @@ class WorldRenderer:
         draw_wind_streaks(batch, world.ambience)
         draw_floating_items(batch, app.assets, world.floating_items)
         draw_mobs(batch, app.assets, world.mobs)
+        draw_projectiles(batch, app.assets, world.projectiles)
         if show_players:
             for player_id, player in world.players.items():
                 if player_id != local_id and player.name:

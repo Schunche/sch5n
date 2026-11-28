@@ -144,6 +144,12 @@ class ItemSpec(_Model):
     """Legacy names accepted when loading saved inventories."""
     food: int = Field(default=0, ge=0)
     """Hunger points eating it restores. Zero means it is not food."""
+    ammo: str | None = None
+    """Name of the item a bow-like item shoots. Using it uses one up."""
+    shot_damage: int = Field(default=0, ge=0)
+    """Health an arrow shot with it takes away."""
+    shot_speed: float = Field(default=9.0, gt=0)
+    """Pixels per tick the arrow leaves at."""
     armor: Literal["head", "chest", "legs"] | None = None
     """The part of the body it is worn on, if it is armor."""
     defense: int = Field(default=0, ge=0)

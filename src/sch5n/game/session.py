@@ -19,10 +19,12 @@ from sch5n.game.mining import HitResult, can_place, fell_tree, hit_tile, log_of
 from sch5n.game.mobs import (
     CONTACT_COOLDOWN,
     KINDS,
+    SHOOT_EVERY,
     Mob,
 )
 from sch5n.game.plants import Garden
 from sch5n.game.player import Player
+from sch5n.game.projectiles import ArrowWorld, Projectile, advance, aim
 from sch5n.log.logger import LOGGER
 from sch5n.math.rect import Rect
 
@@ -119,6 +121,8 @@ DESPAWN_TILES = 48
 PLAYER_KNOCK = 3.0
 BAT_LIFT = (4, 9)
 """Rows above the ground where flying creatures appear, fewest and most."""
+ARROW_SPEED = 7.0
+"""Pixels per tick the arrows of creatures fly at."""
 BOSS = "king_slime"
 BOSS_CHANCE = 0.04
 """Chance per try, at night, that the boss comes, if none is around."""
@@ -166,6 +170,9 @@ class Game:
         self.mobs: dict[int, Mob] = {}
         """Hostile creatures by id."""
         self._next_mob = 0
+        self.projectiles: dict[int, Projectile] = {}
+        """Arrows in flight by id."""
+        self._next_projectile = 0
         self.chests: dict[tuple[int, int], Inventory] = {}
         """Contents of the storage blocks that have been opened or
         filled, by tile."""
@@ -448,7 +455,52 @@ class Game:
         if side != player.inventory.crafting_side:
             self._stow(player, player.inventory.resize_crafting(side))
 
+    def _fire(self, arrow: Projectile) -> None:
+        self.projectiles[self._next_projectile] = arrow
+        self._next_projectile += 1
+
+    def _shoot(self, player: Player, bow: ItemDef, inp: TickInput) -> None:
+        """Loose an arrow at the target tile, if ready and loaded."""
+        spec = bow.spec
+        if not inp.use or inp.target is None or spec.ammo is None:
+            return
+        if player.use_cooldown < spec.use_time:
+            return
+        inventory = player.inventory
+        index = next(
+            (
+                i
+                for i, stack in enumerate(inventory)
+                if stack is not None and stack.item.name == spec.ammo
+            ),
+            None,
+        )
+        if index is None:
+            return
+        stack = inventory.slots[index]
+        if stack is not None:
+            stack.amount -= 1
+            if stack.amount <= 0:
+                inventory.slots[index] = None
+        size = self.config.tile_size
+        start = (player.body.center[0], player.body.y + size / 2)
+        aim_at = ((inp.target[0] + 0.5) * size, (inp.target[1] + 0.5) * size)
+        vx, vy = aim(start, aim_at, spec.shot_speed)
+        self._fire(
+            Projectile(
+                spec.ammo, *start, vx, vy, spec.shot_damage, hostile=False
+            )
+        )
+        player.use_cooldown = 0
+
     def _use_held_item(self, player: Player, inp: TickInput) -> None:
+        held = player.inventory.held
+        if held is not None and held.item.spec.ammo is not None:
+            self._shoot(player, held.item, inp)
+        else:
+            self._use_tool_or_food(player, inp)
+
+    def _use_tool_or_food(self, player: Player, inp: TickInput) -> None:
         held = player.inventory.held
         if held is None or held.item.spec.food:
             self._use_by_hand(player, inp)
@@ -739,6 +791,20 @@ class Game:
                 (int(mob.body.center[0] // size), int(mob.body.y // size)),
             )
 
+    def _mob_shoots(self, mob: Mob, target: Player) -> None:
+        """Let a ranged creature loose an arrow when it is time."""
+        mob.shoot_wait = max(0, mob.shoot_wait - 1)
+        size = self.config.tile_size
+        dist = math.dist(target.body.center, mob.body.center)
+        if mob.shoot_wait or dist > mob.kind.sight * size:
+            return
+        mob.shoot_wait = SHOOT_EVERY
+        start = (mob.body.center[0], mob.body.y + size / 2)
+        vx, vy = aim(start, target.body.center, ARROW_SPEED)
+        self._fire(
+            Projectile("arrow", *start, vx, vy, mob.kind.damage, hostile=True)
+        )
+
     def _tick_mobs(self) -> None:
         """Spawn at night, move, touch players and fade with the day."""
         rate = self.config.tick_rate
@@ -762,6 +828,8 @@ class Game:
             nearest = self._nearest_player(mob.body.center)
             target = None if nearest is None else nearest.body.center
             mob.tick(self.tilemap, self.config.physics, size, target)
+            if mob.kind.ranged and nearest is not None:
+                self._mob_shoots(mob, nearest)
             gone = mob.body.y > self.void_y or (
                 nearest is None
                 or math.dist(nearest.body.center, mob.body.center)
@@ -787,6 +855,29 @@ class Game:
         for player in self.players.values():
             player.hurt_cooldown = max(0, player.hurt_cooldown - 1)
 
+    def _arrow_hit_mob(self, mob_id: int, mob: Mob, arrow: Projectile) -> None:
+        if mob.hit(arrow.damage, arrow.x - arrow.vx):
+            self._mob_died(mob_id)
+
+    def _arrow_hit_player(self, player: Player, arrow: Projectile) -> None:
+        if player.hurt_cooldown > 0:
+            return
+        player.hurt_cooldown = CONTACT_COOLDOWN // 2
+        self.hurt_player(player, arrow.damage, "was shot")
+
+    def _tick_projectiles(self) -> None:
+        advance(
+            self.projectiles,
+            ArrowWorld(
+                self.tilemap,
+                self.config.tile_size,
+                self.mobs,
+                self.players,
+                self._arrow_hit_mob,
+                self._arrow_hit_player,
+            ),
+        )
+
     def tick_world(self, view: Rect | None = None) -> None:
         """Advance everything but the players by one tick."""
         self.garden.tick(self._broken)
@@ -794,6 +885,7 @@ class Game:
             self._fit_crafting_grid(player)
         self._tick_vitals()
         self._tick_mobs()
+        self._tick_projectiles()
         self.ambience.tick(self.tilemap, view, self.config.tile_size)
         self._tick_floating_items()
         self.ticks += 1

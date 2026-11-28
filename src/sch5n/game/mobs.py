@@ -39,6 +39,10 @@ class MobKind:
     """Bosses show a health bar."""
     flying: bool = False
     """It flutters through the air, with no gravity."""
+    ranged: bool = False
+    """It shoots arrows, and keeps its distance."""
+    keep: float = 0.0
+    """Tiles a ranged creature tries to stay away from a player."""
 
     @property
     def display_name(self) -> str:
@@ -83,6 +87,20 @@ KINDS = {
         weight=2,
         flying=True,
     ),
+    "skeleton": MobKind(
+        name="skeleton",
+        size=(16, 32),
+        health=10,
+        speed=0.45,
+        jump=3.6,
+        damage=3,
+        sight=20.0,
+        drop="arrow",
+        drop_chance=0.7,
+        drop_amount=3,
+        ranged=True,
+        keep=9.0,
+    ),
     "king_slime": MobKind(
         name="king_slime",
         size=(96, 72),
@@ -102,6 +120,10 @@ KINDS = {
 FLUTTER_RATE = 0.25
 FLUTTER_SIZE = 0.6
 """How fast and how far a flying creature bobs."""
+KEEP_CLOSE = 0.6
+"""Share of its distance below which a ranged creature backs off."""
+SHOOT_EVERY = 110
+"""Ticks between the arrows of a skeleton."""
 HURT_TICKS = 12
 """Ticks a mob flashes after being hit."""
 KNOCK_DECAY = 0.85
@@ -124,6 +146,8 @@ class Mob:
         self.knock = 0.0
         """Horizontal push from a hit, fading away."""
         self.age = 0
+        self.shoot_wait = SHOOT_EVERY // 2
+        """Ticks until a ranged creature may shoot again."""
 
     def hit(self, damage: int, from_x: float) -> bool:
         """Take damage and get pushed away from `from_x`.
@@ -138,6 +162,24 @@ class Mob:
         self.knock = away * KNOCK_SPEED
         self.body.vy = -2.5
         return self.health <= 0
+
+    def _walk_towards(self, dx: float, tile_size: int) -> float:
+        """Horizontal speed for a target `dx` pixels away.
+
+        A ranged creature backs off when close and waits at its distance.
+
+        Returns:
+            float: Speed, negative to the left.
+
+        """
+        speed = self.kind.speed
+        if self.kind.ranged:
+            keep = self.kind.keep * tile_size
+            if abs(dx) < keep * KEEP_CLOSE:
+                return -math.copysign(speed, dx)
+            if abs(dx) < keep:
+                return 0.0
+        return math.copysign(speed, dx)
 
     def _flutter(
         self,
@@ -184,8 +226,8 @@ class Mob:
             cx = body.center[0]
             reach = self.kind.sight * tile_size
             if abs(target[0] - cx) < reach and abs(target[1] - body.y) < reach:
-                walk = math.copysign(self.kind.speed, target[0] - cx)
-                self.facing_left = walk < 0
+                walk = self._walk_towards(target[0] - cx, tile_size)
+                self.facing_left = target[0] < cx
         body.vy = min(body.vy + physics.gravity, physics.max_fall_speed)
         grounded = body.collisions.down
         hits = move_and_collide(

@@ -341,3 +341,22 @@ Work done on the `claude/auto` branch, newest last.
   in `data/animations.json`).
 - Placeholder art to replace: `assets/textures/tool/<material>_sword.png`.
 - Tests: `tests/test_mobs.py`.
+
+## Bow, arrows and skeletons
+
+- New `game/projectiles.py`: arrows fly with gravity (checked every 4
+  pixels so thin targets are hit), stop in solid tiles, hit one creature
+  (player arrows) or one player (creature arrows), last 300 ticks.
+  `aim()` allows for gravity.
+- Items `bow` (hold the left mouse button; one arrow per 28 ticks, 5 damage,
+  aimed at the cursor tile) and `arrow`; spec fields `ammo`, `shot_damage`,
+  `shot_speed` in `data/items.json`. Recipes: stick over cloth makes 4
+  arrows; the bow is three stick/cloth rows.
+- The skeleton (16x32, 10 health) keeps about 9 tiles from a player (backs
+  off when closer), shoots an arrow every ~110 ticks (3 damage, half a
+  contact cooldown of protection after a hit) and drops arrows.
+- Network: `Snapshot.projectiles` (protocol version 10); clients draw them
+  rotated along their flight (`draw_projectiles`).
+- Placeholder art to replace: `assets/textures/item/arrow.png`,
+  `item/bow.png`, `mob/skeleton.png`.
+- Tests: `tests/test_arrows.py`.

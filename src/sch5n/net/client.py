@@ -36,6 +36,7 @@ from sch5n.game.inventory import (
 )
 from sch5n.game.mobs import KINDS, Mob
 from sch5n.game.player import Action, Player, Swing
+from sch5n.game.projectiles import Projectile
 from sch5n.game.session import swing_tool
 from sch5n.net.connection import SocketConnection
 from sch5n.net.protocol import (
@@ -209,6 +210,8 @@ class ClientWorld:
         self.ambience = Ambience(self.config, np.random.default_rng())
         self.players: dict[int, Player] = {}
         self.floating_items: list[FloatingItem] = []
+        self.projectiles: dict[int, Projectile] = {}
+        """Arrows in flight, as of the last snapshot."""
         self.mobs: dict[int, Mob] = {}
         self.inventory = Inventory(self.config.inventory.size)
         self.ticks = 0
@@ -303,6 +306,18 @@ class ClientWorld:
             msg = f"Unknown creature {error}"
             raise ProtocolError(msg) from error
         self.mobs = mobs
+        self.projectiles = {
+            index: Projectile(
+                state.item,
+                state.x,
+                state.y,
+                state.vx,
+                state.vy,
+                0,
+                hostile=state.hostile,
+            )
+            for index, state in enumerate(snapshot.projectiles)
+        }
         self.players = players
         self.floating_items = items
         self.tilemap.damage = {(x, y): left for x, y, left in snapshot.damage}

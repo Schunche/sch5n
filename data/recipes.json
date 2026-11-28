@@ -76,6 +76,8 @@
         {"pattern": ["I", "I", "S"], "key": {"I": "tungsten_ingot", "S": "stick"}, "result": {"item": "tungsten_sword"}},
         {"pattern": ["I", "I", "S"], "key": {"I": "gold_ingot", "S": "stick"}, "result": {"item": "gold_sword"}},
         {"pattern": ["I", "I", "S"], "key": {"I": "platinum_ingot", "S": "stick"}, "result": {"item": "platinum_sword"}},
+        {"pattern": ["S", "C"], "key": {"S": "stick", "C": "cloth"}, "result": {"item": "arrow", "amount": 4}},
+        {"pattern": [" SC", "S C", " SC"], "key": {"S": "stick", "C": "cloth"}, "result": {"item": "bow"}},
         {"ingredients": ["stick", "leaf"], "result": {"item": "torch"}},
         {"ingredients": ["stick", "slime_ball"], "result": {"item": "torch", "amount": 4}},
         {"ingredients": ["copper_ore", "stick", "stick"], "station": "furnace", "result": {"item": "copper_ingot"}},
