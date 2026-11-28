@@ -472,4 +472,7 @@ Work done on the `claude/auto` branch, newest last.
 - The dirt layer of generated worlds is now 24 rows (`DIRT_ROWS`, half the
   depth in worlds too shallow for that) instead of the upper half, so stone
   starts close to the surface. Ores still lie by their share of the stone
-  layer. `data/maps/map1.json` is untouched.
+  layer. Fewer dirt strokes in the stone (`DIRT_STROKES`) keep it from
+  filling the gap, and the top 4 rows are always dirt so grass grows on
+  every column. The first stone is now about 19 rows down on average
+  (was about 80). `data/maps/map1.json` is untouched.

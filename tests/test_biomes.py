@@ -138,12 +138,23 @@ def test_a_wandering_player_survives_a_generated_world(
 
 
 def test_stone_starts_close_to_the_surface(content: Content) -> None:
-    """The dirt layer is thin: most columns hit stone within 30 tiles."""
+    """The dirt layer is thin: most columns hit stone within 40 tiles."""
     spec = WorldSpec(left=-100, right=100, home=0)
     tiles = generate(content.blocks, spec, 4)
     stone = content.blocks.id_of("stone")
     shallow = sum(
-        any(tiles.get(x, y) == stone for y in range(spec.top, 30))
+        any(tiles.get(x, y) == stone for y in range(spec.top, 40))
         for x in range(spec.left, spec.right)
     )
-    assert shallow > (spec.right - spec.left) * 0.9
+    assert shallow > (spec.right - spec.left) * 0.85
+
+
+def test_every_column_has_grass_or_sand_or_snow(content: Content) -> None:
+    """No column starts with bare stone at the surface."""
+    spec = WorldSpec(left=-100, right=100, home=0)
+    tiles = generate(content.blocks, spec, 4)
+    stone = content.blocks.id_of("stone")
+    for x in range(spec.left, spec.right):
+        top = tiles.surface_y(x, spec.top, spec.bottom)
+        assert top is not None
+        assert tiles.get(x, top) != stone

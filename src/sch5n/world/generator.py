@@ -23,6 +23,10 @@ if TYPE_CHECKING:
     from sch5n.game.content import BlockRegistry
 
 DIRT_ROWS = 24
+DIRT_STROKES = 0.0015
+"""Density of dirt strokes in the stone, per tile."""
+SURFACE_ROWS = 4
+"""Top rows that are always dirt."""
 """Rows of dirt above the stone layer."""
 
 ORE_PAIRS: tuple[tuple[str, str], ...] = (
@@ -74,8 +78,7 @@ class WorldSpec:
 
     @property
     def dirt_until(self) -> int:
-        """First row of the stone layer: `DIRT_ROWS` down, or the middle of
-        a world too shallow for that."""
+        """First row of the stone layer: `DIRT_ROWS` down, at most half."""
         return self.top + min(DIRT_ROWS, (self.bottom - self.top) // 2)
 
 
@@ -251,12 +254,23 @@ class _Generator:
             trees,
         )
 
+    def seal_surface(self) -> None:
+        """Turn the top rows back to dirt, so grass can grow everywhere."""
+        spec = self.spec
+        for y in range(spec.top, min(spec.top + SURFACE_ROWS, spec.bottom)):
+            for x in range(spec.left, spec.right):
+                if self.tilemap.get(x, y) == self.stone:
+                    self.tilemap.set(x, y, self.dirt)
+
     def run(self) -> TileMap:
         spec = self.spec
         self.fill_layers()
         stone = self.scatter(self.stone, spec.top, spec.dirt_until, 0.003)
-        dirt = self.scatter(self.dirt, spec.dirt_until, spec.bottom, 0.004)
+        dirt = self.scatter(
+            self.dirt, spec.dirt_until, spec.bottom, DIRT_STROKES
+        )
         LOGGER.info("Strokes: %s stone in dirt, %s dirt in stone", stone, dirt)
+        self.seal_surface()
         self.grow_surface()
         ores = self.place_ores()
         LOGGER.info("This world contains the ores: %s", ", ".join(ores))
