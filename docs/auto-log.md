@@ -607,3 +607,4 @@ Todo: nothing left from this list.
 
 ## Glass
 - New `glass` block/item, smelted from sand in a furnace. Placeholder art (generated, translucent blue): `assets/textures/tile/glass/0.png`. Replace freely.
+- `/clear` (host only) empties the host's inventory.

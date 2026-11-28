@@ -1365,3 +1365,21 @@ def test_the_host_can_teleport_to_a_player(
     assert players["alice"].body.x == pytest.approx(
         players["bob"].body.x, abs=8
     )
+
+
+def test_the_host_can_clear_the_inventory(
+    server: Server, content: Content
+) -> None:
+    """/clear empties the host's inventory; guests cannot."""
+    server.host = "alice"
+    alice = join(server, content, "alice")
+    bob = join(server, content, "bob")
+    step(server, [alice, bob])
+    players = {p.name: p for p in server.game.players.values()}
+    assert any(players["bob"].inventory)
+    bob.say("/clear")
+    step(server, [alice, bob], 2)
+    assert any(players["bob"].inventory)
+    alice.say("/clear")
+    step(server, [alice, bob], 2)
+    assert not any(players["alice"].inventory)

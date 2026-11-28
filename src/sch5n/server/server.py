@@ -576,6 +576,18 @@ class Server:
         teleport(players[client.player_id], players[target.player_id])
         _tell(client, f"Went to {target.name}.")
 
+    def _clear(self, client: _Client) -> None:
+        """Empty the host's inventory."""
+        if not self.host or client.name != self.host:
+            _tell(client, "Only the host can do that.")
+            return
+        if client.player_id is None:
+            return
+        inventory = self.game.players[client.player_id].inventory
+        for index in range(len(inventory)):
+            inventory.slots[index] = None
+        _tell(client, "Your inventory was cleared.")
+
     def _weather(self, client: _Client) -> None:
         """Say whether it rains, and when the next shower comes."""
         rate = self.game.config.tick_rate
@@ -611,6 +623,7 @@ class Server:
             "time": lambda: self._set_time(client, argument),
             "give": lambda: self._give(client, argument),
             "home": lambda: self._go_home(client),
+            "clear": lambda: self._clear(client),
             "tp": lambda: self._teleport(client, argument),
             "weather": lambda: self._weather(client),
             "msg": lambda: self._whisper(client, argument),

@@ -42,6 +42,7 @@ COMMANDS = {
     "home": "",
     "weather": "",
     "tp": "<player>",
+    "clear": "",
     "kick": "<player>",
     "mute": "<player>",
     "unmute": "<player>",
