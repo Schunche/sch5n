@@ -4,10 +4,11 @@ Work done on the `claude/auto` branch, newest last.
 
 ## Standing rules for resumes
 
-- Run the full test suite (`xvfb-run -a uv run pytest -q`) every couple of
-  increments and before usage runs out, as the user asked. If anything
-  fails, write it in "Failing tests" below and commit; the next resume
-  fixes it first.
+- Run the full test suite (`xvfb-run -a uv run pytest -q`) only once per
+  usage window: at the very start of each resume, which checks everything
+  from the previous window. Fix any failures first, then run only the
+  relevant tests for the rest of that window. Failures that cannot be fixed
+  at once go under "Failing tests" below, committed.
 - Last full run: all tests passed (after the climbing animation).
 
 ### Failing tests
