@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pytest
 
@@ -183,7 +183,8 @@ def test_saved_branches_load_as_sticks(content: Content) -> None:
     stack = inventory[0]
     assert stack is not None
     assert (stack.item.name, stack.amount) == ("stick", 7)
-    assert inventory_to_json(inventory)["slots"][0] == ["stick", 7]
+    slots = cast("list[object]", inventory_to_json(inventory)["slots"])
+    assert slots[0] == ["stick", 7]
 
 
 def test_health_and_hunger_are_saved(tmp_path: Path, content: Content) -> None:

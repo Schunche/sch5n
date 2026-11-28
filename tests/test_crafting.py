@@ -299,8 +299,9 @@ def test_spreading_a_stack(
     got = [inventory[1], inventory.crafting[0], inventory[2]]
     assert [s and s.amount for s in got] == shares
     assert (inventory.cursor.amount if inventory.cursor else 0) == left
-    assert inventory[0] is not None
-    assert inventory[0].item.name == "leaf"
+    first = inventory[0]
+    assert first is not None
+    assert first.item.name == "leaf"
 
 
 def test_gathering_stops_at_a_full_stack(
@@ -313,8 +314,9 @@ def test_gathering_stops_at_a_full_stack(
     inventory.slots[7] = ItemStack(stick, 10)
     inventory.cursor = ItemStack(stick, 1)
     inventory.gather(5)
-    assert inventory[5] is not None
-    assert inventory[5].amount == full
+    fifth = inventory[5]
+    assert fifth is not None
+    assert fifth.amount == full
     assert sum(s.amount for s in inventory if s) == full + 7
     assert inventory.cursor is None
 
@@ -331,8 +333,9 @@ def test_crafting_all_stops_when_full(
     craft_all(inventory, content)
     assert inventory.crafting[0] is not None
     assert inventory.crafting[0].amount == UNMOVED
-    assert inventory[0] is not None
-    assert inventory[0].amount == planks.spec.max_stack - 1
+    first = inventory[0]
+    assert first is not None
+    assert first.amount == planks.spec.max_stack - 1
 
 
 def test_stowing_keeps_what_does_not_fit(

@@ -198,3 +198,7 @@ Work done on the `claude/auto` branch, newest last.
   (`draw_night`/`draw_lights` became `WorldRenderer.draw_night`).
 - Tests: `tests/test_lightmap.py`, plus a render test that a torch brightens
   the midnight screen.
+
+## Type check
+
+- Pyright is clean over the whole project: the last 8 errors in tests were narrowed away.
