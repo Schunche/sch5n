@@ -14,9 +14,12 @@ from sch5n.client.render.batch import (
     INSTANCE_FLOATS,
     WHITE,
     Transform,
+    rgba,
     sprite_instances,
 )
+from sch5n.client.render.daynight import NIGHT_TINT, darkness, sky_at
 from sch5n.client.render.text import Anchor, TextStyle
+from sch5n.game.daylight import phase
 from sch5n.game.mining import durability_fraction
 from sch5n.game.player import Action
 from sch5n.world.io import DEFAULT_MAP, load_tilemap, map_file
@@ -770,6 +773,11 @@ class WorldView(Protocol):
         ...
 
     @property
+    def ticks(self) -> int:
+        """Ticks since the game began, which tell the time of day."""
+        ...
+
+    @property
     def horizon(self) -> float:
         """World y where the sky begins."""
         ...
@@ -854,7 +862,14 @@ class WorldRenderer:
         batch = app.batch
         offset = camera.offset(app.screen)
 
-        app.sky.draw(app.content.game.sky, camera, app.screen, world.horizon)
+        game = app.content.game
+        day_phase = phase(world.ticks, game.tick_rate)
+        app.sky.draw(
+            sky_at(game.sky, day_phase),
+            camera,
+            app.screen,
+            world.horizon,
+        )
         batch.begin(app.screen)
         view = camera.view(app.screen)
         draw_clouds(batch, app.assets, world, view.center, app.screen)
@@ -873,6 +888,17 @@ class WorldRenderer:
             for player_id, player in world.players.items():
                 if player_id != local_id and player.name:
                     self._draw_name(player)
+
+
+def draw_night(app: App, world: WorldView) -> None:
+    """Darken the screen at night. Draws in screen space, over the world."""
+    shade = darkness(phase(world.ticks, app.content.game.tick_rate))
+    if shade <= 0.0:
+        return
+    batch = app.batch
+    batch.begin(app.screen)
+    w, h = app.screen
+    batch.shape((0, 0, w, h), rgba(NIGHT_TINT, shade))
 
 
 def load_start_map(app: App) -> TileMap:

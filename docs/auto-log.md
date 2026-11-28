@@ -132,3 +132,15 @@ Work done on the `claude/auto` branch, newest last.
 - Placeholder art: `assets/textures/tile/chest/0.png`, drawn by script.
 - Tests in `tests/test_server.py`, `tests/test_world_save.py`,
   `tests/test_render.py`.
+
+## Day and night
+
+- `sch5n.game.daylight`: a day lasts 10 minutes (`DAY_SECONDS`) and a new
+  game starts in the morning. Time is the server's tick count, which
+  snapshots already carry, so everybody sees the same time and no protocol
+  change was needed. Loading a world starts a new morning.
+- `sch5n.client.render.daynight`: the sky blends to night colors with warm
+  dawn and dusk glows and the sun glow travels across the sky; at night a
+  dark blue tint covers the world (not the HUD).
+- Tests: `tests/test_daylight.py`. Not done: stars/moon art, a `/time`
+  command, light sources (torches) that push the dark back.

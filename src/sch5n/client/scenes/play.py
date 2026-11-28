@@ -43,7 +43,7 @@ from sch5n.client.window import (
     MouseMoveEvent,
     ScrollEvent,
 )
-from sch5n.client.world_view import WorldRenderer, load_start_map
+from sch5n.client.world_view import WorldRenderer, draw_night, load_start_map
 from sch5n.game.config import GameMode
 from sch5n.game.crafting import crafted
 from sch5n.game.session import GameSetup, TickInput
@@ -641,6 +641,7 @@ class PlayScene(Scene):
         self.renderer.draw(
             self.world, self.camera, local_id=self.world.local_id
         )
+        draw_night(self.app, self.world)
 
     def render(self) -> None:
         """Draw the world and the HUD."""
