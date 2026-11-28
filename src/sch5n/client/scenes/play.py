@@ -753,6 +753,7 @@ class PlayScene(Scene):
             self.world, self.camera, local_id=self.world.local_id
         )
         self.renderer.draw_night(self.world, self.camera)
+        self.renderer.draw_rain(self.world, self.camera)
 
     def render(self) -> None:
         """Draw the world and the HUD."""

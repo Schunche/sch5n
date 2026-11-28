@@ -1637,3 +1637,27 @@ def test_debug_lines_show_the_time_of_day(app: App) -> None:
     play.debug = True
     play.render()
     play.leave()
+
+
+def test_rain_veils_the_screen_but_not_under_a_roof(app: App) -> None:
+    """In a shower the world is grayer; under a roof the rain stays out."""
+    from sch5n.game.daylight import DAY_SECONDS  # ruff: ignore[import-outside-top-level]
+    from sch5n.game.weather import rain_amount  # ruff: ignore[import-outside-top-level]
+
+    play = PlayScene.singleplayer(app)
+    for _ in range(WARMUP_TICKS):
+        play.tick()
+    rate = app.content.game.tick_rate
+    day_ticks = DAY_SECONDS * rate
+    wet = next(
+        day * day_ticks + day_ticks // 3
+        for day in range(1, 400)
+        if rain_amount(day * day_ticks + day_ticks // 3, rate) > 0.99  # ruff: ignore[magic-value-comparison]
+    )
+    play.world.clock = wet - wet % 1  # noon-ish of a rainy day
+    play.renderer.rain_cover = 1.0
+    rainy = draw(app, play).astype(int).sum()
+    play.world.clock = day_ticks // 3  # first day: dry
+    dry = draw(app, play).astype(int).sum()
+    assert rainy < dry
+    play.leave()

@@ -27,11 +27,13 @@ from sch5n.client.render.lightmap import (
     light_field,
     night_pixels,
 )
+from sch5n.client.render.rain import draw_rain
 from sch5n.client.render.sky import horizon_on_screen
 from sch5n.client.render.text import Anchor, TextStyle
 from sch5n.game.daylight import phase
 from sch5n.game.mining import durability_fraction
 from sch5n.game.player import Action
+from sch5n.game.weather import rain_amount
 from sch5n.world.io import DEFAULT_MAP, load_tilemap, map_file
 from sch5n.world.tilemap import CHUNK_SHIFT, CHUNK_SIZE
 
@@ -851,6 +853,12 @@ class WorldView(Protocol):
         ...
 
 
+ROOF_SEARCH = 24
+"""Rows above the top of the world searched for a roof over the camera."""
+RAIN_COVER_SPEED = 0.08
+"""Share of the way rain fades in or out each frame, under or from a roof."""
+
+
 class WorldRenderer:
     """Draws a world as a player sees it: sky, clouds, tiles, players.
 
@@ -864,6 +872,8 @@ class WorldRenderer:
         self.animators: dict[int, Animator] = {}
         """Animation of each player, by id."""
         self.lightmap = LightMap(app.ctx)
+        self.rain_cover = 1.0
+        """How much rain reaches the camera: 0 under a roof, 1 in the open."""
         self.player_renderer = PlayerRenderer(
             app.assets, app.animations.tool_use.get("player")
         )
@@ -872,6 +882,29 @@ class WorldRenderer:
         )
         self._name_shadow = TextStyle(
             NAME_TAG_SIZE, NAME_TAG_SHADOW, Anchor.BOTTOM_CENTER
+        )
+
+    def draw_rain(self, world: WorldView, camera: Camera) -> None:
+        """Draw rain over the world while it showers, unless under a roof."""
+        app = self.app
+        game = app.content.game
+        amount = rain_amount(world.clock, game.tick_rate)
+        if amount <= 0.0 and self.rain_cover <= 0.0:
+            return
+        size = game.tile_size
+        column = math.floor(camera.center_x / size)
+        row = math.floor(camera.center_y / size)
+        top = math.floor(world.horizon / size) - ROOF_SEARCH
+        covered = world.tilemap.any_solid(column, top, column + 1, row)
+        target = 0.0 if covered else 1.0
+        self.rain_cover += (target - self.rain_cover) * RAIN_COVER_SPEED
+        app.batch.begin(app.screen)
+        draw_rain(
+            app.batch,
+            app.screen,
+            amount * self.rain_cover,
+            world.clock,
+            world.ambience.wind.strength,
         )
 
     def _night_tiles(self, camera: Camera) -> tuple[int, int, int, int]:

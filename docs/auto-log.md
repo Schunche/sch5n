@@ -360,3 +360,14 @@ Work done on the `claude/auto` branch, newest last.
 - Placeholder art to replace: `assets/textures/item/arrow.png`,
   `item/bow.png`, `mob/skeleton.png`.
 - Tests: `tests/test_arrows.py`.
+
+## Rain
+
+- `game/weather.py`: `rain_amount(clock, tick_rate)` is a pure function of
+  the clock (no state, no network): about a third of days have one shower
+  (not the first day), 0.12-0.32 of a day long, building up and dying down.
+  `/time` shifts it with the clock.
+- `client/render/rain.py` draws a gray veil and falling streaks (slanted by
+  the wind); `WorldRenderer.draw_rain` fades it out under a roof (a solid
+  tile above the camera).
+- Tests: `tests/test_weather.py`, `tests/test_render.py`.
