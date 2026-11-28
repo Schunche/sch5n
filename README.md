@@ -97,6 +97,18 @@ data; others are turned away with a reason. Messages are length prefixed
 JSON over TCP, validated on arrival; a client that sends something invalid
 or too large is disconnected, the server goes on.
 
+### Survival
+
+Health and hunger are shown at the bottom (the saved world keeps them). Eat
+food (apples) by holding the left mouse button with it in hand. At night
+slimes, zombies and bats come out, and rarely the King Slime; torches keep
+them away and light the dark. Defeated creatures drop slime balls (torches),
+cloth (armor, beds) and more. Smelt ore at a furnace (stand next to it) and craft
+tools and armor of copper, iron and the other metals; wear armor in the three
+slots next to the crafting grid. A bed (right click it) sets where you respawn.
+Worlds made by `python -m sch5n.world` have plains, desert and snow biomes,
+trees, and one ore of every pair; use one with `--map <name>`.
+
 ### Controls
 
 Default game controls:
