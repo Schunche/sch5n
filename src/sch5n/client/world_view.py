@@ -14,18 +14,22 @@ from sch5n.client.render.batch import (
     INSTANCE_FLOATS,
     WHITE,
     Transform,
-    rgba,
     sprite_instances,
 )
 from sch5n.client.render.daynight import (
-    NIGHT_TINT,
     darkness,
     draw_stars_and_moon,
     sky_at,
 )
+from sch5n.client.render.lightmap import (
+    MAX_LIGHT,
+    LightMap,
+    light_field,
+    night_pixels,
+)
 from sch5n.client.render.sky import horizon_on_screen
 from sch5n.client.render.text import Anchor, TextStyle
-from sch5n.game.daylight import daylight, phase
+from sch5n.game.daylight import phase
 from sch5n.game.mining import durability_fraction
 from sch5n.game.player import Action
 from sch5n.world.io import DEFAULT_MAP, load_tilemap, map_file
@@ -837,6 +841,7 @@ class WorldRenderer:
         self.tiles = TileRenderer(app.assets, app.content.game.tile_size)
         self.animators: dict[int, Animator] = {}
         """Animation of each player, by id."""
+        self.lightmap = LightMap(app.ctx)
         self.player_renderer = PlayerRenderer(
             app.assets, app.animations.tool_use.get("player")
         )
@@ -846,6 +851,45 @@ class WorldRenderer:
         self._name_shadow = TextStyle(
             NAME_TAG_SIZE, NAME_TAG_SHADOW, Anchor.BOTTOM_CENTER
         )
+
+    def _night_tiles(self, camera: Camera) -> tuple[int, int, int, int]:
+        size = self.app.content.game.tile_size
+        view = camera.view(self.app.screen)
+        return (
+            math.floor(view.x / size) - 1,
+            math.floor(view.y / size) - 1,
+            math.ceil(view.right / size) + 1,
+            math.ceil(view.bottom / size) + 1,
+        )
+
+    def draw_night(self, world: WorldView, camera: Camera) -> None:
+        """Darken the screen at night, except where lights shine.
+
+        Draws in screen space, over the world.
+        """
+        app = self.app
+        game = app.content.game
+        shade = darkness(phase(world.clock, game.tick_rate))
+        if shade <= 0.0:
+            return
+        x0, y0, x1, y1 = self._night_tiles(camera)
+        tilemap = world.tilemap
+        radii = tilemap.blocks.light[
+            tilemap.region(
+                x0 - MAX_LIGHT, y0 - MAX_LIGHT, x1 + MAX_LIGHT, y1 + MAX_LIGHT
+            )
+        ]
+        field = light_field(radii)[MAX_LIGHT:-MAX_LIGHT, MAX_LIGHT:-MAX_LIGHT]
+        size, zoom = game.tile_size, camera.zoom
+        left, top = camera.top_left(app.screen)
+        rect = (
+            (x0 * size - left) * zoom,
+            (y0 * size - top) * zoom,
+            (x1 - x0) * size * zoom,
+            (y1 - y0) * size * zoom,
+        )
+        app.batch.begin(app.screen)
+        self.lightmap.draw(app.batch, night_pixels(field, shade), rect)
 
     def _animator(self, player_id: int, player: Player) -> Animator:
         animator = self.animators.get(player_id)
@@ -925,73 +969,6 @@ class WorldRenderer:
             for player_id, player in world.players.items():
                 if player_id != local_id and player.name:
                     self._draw_name(player)
-
-
-MAX_LIGHT = 32
-"""Largest light radius, in tiles, so far away lights still show."""
-GLOW_STEPS = 10
-GLOW_ALPHA = 0.055
-GLOW_COLOR = (255, 176, 80)
-
-
-def draw_night(app: App, world: WorldView) -> None:
-    """Darken the screen at night. Draws in screen space, over the world."""
-    shade = darkness(phase(world.clock, app.content.game.tick_rate))
-    if shade <= 0.0:
-        return
-    batch = app.batch
-    batch.begin(app.screen)
-    w, h = app.screen
-    batch.shape((0, 0, w, h), rgba(NIGHT_TINT, shade))
-
-
-def light_sources(
-    world: WorldView, camera: Camera, screen: tuple[int, int], size: int
-) -> list[tuple[float, float, float]]:
-    """Find the lights that may be seen.
-
-    Returns:
-        list[tuple[float, float, float]]: Screen x, y and radius of each.
-
-    """
-    view = camera.view(screen)
-    x0 = math.floor(view.x / size) - MAX_LIGHT
-    y0 = math.floor(view.y / size) - MAX_LIGHT
-    x1 = math.ceil(view.right / size) + MAX_LIGHT
-    y1 = math.ceil(view.bottom / size) + MAX_LIGHT
-    radii = world.tilemap.blocks.light[world.tilemap.region(x0, y0, x1, y1)]
-    rows, columns = np.nonzero(radii)
-    left, top = camera.top_left(screen)
-    zoom = camera.zoom
-    return [
-        (
-            ((x0 + column + 0.5) * size - left) * zoom,
-            ((y0 + row + 0.5) * size - top) * zoom,
-            int(radii[row, column]) * size * zoom,
-        )
-        for row, column in zip(rows.tolist(), columns.tolist(), strict=True)
-    ]
-
-
-def draw_lights(app: App, world: WorldView, camera: Camera) -> None:
-    """Glow around light sources, over the night. Draws in screen space."""
-    game = app.content.game
-    night = 1.0 - daylight(phase(world.clock, game.tick_rate))
-    if night <= 0.0:
-        return
-    lights = light_sources(world, camera, app.screen, game.tile_size)
-    if not lights:
-        return
-    batch = app.batch
-    batch.begin(app.screen)
-    for cx, cy, radius in lights:
-        for step in range(GLOW_STEPS):
-            r = radius * (1 - step / GLOW_STEPS)
-            batch.shape(
-                (cx - r, cy - r, 2 * r, 2 * r),
-                rgba(GLOW_COLOR, night * GLOW_ALPHA),
-                radius=r,
-            )
 
 
 def load_start_map(app: App) -> TileMap:

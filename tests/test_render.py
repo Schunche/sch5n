@@ -1555,3 +1555,22 @@ def test_night_sky_has_stars(app: App) -> None:
     top = midnight[: app.screen[1] // 4].astype(int).sum(axis=2)
     assert (top > 400).any()  # ruff: ignore[magic-value-comparison]
     play.leave()
+
+
+def test_torch_lifts_the_night(app: App) -> None:
+    """At midnight the screen is brighter around a torch than far from it."""
+    from sch5n.game.daylight import DAY_SECONDS, START  # ruff: ignore[import-outside-top-level]
+
+    play = PlayScene.singleplayer(app)
+    for _ in range(WARMUP_TICKS):
+        play.tick()
+    rate = app.content.game.tick_rate
+    play.world.clock = int(((0.0 - START) % 1) * DAY_SECONDS * rate)
+    before = draw(app, play).astype(int).sum(axis=2)
+    size = app.content.game.tile_size
+    cx, cy = (int(v // size) for v in play.camera.center)
+    tilemap = play.world.tilemap
+    tilemap.set(cx + 2, cy + 2, tilemap.blocks.id_of("torch"))
+    after = draw(app, play).astype(int).sum(axis=2)
+    assert after.sum() > before.sum()
+    play.leave()

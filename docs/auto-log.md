@@ -187,3 +187,14 @@ Work done on the `claude/auto` branch, newest last.
   under it); real per-tile lighting would be a bigger rendering change.
 - Placeholder art: `assets/textures/tile/torch/0.png`.
 - Tests in `tests/test_mobs.py` and `tests/test_crafting.py`.
+
+## Light map
+
+- `client/render/lightmap.py`: lights now cut a smooth hole out of the night.
+  `light_field` spreads every torch over a tile grid (strongest light wins, at
+  most 400 sources per frame), `night_pixels` colors it (cool dark, warm where
+  lit) and `LightMap` draws it as one linearly filtered texture, a pixel per
+  tile, over the view. It replaces the old stacked-circle glow
+  (`draw_night`/`draw_lights` became `WorldRenderer.draw_night`).
+- Tests: `tests/test_lightmap.py`, plus a render test that a torch brightens
+  the midnight screen.

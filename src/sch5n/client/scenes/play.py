@@ -45,8 +45,6 @@ from sch5n.client.window import (
 )
 from sch5n.client.world_view import (
     WorldRenderer,
-    draw_lights,
-    draw_night,
     load_start_map,
 )
 from sch5n.game.config import GameMode
@@ -692,8 +690,7 @@ class PlayScene(Scene):
         self.renderer.draw(
             self.world, self.camera, local_id=self.world.local_id
         )
-        draw_night(self.app, self.world)
-        draw_lights(self.app, self.world, self.camera)
+        self.renderer.draw_night(self.world, self.camera)
 
     def render(self) -> None:
         """Draw the world and the HUD."""
