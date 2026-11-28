@@ -286,3 +286,18 @@ Work done on the `claude/auto` branch, newest last.
 - Block spec `bed: true`; `Game.sleep_in`; the client reuses the
   right-click path of chests and `ChestOpen` (no new message).
 - Placeholder art to replace: `assets/textures/tile/bed/0.png`.
+
+## All metals
+
+- Generated worlds hold one ore of each pair, so every ore now works: tin,
+  lead, silver, tungsten, gold and platinum smelt into ingots at a furnace
+  (ore plus two sticks) and make a pickaxe, axe, shovel and a three-piece
+  armor set (recipes like the copper and iron ones). Power and defense grow
+  with the depth of the ore pair: tin 23, lead 42, silver 60, tungsten 72,
+  gold 80, platinum 95 (pickaxe power); armor defense up to 11 per set.
+- Gold and platinum tools reuse the existing `golden_*` and `diamond_*`
+  textures (not mine, untouched). Placeholder art to replace: every
+  `assets/textures/item/{tin,lead,silver,tungsten,gold,platinum}_*` and
+  `assets/textures/tool/{tin,lead,silver,tungsten}_{pickaxe,axe,shovel}.png`.
+- Loppers stay copper and iron only.
+- Tests: `tests/test_crafting.py`.

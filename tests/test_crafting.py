@@ -445,3 +445,33 @@ def test_torches_are_made_from_sticks(
         assert result is not None
         assert (result.item.name, result.amount) == ("torch", amount)
     assert content.blocks.by_name("torch").spec.light > 0
+
+
+def test_every_ore_can_be_smelted_into_tools_and_armor(
+    content: Content,
+) -> None:
+    """Whichever ore a world has, it leads to an ingot, tools and armor."""
+    from sch5n.world.generator import ORE_PAIRS  # ruff: ignore[import-outside-top-level]
+
+    results = {r.result.item for r in content.recipes}
+    for pair in ORE_PAIRS:
+        for metal in pair:
+            assert f"{metal}_ore" in content.items
+            for made in ("ingot", "helmet", "chestplate", "leggings"):
+                assert f"{metal}_{made}" in results, (metal, made)
+            if metal in {"copper", "iron"}:
+                continue
+            for tool in ("pickaxe", "axe", "shovel"):
+                assert f"{metal}_{tool}" in results, (metal, tool)
+
+
+def test_deeper_ores_make_better_pickaxes(content: Content) -> None:
+    """Pickaxe power grows from the shallow pair of ores to the deepest."""
+    from sch5n.world.generator import ORE_PAIRS  # ruff: ignore[import-outside-top-level]
+
+    def power(metal: str) -> int:
+        return content.items[f"{metal}_pickaxe"].spec.tool_power["pickaxe"]
+
+    best = [max(power(m) for m in pair) for pair in ORE_PAIRS]
+    assert best == sorted(best)
+    assert len(set(best)) == len(best)
