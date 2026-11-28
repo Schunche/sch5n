@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import functools
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -28,18 +29,35 @@ GLOW_ALPHA = 0.10
 """Warm haze left at full light, as a share of the night's darkness."""
 
 
-def _stamp(field: np.ndarray, row: int, column: int, radius: float) -> None:
+@functools.cache
+def _glow(radius: int) -> np.ndarray:
+    """Make the light of one source, a square around its middle.
+
+    Returns:
+        np.ndarray: Light from 0 to 1, `2 * radius + 3` tiles wide.
+
+    """
+    reach = radius + 1
+    axis = np.arange(-reach, reach + 1)
+    dist = np.hypot(axis[:, None], axis[None, :])
+    glow = np.clip(1.0 - dist / (radius + 0.5), 0.0, 1.0) ** FALLOFF
+    return glow.astype(np.float32)
+
+
+def _stamp(field: np.ndarray, row: int, column: int, radius: int) -> None:
     """Add the glow of one source to a field, keeping the stronger light."""
-    reach = int(radius) + 1
+    glow = _glow(radius)
+    reach = radius + 1
     top, left = max(row - reach, 0), max(column - reach, 0)
-    window = field[top : row + reach + 1, left : column + reach + 1]
-    ys, xs = np.ogrid[
-        top : top + window.shape[0], left : left + window.shape[1]
-    ]
-    dist = np.hypot(ys - row, xs - column)
+    bottom = min(row + reach + 1, field.shape[0])
+    right = min(column + reach + 1, field.shape[1])
+    window = field[top:bottom, left:right]
     np.maximum(
         window,
-        np.clip(1.0 - dist / (radius + 0.5), 0.0, 1.0) ** FALLOFF,
+        glow[
+            top - row + reach : bottom - row + reach,
+            left - column + reach : right - column + reach,
+        ],
         out=window,
     )
 
@@ -60,7 +78,7 @@ def light_field(radii: np.ndarray) -> np.ndarray:
         keep = np.linspace(0, len(rows) - 1, MAX_SOURCES).astype(int)
         rows, columns = rows[keep], columns[keep]
     for row, column in zip(rows.tolist(), columns.tolist(), strict=True):
-        _stamp(field, row, column, float(radii[row, column]))
+        _stamp(field, row, column, int(radii[row, column]))
     return field
 
 

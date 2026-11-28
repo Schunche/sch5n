@@ -202,3 +202,8 @@ Work done on the `claude/auto` branch, newest last.
 ## Type check
 
 - Pyright is clean over the whole project: the last 8 errors in tests were narrowed away.
+
+## Performance check
+
+- Server: 16 players in memory on a 1200x600 and a 6000x3000 world take about 2 ms per tick (budget 16.7 ms), 3 ms with the mob cap reached. The cost does not grow with the world size. World generation of 6000x3000 takes about 12 s, once.
+- Client: the light map was the one hot spot when zoomed out (400 torches, 12 ms). The glow of each radius is now computed once and stamped, giving 5 ms in that extreme case, 1-3 ms normally.
