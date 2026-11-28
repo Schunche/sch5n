@@ -460,3 +460,9 @@ Work done on the `claude/auto` branch, newest last.
 
 - Apple + stick at a furnace makes a Baked Apple (restores 9 hunger, an
   apple 5). Placeholder art: it reuses `item/apple`.
+
+## Sleeping
+
+- Right clicking a bed at night also skips to morning (`MORNING`), unless a
+  creature is within 16 tiles; either way the chat says what happened. In
+  multiplayer one player's sleep moves the clock for everyone. No new art.

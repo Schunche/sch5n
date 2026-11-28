@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from sch5n.game.config import GameMode
-from sch5n.game.daylight import DAY_SECONDS, START
+from sch5n.game.daylight import DAY_SECONDS, START, phase
 from sch5n.game.inventory import ItemStack
 from sch5n.game.mobs import CONTACT_COOLDOWN, KINDS, Mob
 from sch5n.game.session import Game, GameSetup, TickInput
@@ -347,3 +347,25 @@ def test_the_boss_calls_slimes_once_at_half_health(content: Content) -> None:
     game.tick(TickInput())
     assert len(game.mobs) == 1
     assert any("calls for help" in text for text in game.announcements)
+
+
+def test_sleeping_in_a_bed_skips_the_night(content: Content) -> None:
+    """At night a bed brings the morning, unless a creature is close."""
+    from sch5n.game.session import MORNING  # ruff: ignore[import-outside-top-level]
+
+    game = make_game(content)
+    player = game.player
+    bed = (int(player.body.x // TILE) + 1, 9)
+    game.tilemap.set(*bed, content.blocks.id_of("bed"))
+    game.ticks = MIDNIGHT
+    slime = add_slime(game, player.body.x + 3 * TILE)
+    assert game.sleep_in(player, bed)
+    assert game.clock == MIDNIGHT  # a creature is near
+    assert any("cannot sleep" in text for text in game.announcements)
+    del game.mobs[next(iter(game.mobs))]
+    assert slime
+    assert game.sleep_in(player, bed)
+    assert phase(game.clock, game.config.tick_rate) == pytest.approx(MORNING)
+    game.announcements.clear()
+    assert game.sleep_in(player, bed)  # by day nothing happens
+    assert not game.announcements

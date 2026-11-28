@@ -105,7 +105,7 @@ slimes, zombies, bats and arrow-shooting skeletons come out, and rarely the King
 them away and light the dark. Defeated creatures drop slime balls (torches),
 cloth (armor, beds) and more. Smelt ore at a furnace (stand next to it) and craft
 tools and armor of copper, iron and the other metals; wear armor in the three
-slots next to the crafting grid. A bed (right click it) sets where you respawn.
+slots next to the crafting grid. A bed (right click it) sets where you respawn, and at night skips to morning if no creature is within 16 tiles.
 Worlds made by `python -m sch5n.world` have plains, desert and snow biomes,
 trees, and one ore of every pair; use one with `--map <name>`, or pick
 "Terrain: Generated" on the Worlds screen to start a fresh one. Falls of more

@@ -128,6 +128,10 @@ HELPER = "slime"
 """What a boss calls at half health."""
 BOSS_CHANCE = 0.04
 """Chance per try, at night, that the boss comes, if none is around."""
+SLEEP_SAFE_TILES = 16
+"""A bed will not let you sleep with a creature this close."""
+MORNING = 0.3
+"""Moment of the day (see `daylight.phase`) a night's sleep ends at."""
 RESPAWN_SAFE_TICKS = 180
 """Ticks a player who just respawned cannot be touched by creatures."""
 SAFE_FALL = 7
@@ -351,7 +355,27 @@ class Game:
         if block is None or not block.spec.bed or not player.can_reach(tile):
             return False
         player.inventory.home = tile
+        self._sleep_through_night(player)
         return True
+
+    def _sleep_through_night(self, player: Player) -> None:
+        """Skip to morning if it is night and no creature is near."""
+        rate = self.config.tick_rate
+        if daylight(phase(self.clock, rate)) >= NIGHT_LIGHT:
+            return
+        reach = SLEEP_SAFE_TILES * self.config.tile_size
+        if any(
+            math.dist(mob.body.center, player.body.center) < reach
+            for mob in self.mobs.values()
+        ):
+            self.announcements.append(
+                f"{player.name or "A player"} cannot sleep with creatures near"
+            )
+            return
+        self.set_time(MORNING)
+        self.announcements.append(
+            f"{player.name or "A player"} slept until morning"
+        )
 
     def go_home(self, player: Player) -> None:
         """Take a player to their bed, or to spawn without one."""
