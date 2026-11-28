@@ -106,9 +106,10 @@ Default game controls:
 | A / D | Move |
 | Space | Jump (wall jump while sliding on a wall) |
 | Left mouse | Use the held item: shovel for dirt, pickaxe for stone (it digs dirt too, slower), axe for trees (a broken log fells the tree above it), lopper for leaves (the axe cuts them too, slower). Blocks are within reach up to `player.reach` (5) tiles away |
-| Right mouse | Place the held block |
+| Right mouse | Place the held block; on a chest, open it. Food in hand: hold the left mouse button to eat |
+| T / Enter | Chat (Enter sends, Esc cancels, Up/Down recall your messages, PageUp/PageDown scroll). `/help` lists the commands |
 | Wheel, 1-0 | Select hotbar slot |
-| Tab | Inventory: left click picks up / swaps / merges, right click splits / places one |
+| Tab | Inventory: left click picks up / swaps / merges, right click splits / places one. The Recipes button lists every recipe |
 | Esc | Close inventory, open settings |
 | F3 | Debug info |
 

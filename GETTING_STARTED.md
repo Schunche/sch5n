@@ -67,9 +67,10 @@ it. Tab switches between the two fields.
 | A / D or the arrow keys | Walk |
 | Space | Jump. Hold it to jump higher. Jump while sliding down a wall to jump off it |
 | Left mouse button | Use the item in your hand: dig dirt with the shovel, mine stone with the pickaxe, chop trees with the axe, cut leaves with the lopper. Chopping through a log brings down the tree above it. You can reach blocks up to 5 tiles away |
-| Right mouse button | Place the block in your hand |
+| Right mouse button | Place the block in your hand. Click a chest to open it. Eat food by holding the left mouse button with it in hand |
+| T or Enter | Chat with the other players. Enter sends, Esc closes it. Type `/help` for commands |
 | Mouse wheel, 1 to 0 | Choose a hotbar slot |
-| Tab | Open the inventory. Point at an item to see what it does. Left click picks up or swaps items, right click takes half or puts one down |
+| Tab | Open the inventory. Point at an item to see what it does. Left click picks up or swaps items, right click takes half or puts one down. The **Recipes** button shows what you can craft |
 | Esc | Close the inventory, open the settings |
 | F3 | Show technical information |
 
