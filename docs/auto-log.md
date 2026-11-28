@@ -603,3 +603,4 @@ Todo: nothing left from this list.
 
 ## Help and weather
 - `/help <command>` shows one usage; unknown commands suggest the closest one. `/weather` says whether it rains and about when the next shower is.
+- `/tp <player>` (host only) takes the host to another player; command dispatch in the server is a table now and honours aliases (`/w`, `/tell`).

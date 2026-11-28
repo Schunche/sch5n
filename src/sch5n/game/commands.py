@@ -41,6 +41,7 @@ COMMANDS = {
     "msg": "<player> <text>",
     "home": "",
     "weather": "",
+    "tp": "<player>",
     "kick": "<player>",
     "mute": "<player>",
     "unmute": "<player>",
@@ -56,7 +57,7 @@ ALIASES = {
     "whisper": "msg",
     "tell": "msg",
 }
-PLAYER_COMMANDS = frozenset({"msg", "kick", "mute", "unmute"})
+PLAYER_COMMANDS = frozenset({"msg", "kick", "mute", "unmute", "tp"})
 TIME_WORDS = ("set", "add", "speed", "query")
 HELP = (
     "Commands: " + ", ".join(f"/{name}" for name in COMMANDS),

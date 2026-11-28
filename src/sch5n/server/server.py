@@ -21,6 +21,7 @@ from sch5n.game.chat import (
     sanitize,
 )
 from sch5n.game.commands import (
+    ALIASES,
     DAY_TICKS,
     MAX_TIME_SPEED,
     TIMES,
@@ -31,7 +32,7 @@ from sch5n.game.config import MAX_PLAYERS
 from sch5n.game.crafting import craft, craft_all, fill_recipe
 from sch5n.game.daylight import DAY_SECONDS, phase
 from sch5n.game.inventory import MAX_CRAFTING_SIDE, ItemStack
-from sch5n.game.session import Game, GameSetup, TickInput
+from sch5n.game.session import Game, GameSetup, TickInput, teleport
 from sch5n.game.smelting import FUEL, INPUT
 from sch5n.game.weather import rain_amount
 from sch5n.log.logger import LOGGER
@@ -550,6 +551,31 @@ class Server:
         given = amount - (left.amount if left else 0)
         _tell(client, f"Gave {given} {item.spec.name}.")
 
+    def _teleport(self, client: _Client, who: str) -> None:
+        """Take the host to another player: `/tp <player>`."""
+        if not self.host or client.name != self.host:
+            _tell(client, "Only the host can do that.")
+            return
+        wanted = " ".join(who.split()).lower()
+        target = next(
+            (
+                c
+                for c in self.clients
+                if c.player_id is not None and c.name.lower() == wanted
+            ),
+            None,
+        )
+        if (
+            client.player_id is None
+            or target is None
+            or target.player_id is None
+        ):
+            _tell(client, f"Use {usage("tp")}, with a player who is here.")
+            return
+        players = self.game.players
+        teleport(players[client.player_id], players[target.player_id])
+        _tell(client, f"Went to {target.name}.")
+
     def _weather(self, client: _Client) -> None:
         """Say whether it rains, and when the next shower comes."""
         rate = self.game.config.tick_rate
@@ -577,23 +603,21 @@ class Server:
 
     def _command(self, client: _Client, text: str) -> None:
         command, _, argument = text.removeprefix("/").partition(" ")
-        if command.lower() in {"kick", "mute", "unmute"}:
-            self._moderate(client, command.lower(), argument)
-            return
-        if command.lower() == "time":
-            self._set_time(client, argument)
-            return
-        if command.lower() == "give":
-            self._give(client, argument)
-            return
-        if command.lower() == "home":
-            self._go_home(client)
-            return
-        if command.lower() == "weather":
-            self._weather(client)
-            return
-        if command.lower() in {"msg", "w", "whisper", "tell"}:
-            self._whisper(client, argument)
+        command = ALIASES.get(command.lower(), command.lower())
+        handlers = {
+            "kick": lambda: self._moderate(client, command, argument),
+            "mute": lambda: self._moderate(client, command, argument),
+            "unmute": lambda: self._moderate(client, command, argument),
+            "time": lambda: self._set_time(client, argument),
+            "give": lambda: self._give(client, argument),
+            "home": lambda: self._go_home(client),
+            "tp": lambda: self._teleport(client, argument),
+            "weather": lambda: self._weather(client),
+            "msg": lambda: self._whisper(client, argument),
+        }
+        handler = handlers.get(command)
+        if handler is not None:
+            handler()
             return
         names = [c.name for c in self.clients if c.player_id is not None]
         result = run_command(text, client.name, names, self.content)

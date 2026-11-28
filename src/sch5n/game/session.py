@@ -93,6 +93,15 @@ class GameSetup:
 DEFAULT_SETUP = GameSetup()
 
 
+def teleport(player: Player, to: Player) -> None:
+    """Put a player where another one stands, at rest."""
+    body = player.body
+    body.x, body.y = to.body.x, to.body.y
+    body.vx = body.vy = 0.0
+    player.reset_fall()
+    player.hurt_cooldown = RESPAWN_SAFE_TICKS
+
+
 def swing_tool(player: Player, inp: TickInput, tile_size: int) -> bool:
     """Swing the held tool at the target if the input asks and it is ready.
 

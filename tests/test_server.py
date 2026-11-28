@@ -1343,3 +1343,25 @@ def test_weather_command(server: Server, content: Content) -> None:
     alice.say("/weather")
     step(server, [alice], 2)
     assert any(m.text.startswith(("Dry", "It is raining")) for m in alice.chat)
+
+
+def test_the_host_can_teleport_to_a_player(
+    server: Server, content: Content
+) -> None:
+    """/tp moves the host to another player; guests cannot."""
+    server.host = "alice"
+    alice = join(server, content, "alice")
+    bob = join(server, content, "bob")
+    step(server, [alice, bob])
+    players = {p.name: p for p in server.game.players.values()}
+    players["bob"].body.x += 500
+    bob.say("/tp alice")
+    alice.say("/tp nobody")
+    step(server, [alice, bob], 2)
+    assert any("Only the host" in m.text for m in bob.chat)
+    assert any(m.text.startswith("Use /tp") for m in alice.chat)
+    alice.say("/tp bob")
+    step(server, [alice, bob], 2)
+    assert players["alice"].body.x == pytest.approx(
+        players["bob"].body.x, abs=8
+    )
