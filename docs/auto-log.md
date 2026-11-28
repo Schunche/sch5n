@@ -466,3 +466,10 @@ Work done on the `claude/auto` branch, newest last.
 - Right clicking a bed at night also skips to morning (`MORNING`), unless a
   creature is within 16 tiles; either way the chat says what happened. In
   multiplayer one player's sleep moves the clock for everyone. No new art.
+
+## Shallower stone
+
+- The dirt layer of generated worlds is now 24 rows (`DIRT_ROWS`, half the
+  depth in worlds too shallow for that) instead of the upper half, so stone
+  starts close to the surface. Ores still lie by their share of the stone
+  layer. `data/maps/map1.json` is untouched.

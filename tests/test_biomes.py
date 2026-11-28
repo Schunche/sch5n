@@ -135,3 +135,15 @@ def test_a_wandering_player_survives_a_generated_world(
             )
         )
     assert game.player.deaths >= 0
+
+
+def test_stone_starts_close_to_the_surface(content: Content) -> None:
+    """The dirt layer is thin: most columns hit stone within 30 tiles."""
+    spec = WorldSpec(left=-100, right=100, home=0)
+    tiles = generate(content.blocks, spec, 4)
+    stone = content.blocks.id_of("stone")
+    shallow = sum(
+        any(tiles.get(x, y) == stone for y in range(spec.top, 30))
+        for x in range(spec.left, spec.right)
+    )
+    assert shallow > (spec.right - spec.left) * 0.9

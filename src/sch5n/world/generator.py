@@ -1,8 +1,8 @@
 # Copyright (c) 2026 Schunche
 """Procedural world generation.
 
-Port of the original generator: the upper half is dirt, the lower half is
-stone, and both are sprinkled with meandering strokes of the other one.
+Port of the original generator: a layer of dirt on top, stone
+below, and both are sprinkled with meandering strokes of the other one.
 Generation is deterministic for a given seed.
 """
 
@@ -21,6 +21,9 @@ from sch5n.world.tilemap import TileMap
 
 if TYPE_CHECKING:
     from sch5n.game.content import BlockRegistry
+
+DIRT_ROWS = 24
+"""Rows of dirt above the stone layer."""
 
 ORE_PAIRS: tuple[tuple[str, str], ...] = (
     ("copper", "tin"),
@@ -71,8 +74,9 @@ class WorldSpec:
 
     @property
     def dirt_until(self) -> int:
-        """First row of the stone layer."""
-        return (self.top + self.bottom) // 2
+        """First row of the stone layer: `DIRT_ROWS` down, or the middle of
+        a world too shallow for that."""
+        return self.top + min(DIRT_ROWS, (self.bottom - self.top) // 2)
 
 
 class _Generator:
