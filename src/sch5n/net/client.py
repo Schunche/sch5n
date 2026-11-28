@@ -212,6 +212,8 @@ class ClientWorld:
         self.mobs: dict[int, Mob] = {}
         self.inventory = Inventory(self.config.inventory.size)
         self.ticks = 0
+        self.clock = 0
+        """Ticks that tell the time of day."""
         self.prediction = True
         """Move the own player right away instead of waiting for the
         server."""
@@ -306,6 +308,7 @@ class ClientWorld:
         self.tilemap.damage = {(x, y): left for x, y, left in snapshot.damage}
         self.ambience.wind.strength = snapshot.wind
         self.ticks = snapshot.tick
+        self.clock = snapshot.clock
         self._reconcile(snapshot.ack, predicted)
 
     @staticmethod

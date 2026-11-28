@@ -239,6 +239,8 @@ class Snapshot(_Message):
 
     type: Literal["snapshot"] = "snapshot"
     tick: int
+    clock: int = 0
+    """Ticks the day and night count, see `Game.clock`."""
     ack: int | None = None
     """`seq` of the receiver's last input the server applied, `None`
     before the first. The receiver replays its later inputs on top."""

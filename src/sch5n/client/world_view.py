@@ -794,8 +794,8 @@ class WorldView(Protocol):
         ...
 
     @property
-    def ticks(self) -> int:
-        """Ticks since the game began, which tell the time of day."""
+    def clock(self) -> int:
+        """Ticks that tell the time of day."""
         ...
 
     @property
@@ -889,7 +889,7 @@ class WorldRenderer:
         offset = camera.offset(app.screen)
 
         game = app.content.game
-        day_phase = phase(world.ticks, game.tick_rate)
+        day_phase = phase(world.clock, game.tick_rate)
         app.sky.draw(
             sky_at(game.sky, day_phase),
             camera,
@@ -919,7 +919,7 @@ class WorldRenderer:
 
 def draw_night(app: App, world: WorldView) -> None:
     """Darken the screen at night. Draws in screen space, over the world."""
-    shade = darkness(phase(world.ticks, app.content.game.tick_rate))
+    shade = darkness(phase(world.clock, app.content.game.tick_rate))
     if shade <= 0.0:
         return
     batch = app.batch

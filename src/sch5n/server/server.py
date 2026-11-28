@@ -71,6 +71,15 @@ if TYPE_CHECKING:
     type ServerSide = Connection[ServerMessage, ClientMessage]
     type ClientSide = Connection[ClientMessage, ServerMessage]
 
+TIMES = {
+    "sunrise": 0.25,
+    "day": 0.35,
+    "noon": 0.5,
+    "sunset": 0.75,
+    "night": 0.9,
+    "midnight": 0.0,
+}
+"""Moments of the day `/time` knows, see `daylight.phase`."""
 HELLO_TIMEOUT_TICKS = 600
 """Clients that do not say hello within this many ticks are dropped."""
 MAX_MESSAGES_PER_TICK = 64
@@ -412,10 +421,25 @@ class Server:
             done = "muted" if target.muted else "unmuted"
             self.say(f"{target.name} was {done}")
 
+    def _set_time(self, client: _Client, argument: str) -> None:
+        """Set the time of day, if the sender is the host."""
+        if not self.host or client.name != self.host:
+            _tell(client, "Only the host can do that.")
+            return
+        moment = TIMES.get(argument.strip().lower())
+        if moment is None:
+            _tell(client, f"Use /time {", ".join(TIMES)}.")
+            return
+        self.game.set_time(moment)
+        self.say(f"The time was set to {argument.strip().lower()}")
+
     def _command(self, client: _Client, text: str) -> None:
         command, _, argument = text.removeprefix("/").partition(" ")
         if command.lower() in {"kick", "mute", "unmute"}:
             self._moderate(client, command.lower(), argument)
+            return
+        if command.lower() == "time":
+            self._set_time(client, argument)
             return
         names = [c.name for c in self.clients if c.player_id is not None]
         result = run_command(text, client.name, names, self.content)
@@ -627,6 +651,7 @@ class Server:
         tilemap.changes = []
         return Snapshot(
             tick=game.ticks,
+            clock=game.clock,
             wind=game.ambience.wind.strength,
             players=list(starmap(player_state, game.players.items())),
             items=[

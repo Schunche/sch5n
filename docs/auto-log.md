@@ -163,3 +163,13 @@ Work done on the `claude/auto` branch, newest last.
   (drawn at 2x, nearest neighbour) and
   `assets/textures/item/slime_ball.png`.
 - Tests: `tests/test_mobs.py`, a render test in `tests/test_render.py`.
+
+## /time and a stability pass
+
+- `/time sunrise|day|noon|sunset|night|midnight` (host only) moves the
+  clock (`Game.set_time`, `Game.time_offset`). Snapshots carry `clock`
+  (ticks plus the shift) next to `tick`, and the sky and slime spawning
+  use it.
+- Extra tests for edge cases: a server saved and restored keeps chests,
+  health and hunger; wild chest coordinates (huge or negative) are
+  harmless.

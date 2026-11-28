@@ -22,7 +22,7 @@ MAX_RECIPE_LINES = 6
 """Most recipes `/recipes` lists at once."""
 HELP = (
     "Commands: /help, /players, /recipes <item>, /me <action>",
-    "The host also has /kick, /mute and /unmute <player>.",
+    "The host also has /kick, /mute and /unmute <player>, and /time <moment>.",
     "T or Enter opens the chat, Esc closes it.",
 )
 

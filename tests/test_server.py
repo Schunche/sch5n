@@ -21,6 +21,7 @@ from sch5n.game.chat import (
 )
 from sch5n.game.config import DEFAULT_PORT, GameMode
 from sch5n.game.content import AIR
+from sch5n.game.daylight import daylight, phase
 from sch5n.game.inventory import ItemStack
 from sch5n.game.session import Game, GameSetup, TickInput
 from sch5n.net.client import (
@@ -1097,3 +1098,78 @@ def test_chests_are_out_of_reach_or_invalid(
     alice.click_chest(CHEST_SLOTS)
     step(server, [alice], 2)
     assert alice.state is SessionState.CLOSED
+
+
+def test_a_saved_server_keeps_chests_and_vitals(
+    server: Server, content: Content, tmp_path: Path
+) -> None:
+    """Saving and loading restores chests, health and hunger.
+
+    A new server takes them back from the loaded world.
+    """
+    alice = join(server, content, "alice")
+    player = next(iter(server.game.players.values()))
+    player.vitals.hunger = 6
+    tile = (3, SURFACE - 1)
+    server.game.tilemap.set(*tile, content.blocks.id_of("chest"))
+    chest = server.game.chest_at(*tile)
+    assert chest is not None
+    chest.slots[1] = ItemStack(content.items["apple"], 2)
+    step(server, [alice])
+    path = world_path(tmp_path, "round")
+    server.save(path)
+    world = load_world(path, content)
+    again = Server(
+        content,
+        world.tilemap,
+        SETUP,
+        name="again",
+        inventories=world.inventories,
+        chests=world.chests,
+    )
+    bob = join(again, content, "alice")
+    step(again, [bob])
+    restored = again.game.chest_at(*tile)
+    assert restored is not None
+    assert restored[1] is not None
+    assert restored[1].amount == 2  # ruff: ignore[magic-value-comparison]
+    assert bob.world is not None
+    assert bob.world.player is not None
+    assert bob.world.player.vitals.hunger == 6  # ruff: ignore[magic-value-comparison]
+
+
+def test_wild_chest_coordinates_are_harmless(
+    server: Server, content: Content
+) -> None:
+    """Huge or negative tiles just do not open anything."""
+    alice = join(server, content)
+    for x, y in ((10**18, 5), (-(10**18), -(10**18)), (0, 2**70)):
+        alice.open_chest(x, y)
+    step(server, [alice], 2)
+    assert alice.state is SessionState.PLAYING
+    assert alice.world is not None
+    assert alice.world.chest is None
+
+
+def test_the_host_can_set_the_time(server: Server, content: Content) -> None:
+    """/time moves the clock for everybody; guests cannot."""
+    server.host = "alice"
+    alice = join(server, content, "alice")
+    bob = join(server, content, "bob")
+    step(server, [alice, bob])
+    bob.say("/time midnight")
+    alice.say("/time lunchtime")
+    step(server, [alice, bob], 2)
+    assert any("Only the host" in m.text for m in bob.chat)
+    assert any(m.text.startswith("Use /time") for m in alice.chat)
+    alice.say("/time midnight")
+    step(server, [alice, bob], 2)
+    assert alice.world is not None
+    assert bob.world is not None
+    rate = content.game.tick_rate
+    assert daylight(phase(server.game.clock, rate)) == pytest.approx(0.0)
+    assert bob.world.clock == server.game.clock
+    assert any("set to midnight" in m.text for m in bob.chat)
+    alice.say("/time noon")
+    step(server, [alice, bob], 2)
+    assert daylight(phase(bob.world.clock, rate)) == pytest.approx(1.0)

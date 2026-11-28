@@ -12,7 +12,7 @@ import numpy as np
 from sch5n.game.ambient import Ambience
 from sch5n.game.config import GameMode
 from sch5n.game.content import AIR, TreePart
-from sch5n.game.daylight import daylight, phase
+from sch5n.game.daylight import DAY_SECONDS, daylight, phase
 from sch5n.game.floating_item import FloatingItem
 from sch5n.game.inventory import CRAFTING_SIDE, Inventory, ItemStack
 from sch5n.game.mining import HitResult, can_place, fell_tree, hit_tile, log_of
@@ -145,6 +145,8 @@ class Game:
         self.setup = setup
         self.rng = np.random.default_rng(setup.seed)
         self.ticks = 0
+        self.time_offset = 0
+        """Ticks the clock of the day was moved, like by `/time`."""
         self.players: dict[int, Player] = {}
         """Players in the session by id, in joining order."""
         self._next_id = 0
@@ -582,6 +584,18 @@ class Game:
                     f"{player.name or "A player"} starved"
                 )
 
+    @property
+    def clock(self) -> int:
+        """Ticks the day and night count: time passed plus any shift."""
+        return self.ticks + self.time_offset
+
+    def set_time(self, day_phase: float) -> None:
+        """Jump to a moment of the day. See `daylight.phase`."""
+        rate = self.config.tick_rate
+        now = phase(self.clock, rate)
+        shift = (day_phase - now) % 1.0
+        self.time_offset += round(shift * DAY_SECONDS * rate)
+
     def hurt_player(self, player: Player, damage: int, cause: str) -> None:
         """Take health from a player. At zero it respawns, fed.
 
@@ -652,7 +666,7 @@ class Game:
     def _tick_mobs(self) -> None:
         """Spawn at night, move, touch players and fade with the day."""
         rate = self.config.tick_rate
-        light = daylight(phase(self.ticks, rate))
+        light = daylight(phase(self.clock, rate))
         wanted = min(MAX_MOBS, MOBS_PER_PLAYER * len(self.players))
         if (
             light < NIGHT_LIGHT
