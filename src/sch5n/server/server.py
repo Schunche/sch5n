@@ -20,9 +20,16 @@ from sch5n.game.chat import (
     RateLimit,
     sanitize,
 )
-from sch5n.game.commands import run_command
+from sch5n.game.commands import (
+    DAY_TICKS,
+    MAX_TIME_SPEED,
+    TIMES,
+    run_command,
+    usage,
+)
 from sch5n.game.config import MAX_PLAYERS
 from sch5n.game.crafting import craft, craft_all, fill_recipe
+from sch5n.game.daylight import DAY_SECONDS, phase
 from sch5n.game.inventory import MAX_CRAFTING_SIDE, ItemStack
 from sch5n.game.session import Game, GameSetup, TickInput
 from sch5n.game.smelting import FUEL, INPUT
@@ -75,15 +82,6 @@ if TYPE_CHECKING:
 
 MAX_GIVE = 1024
 """Most items one `/give` hands over."""
-TIMES = {
-    "sunrise": 0.25,
-    "day": 0.35,
-    "noon": 0.5,
-    "sunset": 0.75,
-    "night": 0.9,
-    "midnight": 0.0,
-}
-"""Moments of the day `/time` knows, see `daylight.phase`."""
 HELLO_TIMEOUT_TICKS = 600
 """Clients that do not say hello within this many ticks are dropped."""
 MAX_MESSAGES_PER_TICK = 64
@@ -462,16 +460,69 @@ class Server:
             _tell(client, f"To {target.name}: {text}")
 
     def _set_time(self, client: _Client, argument: str) -> None:
-        """Set the time of day, if the sender is the host."""
+        """Change the time, if the sender is the host.
+
+        `/time set|add|speed|query`, and `/time <moment>` for short.
+        """
         if not self.host or client.name != self.host:
             _tell(client, "Only the host can do that.")
             return
-        moment = TIMES.get(argument.strip().lower())
-        if moment is None:
-            _tell(client, f"Use /time {", ".join(TIMES)}.")
+        word, _, rest = argument.strip().lower().partition(" ")
+        rest = rest.strip()
+        if word in TIMES:
+            word, rest = "set", word
+        if not word:
+            word = "query"
+        action = {
+            "set": self._time_set,
+            "add": self._time_add,
+            "speed": self._time_speed,
+            "query": self._time_query,
+        }.get(word)
+        if action is None:
+            _tell(client, f"Use {usage("time")}.")
             return
-        self.game.set_time(moment)
-        self.say(f"The time was set to {argument.strip().lower()}")
+        action(client, rest)
+
+    def _time_set(self, client: _Client, text: str) -> None:
+        if text in TIMES:
+            self.game.set_time(TIMES[text])
+        elif text.isdigit():
+            self.game.set_time((int(text) % DAY_TICKS) / DAY_TICKS)
+        else:
+            _tell(client, f"Use /time set <{"|".join(TIMES)}|ticks>.")
+            return
+        self.say(f"The time was set to {text}")
+
+    def _time_add(self, client: _Client, text: str) -> None:
+        try:
+            ticks = int(text)
+        except ValueError:
+            _tell(client, "Use /time add <ticks>. A day is 24000 ticks.")
+            return
+        self.game.add_time(ticks / DAY_TICKS)
+        self.say(f"The time moved by {ticks} ticks")
+
+    def _time_speed(self, client: _Client, text: str) -> None:
+        try:
+            speed = float(text)
+        except ValueError:
+            speed = -1.0
+        if not 0 <= speed <= MAX_TIME_SPEED:
+            _tell(client, f"Use /time speed <0 to {MAX_TIME_SPEED:g}>.")
+            return
+        self.game.time_scale = speed
+        self.say(f"Time now passes at speed {speed:g}")
+
+    def _time_query(self, client: _Client, _text: str) -> None:
+        game = self.game
+        rate = game.config.tick_rate
+        moment = int(phase(game.clock, rate) * DAY_TICKS)
+        day = game.clock // (DAY_SECONDS * rate) + 1
+        _tell(
+            client,
+            f"It is {moment} ticks into day {day}; speed {game.time_scale:g}.",
+        )
 
     def _give(self, client: _Client, argument: str) -> None:
         """Give the host items: `/give <item> [amount]`."""

@@ -333,9 +333,6 @@ class WorldsScene(Scene):
         match event.key:
             case glfw.KEY_ESCAPE:
                 self.app.switch(self.back)
-            case glfw.KEY_BACKSPACE:
-                self.focused.backspace()
-                self._edited()
             case glfw.KEY_TAB:
                 self.focused = (
                     self.world_name
@@ -344,10 +341,15 @@ class WorldsScene(Scene):
                 )
             case glfw.KEY_ENTER | glfw.KEY_KP_ENTER:
                 self.create()
-            case glfw.KEY_V if event.mods & glfw.MOD_CONTROL:
-                self._type(self.app.window.clipboard)
             case _:
-                pass
+                before = self.focused.text
+                if (
+                    self.focused.handle_window_key(
+                        event.key, event.mods, self.app.window
+                    )
+                    and before != self.focused.text
+                ):
+                    self._edited()
 
     def _on_click(self, pos: tuple[float, float]) -> None:
         for field in (self.player_name, self.world_name):

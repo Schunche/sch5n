@@ -21,7 +21,7 @@ from sch5n.game.chat import (
 )
 from sch5n.game.config import DEFAULT_PORT, GameMode
 from sch5n.game.content import AIR
-from sch5n.game.daylight import daylight, phase
+from sch5n.game.daylight import DAY_SECONDS, daylight, phase
 from sch5n.game.inventory import ItemStack
 from sch5n.game.session import Game, GameSetup, TickInput
 from sch5n.net.client import (
@@ -1195,6 +1195,39 @@ def test_the_host_can_set_the_time(server: Server, content: Content) -> None:
     alice.say("/time noon")
     step(server, [alice, bob], 2)
     assert daylight(phase(bob.world.clock, rate)) == pytest.approx(1.0)
+
+
+def test_time_subcommands(server: Server, content: Content) -> None:
+    """/time set, add, speed and query work for the host."""
+    server.host = "alice"
+    alice = join(server, content, "alice")
+    step(server, [alice])
+    alice.say("/time set night")
+    alice.say("/time set 6000")
+    step(server, [alice], 2)
+    rate = content.game.tick_rate
+    assert phase(server.game.clock, rate) == pytest.approx(0.25, abs=0.01)
+    before = server.game.clock
+    alice.say("/time add 12000")
+    step(server, [alice], 2)
+    gained = server.game.clock - before
+    assert gained == pytest.approx(DAY_SECONDS * rate / 2, abs=4)
+    alice.say("/time speed 4")
+    step(server, [alice], 2)
+    assert server.game.time_scale == pytest.approx(4.0)
+    start = server.game.clock
+    step(server, [alice], 40)
+    assert server.game.clock - start == pytest.approx(160, abs=4)
+    alice.say("/time speed 0")
+    alice.say("/time query")
+    step(server, [alice], 2)
+    assert any("speed 0" in m.text for m in alice.chat)
+    frozen = server.game.clock
+    step(server, [alice], 20)
+    assert server.game.clock == frozen
+    alice.say("/time speed lots")
+    step(server, [alice], 2)
+    assert any("Use /time speed" in m.text for m in alice.chat)
 
 
 def test_player_names_are_cleaned(server: Server, content: Content) -> None:

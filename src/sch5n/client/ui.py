@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from sch5n.client.render.batch import rgba
 from sch5n.client.render.text import Anchor, TextStyle
+from sch5n.client.textedit import TextEdit
 from sch5n.game.inventory import HOTBAR_SIZE
 from sch5n.math.rect import Rect
 
@@ -178,25 +179,22 @@ def hit_button(buttons: list[Button], pos: tuple[float, float]) -> str | None:
     return None
 
 
-@dataclass(slots=True)
-class TextField:
+class TextField(TextEdit):
     """A one line text input with a label above it."""
 
-    id: str
-    label: str
-    rect: Rect
-    text: str = ""
-    max_length: int = 64
-
-    def type(self, chars: str) -> None:
-        """Append printable characters, up to `max_length`."""
-        for char in chars:
-            if char.isprintable() and len(self.text) < self.max_length:
-                self.text += char
-
-    def backspace(self) -> None:
-        """Delete the last character."""
-        self.text = self.text[:-1]
+    def __init__(
+        self,
+        id: str,  # ruff: ignore[builtin-argument-shadowing]
+        label: str,
+        rect: Rect,
+        text: str = "",
+        max_length: int = 64,
+    ) -> None:
+        """Make a field showing `text`."""
+        super().__init__(text, max_length)
+        self.id = id
+        self.label = label
+        self.rect = rect
 
     def contains(self, pos: tuple[float, float]) -> bool:
         """Whether a screen position is on the field.
@@ -237,17 +235,34 @@ class TextField:
                 anchor=Anchor.BOTTOM_LEFT,
             ),
         )
-        shown = self.text + ("|" if focused and caret else "")
+        left = r.x + FIELD_PADDING
+        start, end = self.selection
+        if focused and start != end:
+            x0 = left + (
+                text.measure(self.text[:start], b.font_size)[0] if start else 0
+            )
+            x1 = left + text.measure(self.text[:end], b.font_size)[0]
+            batch.shape(
+                (x0, r.y + 4, x1 - x0, r.h - 8),
+                rgba(style.color("accent"), 0.4),
+            )
         text.draw(
             batch,
-            shown,
-            (r.x + FIELD_PADDING, r.center[1]),
+            self.text,
+            (left, r.center[1]),
             TextStyle(
                 size=b.font_size,
                 color=rgba(style.color("text")),
                 anchor=Anchor.MIDDLE_LEFT,
             ),
         )
+        if focused and caret:
+            x = left + (
+                text.measure(self.text[: self.caret], b.font_size)[0]
+                if self.caret
+                else 0
+            )
+            batch.shape((x, r.y + 5, 2, r.h - 10), rgba(style.color("text")))
 
 
 @dataclass(frozen=True, slots=True)

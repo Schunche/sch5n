@@ -185,6 +185,9 @@ class Game:
         self.rng = np.random.default_rng(setup.seed)
         self.ticks = 0
         self.time_offset = 0
+        self.time_scale = 1.0
+        """How fast the day passes; 1 is normal, 0 stops the clock."""
+        self._time_carry = 0.0
         """Ticks the clock of the day was moved, like by `/time`."""
         self.players: dict[int, Player] = {}
         """Players in the session by id, in joining order."""
@@ -798,6 +801,11 @@ class Game:
         """Ticks the day and night count: time passed plus any shift."""
         return self.ticks + self.time_offset
 
+    def add_time(self, day_fraction: float) -> None:
+        """Skip ahead (or back) by a share of a day."""
+        rate = self.config.tick_rate
+        self.time_offset += round(day_fraction * DAY_SECONDS * rate)
+
     def set_time(self, day_phase: float) -> None:
         """Jump to a moment of the day. See `daylight.phase`."""
         rate = self.config.tick_rate
@@ -1018,6 +1026,17 @@ class Game:
         self.ambience.tick(self.tilemap, view, self.config.tile_size)
         self._tick_floating_items()
         self.ticks += 1
+        self._run_clock()
+
+    def _run_clock(self) -> None:
+        """Make the day pass faster or slower than the ticks."""
+        speed = self.time_scale
+        if math.isclose(speed, 1.0) and math.isclose(self._time_carry, 0.0):
+            return
+        self._time_carry += speed - 1.0
+        whole = int(self._time_carry)
+        self._time_carry -= whole
+        self.time_offset += whole
 
     def tick(self, inputs: TickInput | Mapping[int, TickInput]) -> None:
         """Advance the simulation by one tick.

@@ -642,14 +642,18 @@ class SettingsScene(Scene):
             case glfw.KEY_ESCAPE:
                 self.editing = None
                 self.message = "Cancelled"
-            case glfw.KEY_BACKSPACE:
-                self.field.backspace()
             case glfw.KEY_ENTER | glfw.KEY_KP_ENTER:
                 self._finish_editing()
-            case glfw.KEY_V if event.mods & glfw.MOD_CONTROL:
-                self._type(self.app.window.clipboard)
             case _:
-                pass
+                self._edit_key(event)
+
+    def _edit_key(self, event: KeyEvent) -> None:
+        if event.key == glfw.KEY_V and event.mods & glfw.MOD_CONTROL:
+            self._type(self.app.window.clipboard)
+        else:
+            self.field.handle_window_key(
+                event.key, event.mods, self.app.window
+            )
 
     def _type(self, chars: str) -> None:
         if self.editing is Option.PORT:

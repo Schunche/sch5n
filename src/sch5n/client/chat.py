@@ -10,8 +10,10 @@ import glfw
 
 from sch5n.client.render.batch import rgba
 from sch5n.client.render.text import Anchor, TextStyle
+from sch5n.client.textedit import TextEdit
 from sch5n.client.window import CharEvent, KeyEvent, ScrollEvent
 from sch5n.game.chat import MAX_CHAT_LENGTH, ChatKind, sanitize
+from sch5n.game.commands import usage_line
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -36,6 +38,8 @@ MAX_WIDTH = 520
 WIDTH_SHARE = 0.5
 """Largest share of the window the chat takes."""
 MAX_SENT_HISTORY = 50
+HINT_WORDS = 8
+"""Suggestions listed above the box."""
 PAGE_LINES = 4
 """Lines the page keys scroll."""
 
@@ -56,6 +60,20 @@ def format_line(message: ChatMessage) -> str:
             return f"{message.sender} left the game"
         case ChatKind.SYSTEM:
             return message.text
+
+
+def _shared_start(words: list[str]) -> str:
+    """Find the longest start that all `words` share.
+
+    Returns:
+        str: The shared start, possibly empty.
+
+    """
+    first, last = min(words), max(words)
+    size = 0
+    while size < len(first) and first[size] == last[size]:
+        size += 1
+    return first[:size]
 
 
 def wrap(text: str, fits: int) -> list[str]:
@@ -103,12 +121,23 @@ class ChatBox:
         """Start closed and empty."""
         self.entries: list[Entry] = []
         self.open = False
-        self.text = ""
+        self.edit = TextEdit("", MAX_CHAT_LENGTH)
         self.scroll = 0
         """Lines scrolled back from the newest."""
+        self.complete: Callable[[str], list[str]] = lambda _text: []
+        """Words that could finish the text before the caret."""
         self.sent: list[str] = []
         self._recall: int | None = None
         self._pending = ""
+
+    @property
+    def text(self) -> str:
+        """What is typed."""
+        return self.edit.text
+
+    @text.setter
+    def text(self, value: str) -> None:
+        self.edit.text = value
 
     def add(self, message: ChatMessage, tick: int) -> None:
         """Take in a line. A scrolled back view stays where it is."""
@@ -132,13 +161,28 @@ class ChatBox:
 
     def type(self, chars: str) -> None:
         """Add printable characters, up to the longest message."""
-        for char in chars:
-            if char.isprintable() and len(self.text) < MAX_CHAT_LENGTH:
-                self.text += char
+        self.edit.type(chars)
 
     def backspace(self) -> None:
-        """Delete the last character."""
-        self.text = self.text[:-1]
+        """Delete the character before the caret."""
+        self.edit.backspace()
+
+    def tab(self) -> None:
+        """Complete the word before the caret as far as is certain."""
+        edit = self.edit
+        before = edit.text[: edit.caret]
+        found = self.complete(before)
+        if not found:
+            return
+        start = before.rfind(" ") + 1
+        word = before[start:]
+        common = _shared_start([w.lower() for w in found])
+        fill = found[0][: len(common)]
+        if len(found) == 1:
+            fill += " "
+        if len(fill) > len(word):
+            edit.anchor = start
+            edit.type(fill)
 
     def submit(self) -> str:
         """Finish typing.
@@ -176,7 +220,12 @@ class ChatBox:
         limit = max(0, total - SHOWN_LINES)
         self.scroll = max(0, min(limit, self.scroll + lines))
 
-    def handle(self, event: Event, clipboard: Callable[[], str]) -> str:
+    def handle(
+        self,
+        event: Event,
+        clipboard: Callable[[], str],
+        set_clipboard: Callable[[str], None] = lambda _text: None,
+    ) -> str:
         """React to input while the box is open.
 
         Returns:
@@ -192,12 +241,13 @@ class ChatBox:
                 self.close()
             case KeyEvent(key=glfw.KEY_ENTER | glfw.KEY_KP_ENTER):
                 return self.submit()
-            case KeyEvent(key=glfw.KEY_V, mods=mods) if mods & (
-                glfw.MOD_CONTROL | glfw.MOD_SUPER
-            ):
-                self.type(clipboard().replace("\n", " "))
-            case KeyEvent(key=key):
-                self._on_key(key)
+            case KeyEvent(key=glfw.KEY_TAB):
+                self.tab()
+            case KeyEvent(key=key, mods=mods):
+                if not self.edit.handle_key(
+                    key, mods, clipboard, set_clipboard
+                ):
+                    self._on_key(key)
             case ScrollEvent(dy=dy) if dy:
                 self.scroll_by(round(dy) * 3, self.total_lines())
             case _:
@@ -206,8 +256,6 @@ class ChatBox:
 
     def _on_key(self, key: int) -> None:
         match key:
-            case glfw.KEY_BACKSPACE:
-                self.backspace()
             case glfw.KEY_UP:
                 self.recall(-1)
             case glfw.KEY_DOWN:
@@ -317,6 +365,9 @@ class ChatBox:
                 ),
             )
         if self.open:
+            self._draw_hint(
+                batch, text, style, (margin, top - PADDING - line_h), width
+            )
             field_y = bottom + PADDING
             batch.shape(
                 (margin + PADDING // 2, field_y, width - PADDING, field_h),
@@ -324,18 +375,125 @@ class ChatBox:
                 radius=4,
                 border=1.5,
             )
-            shown = self.text + ("|" if caret else "")
-            while shown and text.measure(shown, TEXT_SIZE)[0] > (
-                width - 4 * PADDING
-            ):
-                shown = shown[1:]
-            text.draw(
+            self._draw_field(
                 batch,
-                shown,
+                text,
+                style,
                 (margin + 2 * PADDING, field_y + field_h / 2),
-                TextStyle(
-                    size=TEXT_SIZE,
-                    color=rgba(style.color("text")),
-                    anchor=Anchor.MIDDLE_LEFT,
-                ),
+                width - 4 * PADDING,
+                caret=caret,
             )
+
+    def _visible_slice(
+        self, text: TextRenderer, room: float
+    ) -> tuple[int, int]:
+        """Part of the typed text to show so the caret stays in view.
+
+        Returns:
+            tuple[int, int]: Start and end indexes.
+
+        """
+        full = self.edit.text
+        start = 0
+        while start < self.edit.caret and (
+            text.measure(full[start : self.edit.caret], TEXT_SIZE)[0] > room
+        ):
+            start += 1
+        end = len(full)
+        while end > self.edit.caret and (
+            text.measure(full[start:end], TEXT_SIZE)[0] > room
+        ):
+            end -= 1
+        return start, end
+
+    def _draw_field(  # ruff: ignore[too-many-arguments]
+        self,
+        batch: SpriteBatch,
+        text: TextRenderer,
+        style: Style,
+        origin: tuple[float, float],
+        room: float,
+        *,
+        caret: bool,
+    ) -> None:
+        """Queue the typed text with its selection and caret."""
+        edit = self.edit
+        first, last = self._visible_slice(text, room)
+        shown = edit.text[first:last]
+        x, y = origin
+        height = text.measure("Mg", TEXT_SIZE)[1]
+
+        def at(index: int) -> float:
+            part = edit.text[first : max(first, min(last, index))]
+            return x + (text.measure(part, TEXT_SIZE)[0] if part else 0)
+
+        start, end = edit.selection
+        if start != end:
+            left, right = at(start), at(end)
+            batch.shape(
+                (left, y - height / 2, right - left, height),
+                rgba(style.color("accent"), 0.4),
+            )
+        text.draw(
+            batch,
+            shown,
+            (x, y),
+            TextStyle(
+                size=TEXT_SIZE,
+                color=rgba(style.color("text")),
+                anchor=Anchor.MIDDLE_LEFT,
+            ),
+        )
+        if caret:
+            batch.shape(
+                (at(edit.caret), y - height / 2, 2, height),
+                rgba(style.color("text")),
+            )
+
+    def hint(self) -> str:
+        """Possible words or the usage, for the line above the box.
+
+        Returns:
+            str: Empty when there is nothing to suggest.
+
+        """
+        before = self.edit.text[: self.edit.caret]
+        if not before.startswith("/"):
+            return ""
+        found = self.complete(before)
+        word = before[before.rfind(" ") + 1 :]
+        if found and not (len(found) == 1 and found[0] == word):
+            shown = found[:HINT_WORDS]
+            more = (
+                f" +{len(found) - len(shown)}"
+                if len(found) > len(shown)
+                else ""
+            )
+            return "Tab: " + "  ".join(shown) + more
+        return usage_line(self.edit.text)
+
+    def _draw_hint(
+        self,
+        batch: SpriteBatch,
+        text: TextRenderer,
+        style: Style,
+        origin: tuple[float, float],
+        width: float,
+    ) -> None:
+        """Queue the suggestions line above the chat."""
+        hint = self.hint()
+        if not hint:
+            return
+        char_w = max(1, text.measure("M", TEXT_SIZE)[0])
+        hint = hint[: max(8, int((width - 2 * PADDING) // char_w))]
+        x, y = origin
+        height = text.measure("Mg", TEXT_SIZE)[1] + LINE_GAP
+        batch.shape(
+            (x, y, width, height), rgba(style.color("button_inner"), 0.85)
+        )
+        text.draw(
+            batch,
+            hint,
+            (x + PADDING, y),
+            TextStyle(size=TEXT_SIZE, color=rgba(style.color("accent"))),
+        )

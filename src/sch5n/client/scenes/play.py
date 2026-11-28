@@ -56,6 +56,7 @@ from sch5n.client.world_view import (
     WorldRenderer,
     load_start_map,
 )
+from sch5n.game.commands import completions
 from sch5n.game.config import GameMode
 from sch5n.game.crafting import crafted
 from sch5n.game.daylight import DAY_SECONDS, daylight, phase
@@ -146,6 +147,7 @@ class PlayScene(Scene):
         self.mouse = InventoryMouse(session)
         self.debug = False
         self.chat = ChatBox()
+        self.chat.complete = self._complete_chat
         self._deaths_seen = 0
         self.death_ticks = 0
         self.minimap_open = False
@@ -630,12 +632,29 @@ class PlayScene(Scene):
             max(0, min(len(ZOOM_LEVELS) - 1, nearest + steps))
         ]
 
+    def _complete_chat(self, text: str) -> list[str]:
+        """Words that could finish a chat command.
+
+        Returns:
+            list[str]: Candidates for the last word of `text`.
+
+        """
+        players = [p.name for p in self.world.players.values() if p.name]
+        return completions(
+            text, players, [item.name for item in self.app.content.items]
+        )
+
     def _on_chat_event(self, event: Event) -> None:
         """Type into the open chat box."""
         if isinstance(event, CharEvent) and self._skip_char:
             self._skip_char = False
             return
-        text = self.chat.handle(event, lambda: self.app.window.clipboard)
+        window = self.app.window
+        text = self.chat.handle(
+            event,
+            lambda: window.clipboard,
+            lambda value: setattr(window, "clipboard", value),
+        )
         if text:
             self.session.say(text)
 

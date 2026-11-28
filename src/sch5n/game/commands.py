@@ -20,12 +20,45 @@ if TYPE_CHECKING:
 
 MAX_RECIPE_LINES = 6
 """Most recipes `/recipes` lists at once."""
+TIMES = {
+    "sunrise": 0.25,
+    "day": 0.35,
+    "noon": 0.5,
+    "sunset": 0.75,
+    "night": 0.9,
+    "midnight": 0.0,
+}
+"""Moments of the day `/time` knows, see `daylight.phase`."""
+DAY_TICKS = 24000
+"""Ticks in a day as `/time` counts them, whatever the real tick rate."""
+MAX_TIME_SPEED = 100.0
+COMMANDS = {
+    "help": "",
+    "players": "",
+    "recipes": "<item>",
+    "me": "<action>",
+    "msg": "<player> <text>",
+    "home": "",
+    "kick": "<player>",
+    "mute": "<player>",
+    "unmute": "<player>",
+    "give": "<item> [amount]",
+    "time": "set <moment|ticks> | add <ticks> | speed <n> | query",
+}
+"""Commands and how they are used; the last few are for the host."""
+ALIASES = {
+    "?": "help",
+    "list": "players",
+    "recipe": "recipes",
+    "w": "msg",
+    "whisper": "msg",
+    "tell": "msg",
+}
+PLAYER_COMMANDS = frozenset({"msg", "kick", "mute", "unmute"})
+TIME_WORDS = ("set", "add", "speed", "query")
 HELP = (
-    "Commands: /help, /players, /recipes <item>, /me <action>",
-    "Whisper with /msg <player> <text>.",
-    "Go to your bed or the spawn with /home.",
-    "The host also has /kick, /mute and /unmute <player>, and /time <moment>.",
-    "The host can /give <item name> [amount] too.",
+    "Commands: " + ", ".join(f"/{name}" for name in COMMANDS),
+    "Type / and press Tab to complete; /<command> alone shows its usage.",
     "T or Enter opens the chat, Esc closes it.",
 )
 
@@ -91,6 +124,74 @@ def recipes_for(query: str, content: Content) -> tuple[str, ...]:
     if len(found) > len(shown):
         shown.append(f"...and {len(found) - len(shown)} more. Be specific.")
     return tuple(shown)
+
+
+def usage(command: str) -> str:
+    """How a command is used.
+
+    Returns:
+        str: Like `/give <item> [amount]`.
+
+    """
+    return f"/{command} {COMMANDS[command]}".strip()
+
+
+def completions(
+    text: str, players: Iterable[str], items: Iterable[str]
+) -> list[str]:
+    """Words that could finish the last word of a chat line.
+
+    Only lines that start with a slash complete. Names with spaces are
+    skipped for players; items use underscores.
+
+    Returns:
+        list[str]: Sorted candidates for the word being typed.
+
+    """
+    if not text.startswith("/"):
+        return []
+    words = text[1:].split(" ")
+    index = len(words) - 1
+    prefix = words[-1].lower()
+    if index == 0:
+        pool: Iterable[str] = COMMANDS
+    else:
+        command = ALIASES.get(words[0].lower(), words[0].lower())
+        pool = _arguments(command, index, words, players, items)
+    return sorted(w for w in set(pool) if w.lower().startswith(prefix))
+
+
+def _arguments(
+    command: str,
+    index: int,
+    words: list[str],
+    players: Iterable[str],
+    items: Iterable[str],
+) -> Iterable[str]:
+    if index == 1:
+        if command == "time":
+            return (*TIME_WORDS, *TIMES)
+        if command in PLAYER_COMMANDS:
+            return (name for name in players if " " not in name)
+        if command in {"recipes", "give"}:
+            return items
+    elif command == "time" and words[1].lower() == "set":
+        return TIMES
+    return ()
+
+
+def usage_line(text: str) -> str:
+    """Find the usage of the command being typed, for a hint.
+
+    Returns:
+        str: Empty if `text` is not a known command.
+
+    """
+    if not text.startswith("/"):
+        return ""
+    name = text[1:].split(" ", maxsplit=1)[0].lower()
+    name = ALIASES.get(name, name)
+    return usage(name) if name in COMMANDS else ""
 
 
 def run_command(

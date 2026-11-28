@@ -266,18 +266,16 @@ class MultiplayerScene(Scene):
                     self.cancel("Cancelled")
                 else:
                     self.app.switch(self.back)
-            case glfw.KEY_BACKSPACE:
-                self.focused.backspace()
             case glfw.KEY_TAB:
                 self.focused = (
                     self.name if self.focused is self.address else self.address
                 )
             case glfw.KEY_ENTER | glfw.KEY_KP_ENTER:
                 self.join()
-            case glfw.KEY_V if event.mods & glfw.MOD_CONTROL:
-                self.focused.type(self.app.window.clipboard)
             case _:
-                pass
+                self.focused.handle_window_key(
+                    event.key, event.mods, self.app.window
+                )
 
     def _on_click(self, pos: tuple[float, float]) -> None:
         for field in (self.name, self.address):

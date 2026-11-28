@@ -293,3 +293,11 @@ The suite runs on every push (`.github/workflows/tests.yml`).
 - [Map generation](https://www.youtube.com/watch?v=Pgt82G4Jxac)
 
 - [Logging](https://www.youtube.com/watch?v=9L77QExPmI0)
+### Chat
+
+`T` or Enter opens the chat. Lines starting with `/` are commands (`/help`
+lists them); Tab completes commands, players and items and a hint line shows
+the options. The host has `/time set <day|night|ticks>`, `/time add <ticks>`,
+`/time speed <n>` and `/time query`. Every text input supports arrows,
+Home/End, Shift selection, Ctrl+arrows and Ctrl+Backspace/Delete for words,
+and Ctrl+A/C/X/V; chat history is on Up/Down.

@@ -1703,9 +1703,10 @@ def test_the_start_map_keeps_the_starting_items(app: App) -> None:
     worlds = WorldsScene(app, back=MainMenu(app))
     terrain = next(b for b in worlds.buttons if b.id == "terrain")
     worlds.on_event(click(terrain.rect.center))
-    assert "Start map" in next(
-        b for b in worlds.buttons if b.id == "terrain"
-    ).label
+    assert (
+        "Start map"
+        in next(b for b in worlds.buttons if b.id == "terrain").label
+    )
     worlds.on_event(press(glfw.KEY_ENTER))
     play = app.pending_scene
     assert isinstance(play, PlayScene)

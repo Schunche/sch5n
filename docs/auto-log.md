@@ -592,3 +592,8 @@ Todo: nothing left from this list.
 ## Empty start and hand-breaking leaves
 - Procedural ("Terrain: Generated") is now the default on the Worlds screen; new generated worlds give the player an empty inventory. The start map keeps the iron tools.
 - Leaves break by hand (`hand_power`); any held item that isn't a tool (stick, leaf, blocks) punches too. Path: leaves → sticks → planks → bench → wooden tools (test_hand_leaves).
+
+## Chat commands and text editing
+- Shared `client/textedit.py` (`TextEdit`): caret, arrows, Home/End, Shift selection, Ctrl word jump/delete, Ctrl+A/C/X/V. Used by chat and every `TextField` (world name, player name, server address, setting values). Chat keeps Up/Down history.
+- Chat: Tab completes commands, `/time` subcommands, player names and item names; a hint line above the box lists candidates or the usage.
+- `/time set <moment|ticks>`, `/time add <ticks>`, `/time speed <n>` (0 stops the clock), `/time query`; `/time <moment>` still works. A day is 24000 ticks for `/time`.

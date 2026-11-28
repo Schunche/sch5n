@@ -238,6 +238,10 @@ class Window:
             return data.decode("utf-8", "replace")
         return data or ""
 
+    @clipboard.setter
+    def clipboard(self, text: str) -> None:
+        glfw.set_clipboard_string(self.handle, text)
+
     def poll(self) -> list[Event]:
         """Process OS events.
 
