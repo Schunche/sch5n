@@ -10,6 +10,7 @@ one who typed it, or a line to tell everyone.
 
 from __future__ import annotations
 
+import difflib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -194,6 +195,34 @@ def usage_line(text: str) -> str:
     return usage(name) if name in COMMANDS else ""
 
 
+def help_lines(topic: str) -> tuple[str, ...]:
+    """Explain all commands, or the usage of one.
+
+    Returns:
+        tuple[str, ...]: Lines to show.
+
+    """
+    name = topic.strip().lstrip("/").lower()
+    name = ALIASES.get(name, name)
+    if name in COMMANDS:
+        return (usage(name),)
+    if name:
+        return (unknown_command(name),)
+    return HELP
+
+
+def unknown_command(command: str) -> str:
+    """Tell that a command does not exist, suggesting a close one.
+
+    Returns:
+        str: The message.
+
+    """
+    close = difflib.get_close_matches(command.lower(), COMMANDS, n=1)
+    hint = f" Did you mean /{close[0]}?" if close else " Try /help."
+    return f"Unknown command /{command}.{hint}"
+
+
 def run_command(
     text: str, sender: str, players: list[str], content: Content
 ) -> CommandResult:
@@ -207,7 +236,7 @@ def run_command(
     argument = argument.strip()
     match command.lower():
         case "help" | "?":
-            return CommandResult(HELP)
+            return CommandResult(help_lines(argument))
         case "players" | "list":
             return CommandResult((
                 f"{len(players)} online: {", ".join(players)}",
@@ -217,4 +246,4 @@ def run_command(
         case "me" if argument:
             return CommandResult(public=f"* {sender} {argument}")
         case _:
-            return CommandResult((f"Unknown command /{command}. Try /help.",))
+            return CommandResult((unknown_command(command),))

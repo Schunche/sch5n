@@ -140,3 +140,13 @@ def test_tab_completes_in_the_chat_box() -> None:
     box.handle(KeyEvent(glfw.KEY_TAB, glfw.PRESS, 0), lambda: "")
     assert box.text == "/give iron_axe "
     assert box.hint().startswith("/give")
+
+
+def test_help_explains_one_command() -> None:
+    """/help <command> shows its usage; typos get a suggestion."""
+    from sch5n.game.commands import help_lines, unknown_command  # ruff: ignore[import-outside-top-level]
+
+    assert help_lines("give") == ("/give <item> [amount]",)
+    assert help_lines("/w") == ("/msg <player> <text>",)
+    assert "Did you mean /time?" in unknown_command("tiem")
+    assert "Try /help" in unknown_command("zzzz")
