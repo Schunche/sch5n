@@ -2,6 +2,25 @@
 
 Work done on the `claude/auto` branch, newest last.
 
+## Standing rules for resumes
+
+- Run the full test suite (`xvfb-run -a uv run pytest -q`) every couple of
+  increments and before usage runs out, as the user asked. If anything
+  fails, write it in "Failing tests" below and commit; the next resume
+  fixes it first.
+- Last full run: all tests passed (after ladders).
+
+### Failing tests
+
+None.
+
+### Priority list from the user (do first, in this order)
+
+Done: recipe book click fills the grid (shift: all sets), ladders.
+Todo: zoom in and out in play, a separate smelting interface, four armor
+slots (helmet, chestplate, leggings, boots), grass plant drops and planting
+on dirt or grass, grass blocks under a solid block turn to dirt.
+
 ## Multiplayer chat
 
 - Protocol 5: `ChatSend` (client to server) and `ChatMessage` (server to
