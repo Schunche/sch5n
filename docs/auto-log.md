@@ -260,3 +260,19 @@ Work done on the `claude/auto` branch, newest last.
   `tile/birchLeaf`, `tile/pineLog`, `tile/pineLeaf`, `item/birch_sapling.png`,
   `item/pine_sapling.png` under `assets/textures/`.
 - Tests: `tests/test_session.py` (each sapling grows its own tree).
+
+## Biomes, trees and ores in generated worlds
+
+- New `world/biomes.py`: stretches of 50-110 columns of plains (grass, oak
+  and birch trees), desert (6 rows of sand, no trees) and tundra (snow on
+  top, pine trees); the first stretch is always plains, neighbors differ.
+- `world/generator.py`: `grow_surface` covers the surface per biome and
+  grows trees (`WorldSpec.trees` turns them off) with the same shapes the
+  saplings use. `place_ores` finally puts one ore of every pair into the
+  stone as small veins: copper/tin shallow, gold/platinum deepest. (Before,
+  generated worlds contained no ores at all.)
+- Blocks `sand` and `snow` (appended to the end of `data/blocks.json`) and
+  items `sand_block`, `snow_block`. Placeholder art to replace:
+  `assets/textures/tile/sand/0.png`, `tile/snow/0.png`.
+- `data/maps/map1.json` is untouched.
+- Tests: `tests/test_biomes.py`, `tests/test_world_io.py`.

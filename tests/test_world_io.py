@@ -212,22 +212,42 @@ def test_default_map_options_are_for_developers(
         assert default_map.read_bytes() == b"{}"
 
 
+def block_name(content: Content, block: int) -> str:
+    """Name a block id.
+
+    Returns:
+        str: The name.
+
+    """
+    found = content.blocks.get(block)
+    assert found is not None
+    return found.name
+
+
 def test_generation_is_deterministic(content: Content) -> None:
     """The same seed generates the same world."""
-    spec = WorldSpec(right=60, bottom=40)
+    spec = WorldSpec(right=200, bottom=60)
     a = generate(content.blocks, spec, seed=7)
     b = generate(content.blocks, spec, seed=7)
     assert sorted(a.iter_tiles()) == sorted(b.iter_tiles())
-    assert len(a) == 60 * 40
-    assert a.bounds() == (0, 0, 60, 40)
-    dirt, stone = content.blocks.id_of("dirt"), content.blocks.id_of("stone")
-    grass = content.blocks.id_of("grass")
-    assert {block for _, _, block, _ in a.iter_tiles()} <= {dirt, stone, grass}
+    names = {block_name(content, b) for _, _, b, _ in a.iter_tiles()}
+    assert {"dirt", "stone", "grass"} <= names
+
+
+def test_generated_worlds_without_trees_fill_their_box(
+    content: Content,
+) -> None:
+    """Without trees the world is exactly the box asked for."""
+    spec = WorldSpec(right=60, bottom=40, trees=False)
+    world = generate(content.blocks, spec, seed=7)
+    assert len(world) == 60 * 40
+    assert world.bounds() == (0, 0, 60, 40)
 
 
 def test_generated_worlds_have_grass_on_top(content: Content) -> None:
     """Dirt open to the sky is grass, and nothing else is."""
-    tilemap = generate(content.blocks, WorldSpec(right=60, bottom=40), seed=3)
+    spec = WorldSpec(right=60, bottom=40, trees=False)
+    tilemap = generate(content.blocks, spec, seed=3)
     grass = content.blocks.id_of("grass")
     surface = [tilemap.surface_y(x, 0, 40) for x in range(60)]
     assert grass in {
