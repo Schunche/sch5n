@@ -330,3 +330,14 @@ Work done on the `claude/auto` branch, newest last.
 ## Debug clock
 
 - F3 shows the time of day and day number and the number of creatures.
+
+## Swords
+
+- A sword for every material (wooden, stone, copper, tin, iron, lead,
+  silver, tungsten, gold, platinum): tool kind `sword`, damage 4 to 14, so
+  creatures (and the King Slime) are fought with something better than a
+  pickaxe. Recipes: two blades over a stick (planks, cobblestone/stone block
+  or ingots). They use the default swing animation for now (no sword style
+  in `data/animations.json`).
+- Placeholder art to replace: `assets/textures/tool/<material>_sword.png`.
+- Tests: `tests/test_mobs.py`.

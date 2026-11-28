@@ -269,3 +269,29 @@ def test_a_bat_bite_is_light(content: Content) -> None:
     before = game.player.vitals.health
     game.tick(TickInput())
     assert game.player.vitals.health == before - bat.damage
+
+
+def test_swords_hit_harder_than_tools(content: Content) -> None:
+    """Every metal has a sword; damage grows with the metal."""
+    damage = {
+        name: content.items[f"{name}_sword"].spec.damage
+        for name in ("wooden", "stone", "copper", "iron", "gold", "platinum")
+    }
+    assert list(damage.values()) == sorted(damage.values())
+    assert damage["iron"] > content.items["iron_axe"].spec.damage
+    assert damage["platinum"] > KINDS["slime"].health
+
+
+def test_one_sword_blow_can_kill_a_slime(content: Content) -> None:
+    """A gold sword kills a slime in a single swing."""
+    game = make_game(content)
+    player = game.player
+    sword = content.items["platinum_sword"]
+    player.inventory.slots[player.inventory.selected] = ItemStack(sword)
+    slime = add_slime(game, player.body.x + 2 * TILE)
+    tile = (int(slime.body.center[0] // TILE), 9)
+    for _ in range(sword.spec.use_time + 2):
+        game.tick(TickInput(use=True, target=tile))
+        if not game.mobs:
+            break
+    assert not game.mobs

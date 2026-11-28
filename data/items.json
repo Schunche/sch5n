@@ -97,6 +97,16 @@
         "platinum_pickaxe": {"name": "Platinum Pickaxe", "description": "Breaks stone and ore.", "icon": "tool/diamond_pickaxe", "max_stack": 1, "use_time": 15, "tool_power": {"pickaxe": 95}, "damage": 6, "knockback": 2, "drop_size": 32},
         "platinum_axe": {"name": "Platinum Axe", "description": "Chops down trees.", "icon": "tool/diamond_axe", "max_stack": 1, "use_time": 29, "tool_power": {"axe": 52}, "damage": 6, "knockback": 3, "drop_size": 32},
         "platinum_shovel": {"name": "Platinum Shovel", "description": "Made for digging dirt.", "icon": "tool/diamond_shovel", "max_stack": 1, "use_time": 27, "tool_power": {"shovel": 95}, "damage": 6, "knockback": 2, "drop_size": 32},
+        "wooden_sword": {"name": "Wooden Sword", "description": "Strikes creatures hard.", "icon": "tool/wooden_sword", "max_stack": 1, "use_time": 30, "tool_power": {"sword": 10}, "damage": 4, "knockback": 3, "drop_size": 32},
+        "stone_sword": {"name": "Stone Sword", "description": "Strikes creatures hard.", "icon": "tool/stone_sword", "max_stack": 1, "use_time": 29, "tool_power": {"sword": 10}, "damage": 5, "knockback": 3, "drop_size": 32},
+        "copper_sword": {"name": "Copper Sword", "description": "Strikes creatures hard.", "icon": "tool/copper_sword", "max_stack": 1, "use_time": 27, "tool_power": {"sword": 10}, "damage": 6, "knockback": 3, "drop_size": 32},
+        "tin_sword": {"name": "Tin Sword", "description": "Strikes creatures hard.", "icon": "tool/tin_sword", "max_stack": 1, "use_time": 27, "tool_power": {"sword": 10}, "damage": 6, "knockback": 3, "drop_size": 32},
+        "iron_sword": {"name": "Iron Sword", "description": "Strikes creatures hard.", "icon": "tool/iron_sword", "max_stack": 1, "use_time": 25, "tool_power": {"sword": 10}, "damage": 8, "knockback": 3, "drop_size": 32},
+        "lead_sword": {"name": "Lead Sword", "description": "Strikes creatures hard.", "icon": "tool/lead_sword", "max_stack": 1, "use_time": 26, "tool_power": {"sword": 10}, "damage": 8, "knockback": 3, "drop_size": 32},
+        "silver_sword": {"name": "Silver Sword", "description": "Strikes creatures hard.", "icon": "tool/silver_sword", "max_stack": 1, "use_time": 24, "tool_power": {"sword": 10}, "damage": 10, "knockback": 4, "drop_size": 32},
+        "tungsten_sword": {"name": "Tungsten Sword", "description": "Strikes creatures hard.", "icon": "tool/tungsten_sword", "max_stack": 1, "use_time": 24, "tool_power": {"sword": 10}, "damage": 11, "knockback": 4, "drop_size": 32},
+        "gold_sword": {"name": "Gold Sword", "description": "Strikes creatures hard.", "icon": "tool/gold_sword", "max_stack": 1, "use_time": 22, "tool_power": {"sword": 10}, "damage": 12, "knockback": 4, "drop_size": 32},
+        "platinum_sword": {"name": "Platinum Sword", "description": "Strikes creatures hard.", "icon": "tool/platinum_sword", "max_stack": 1, "use_time": 22, "tool_power": {"sword": 10}, "damage": 14, "knockback": 4, "drop_size": 32},
         "apple": {"name": "Apple", "description": "Fruit from an oak. Eat it to feel less hungry.", "icon": "item/apple", "drop_size": 16, "food": 5}
     }
 }
