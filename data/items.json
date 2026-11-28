@@ -2,6 +2,10 @@
     "items": {
         "wooden_pickaxe": {"name": "Wooden Pickaxe", "description": "Breaks stone and ore, slowly.", "icon": "tool/wooden_pickaxe", "max_stack": 1, "use_time": 30, "tool_power": {"pickaxe": 15}, "damage": 2, "knockback": 1, "drop_size": 32},
         "stone_pickaxe": {"name": "Stone Pickaxe", "description": "Breaks stone and ore.", "icon": "tool/stone_pickaxe", "max_stack": 1, "use_time": 28, "tool_power": {"pickaxe": 20}, "damage": 2, "knockback": 2, "drop_size": 32},
+        "wooden_axe": {"name": "Wooden Axe", "description": "Chops down trees, slowly.", "icon": "tool/wooden_axe", "max_stack": 1, "use_time": 44, "tool_power": {"axe": 18}, "damage": 3, "knockback": 3, "drop_size": 32},
+        "wooden_shovel": {"name": "Wooden Shovel", "description": "Digs dirt, slowly.", "icon": "tool/wooden_shovel", "max_stack": 1, "use_time": 40, "tool_power": {"shovel": 15}, "damage": 2, "knockback": 2, "drop_size": 32},
+        "stone_axe": {"name": "Stone Axe", "description": "Chops down trees.", "icon": "tool/stone_axe", "max_stack": 1, "use_time": 42, "tool_power": {"axe": 24}, "damage": 3, "knockback": 3, "drop_size": 32},
+        "stone_shovel": {"name": "Stone Shovel", "description": "Made for digging dirt.", "icon": "tool/stone_shovel", "max_stack": 1, "use_time": 38, "tool_power": {"shovel": 20}, "damage": 2, "knockback": 2, "drop_size": 32},
         "copper_pickaxe": {"name": "Copper Pickaxe", "description": "Breaks stone and ore. Digs dirt too, slowly.", "icon": "tool/copper_pickaxe", "max_stack": 1, "use_time": 25, "tool_power": {"pickaxe": 25}, "damage": 3, "knockback": 2, "drop_size": 32},
         "copper_axe": {"name": "Copper Axe", "description": "Chops down trees. Cuts leaves too, slowly.", "icon": "tool/copper_axe", "max_stack": 1, "use_time": 40, "tool_power": {"axe": 30}, "damage": 4, "knockback": 3, "drop_size": 32},
         "copper_shovel": {"name": "Copper Shovel", "description": "Made for digging dirt.", "icon": "tool/copper_shovel", "max_stack": 1, "use_time": 36, "tool_power": {"shovel": 25}, "damage": 3, "knockback": 2, "drop_size": 32},

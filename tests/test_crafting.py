@@ -139,6 +139,13 @@ def fill(inventory: Inventory, content: Content, *rows: str) -> None:
         (("SS", "  "), None),
         (("PPP", "S  ", "S  "), None),
         (("PPP", " S ", "S  "), None),
+        (("PP ", "PS ", " S "), ("wooden_axe", 1)),
+        (("PP ", "SP ", "S  "), None),
+        (("P  ", "S  ", "S  "), ("wooden_shovel", 1)),
+        (("CC ", "CS ", " S "), ("stone_axe", 1)),
+        (("BC ", "CS ", " S "), ("stone_axe", 1)),
+        (("C  ", "S  ", "S  "), ("stone_shovel", 1)),
+        (("C  ", "S  ", "P  "), None),
         (("PPP", " SL", " S "), None),
     ],
 )
@@ -159,6 +166,19 @@ def test_the_wooden_pickaxe_is_the_weakest(content: Content) -> None:
     kinds = ("wooden", "stone", "copper")
     specs = [content.items[f"{kind}_pickaxe"].spec for kind in kinds]
     powers = [spec.tool_power["pickaxe"] for spec in specs]
+    times = [spec.use_time for spec in specs]
+    assert powers == sorted(set(powers))
+    assert times == sorted(set(times), reverse=True)
+
+
+@pytest.mark.parametrize("tool", ["axe", "shovel"])
+def test_wooden_and_stone_tools_are_weaker_than_copper(
+    content: Content, tool: str
+) -> None:
+    """Every kind of tool gets stronger and quicker with better material."""
+    kinds = ("wooden", "stone", "copper")
+    specs = [content.items[f"{kind}_{tool}"].spec for kind in kinds]
+    powers = [spec.tool_power[tool] for spec in specs]
     times = [spec.use_time for spec in specs]
     assert powers == sorted(set(powers))
     assert times == sorted(set(times), reverse=True)

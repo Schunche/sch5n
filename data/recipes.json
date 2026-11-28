@@ -5,6 +5,10 @@
         {"pattern": ["P", "P"], "key": {"P": "oak_planks"}, "result": {"item": "stick", "amount": 4}},
         {"pattern": ["PP", "PP"], "key": {"P": "oak_planks"}, "result": {"item": "crafting_bench"}},
         {"pattern": ["PPP", " S ", " S "], "key": {"P": "oak_planks", "S": "stick"}, "result": {"item": "wooden_pickaxe"}},
-        {"pattern": ["CCC", " S ", " S "], "key": {"C": ["cobblestone", "stone_block"], "S": "stick"}, "result": {"item": "stone_pickaxe"}}
+        {"pattern": ["CCC", " S ", " S "], "key": {"C": ["cobblestone", "stone_block"], "S": "stick"}, "result": {"item": "stone_pickaxe"}},
+        {"pattern": ["PP", "PS", " S"], "key": {"P": "oak_planks", "S": "stick"}, "result": {"item": "wooden_axe"}},
+        {"pattern": ["P", "S", "S"], "key": {"P": "oak_planks", "S": "stick"}, "result": {"item": "wooden_shovel"}},
+        {"pattern": ["CC", "CS", " S"], "key": {"C": ["cobblestone", "stone_block"], "S": "stick"}, "result": {"item": "stone_axe"}},
+        {"pattern": ["C", "S", "S"], "key": {"C": ["cobblestone", "stone_block"], "S": "stick"}, "result": {"item": "stone_shovel"}}
     ]
 }

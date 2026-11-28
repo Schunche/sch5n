@@ -20,3 +20,11 @@ Work done on the `claude/auto` branch, newest last.
   Multiplayer → Display name. Single player works the same way.
 - Tests: `tests/test_chat.py`, chat tests in `tests/test_server.py` and
   `tests/test_render.py`.
+
+## Wooden and stone axes and shovels
+
+- New items `wooden_axe`, `wooden_shovel`, `stone_axe`, `stone_shovel` and
+  their recipes (axe: two materials on top, then one beside a stick; shovel:
+  material over two sticks). They use the existing textures under
+  `assets/textures/tool/`, and get weaker and slower than the copper ones.
+- Test: `tests/test_crafting.py`.
