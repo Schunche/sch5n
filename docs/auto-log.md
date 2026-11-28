@@ -455,3 +455,8 @@ Work done on the `claude/auto` branch, newest last.
 
 - After sounds, tips, falls and boss changes: the server fuzz test passes,
   and 16 players on a 3000 wide world cost 3.7 ms per tick (budget 16.7).
+
+## Baked apple
+
+- Apple + stick at a furnace makes a Baked Apple (restores 9 hunger, an
+  apple 5). Placeholder art: it reuses `item/apple`.

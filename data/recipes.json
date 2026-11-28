@@ -89,6 +89,7 @@
         {"pattern": ["III", " S ", " S "], "key": {"I": "iron_ingot", "S": "stick"}, "result": {"item": "iron_pickaxe"}},
         {"pattern": ["II", "IS", " S"], "key": {"I": "iron_ingot", "S": "stick"}, "result": {"item": "iron_axe"}},
         {"pattern": ["I", "S", "S"], "key": {"I": "iron_ingot", "S": "stick"}, "result": {"item": "iron_shovel"}},
-        {"pattern": ["I I", " S ", "S S"], "key": {"I": "iron_ingot", "S": "stick"}, "result": {"item": "iron_lopper"}}
+        {"pattern": ["I I", " S ", "S S"], "key": {"I": "iron_ingot", "S": "stick"}, "result": {"item": "iron_lopper"}},
+        {"ingredients": ["apple", "stick"], "station": "furnace", "result": {"item": "baked_apple"}}
     ]
 }

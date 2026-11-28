@@ -109,6 +109,7 @@
         "platinum_sword": {"name": "Platinum Sword", "description": "Strikes creatures hard.", "icon": "tool/platinum_sword", "max_stack": 1, "use_time": 22, "tool_power": {"sword": 10}, "damage": 14, "knockback": 4, "drop_size": 32},
         "arrow": {"name": "Arrow", "description": "Ammunition for a bow.", "icon": "item/arrow", "drop_size": 16},
         "bow": {"name": "Bow", "description": "Hold the left mouse button to shoot arrows at the cursor.", "icon": "item/bow", "max_stack": 1, "use_time": 28, "ammo": "arrow", "shot_damage": 5, "shot_speed": 9.0, "drop_size": 32},
-        "apple": {"name": "Apple", "description": "Fruit from an oak. Eat it to feel less hungry.", "icon": "item/apple", "drop_size": 16, "food": 5}
+        "apple": {"name": "Apple", "description": "Fruit from an oak. Eat it to feel less hungry.", "icon": "item/apple", "drop_size": 16, "food": 5},
+        "baked_apple": {"name": "Baked Apple", "description": "An apple cooked in a furnace. Fills you up more.", "icon": "item/apple", "drop_size": 16, "food": 9}
     }
 }
