@@ -1131,8 +1131,9 @@ def test_a_saved_server_keeps_chests_and_vitals(
     step(again, [bob])
     restored = again.game.chest_at(*tile)
     assert restored is not None
-    assert restored[1] is not None
-    assert restored[1].amount == 2  # ruff: ignore[magic-value-comparison]
+    stack = restored[1]
+    assert stack is not None
+    assert stack.amount == 2  # ruff: ignore[magic-value-comparison]
     assert bob.world is not None
     assert bob.world.player is not None
     assert bob.world.player.vitals.hunger == 6  # ruff: ignore[magic-value-comparison]
