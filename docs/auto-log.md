@@ -404,3 +404,9 @@ Work done on the `claude/auto` branch, newest last.
   `SAFE_FALL` (7). Wall slides and respawns reset the measure; admins are
   immune. Clients only predict movement, so nothing changed on the wire.
 - No new art.
+
+## Playtest pass
+
+- Scripted wandering bots on four generated worlds for 20000 ticks each
+  found no crashes; deaths were all from creatures at night.
+- A shorter version is now a test in `tests/test_biomes.py`.

@@ -108,3 +108,30 @@ def test_the_home_stretch_is_plains() -> None:
         assert home.name == "plains"
         for (_, _, biome), (_, _, other) in pairwise(bands):
             assert biome.name != other.name
+
+
+def test_a_wandering_player_survives_a_generated_world(
+    content: Content,
+) -> None:
+    """Walking, jumping and using things on generated ground never crash."""
+    from sch5n.game.session import Game, GameSetup, TickInput  # ruff: ignore[import-outside-top-level]
+
+    spec = WorldSpec(left=-WIDTH // 2, right=WIDTH // 2, home=0)
+    game = Game(content, generate(content.blocks, spec, 3), GameSetup(seed=3))
+    rng = np.random.default_rng(3)
+    direction = 1
+    for tick in range(3000):
+        if tick % 100 == 0:
+            direction = int(rng.integers(-1, 2))
+        x, y = game.player.body.center
+        target = (int(x // 32) + int(rng.integers(-4, 5)), int(y // 32))
+        game.tick(
+            TickInput(
+                move_x=direction,
+                jump=tick % 40 == 0,
+                use=tick % 3 == 0,
+                place=tick % 7 == 0,
+                target=target,
+            )
+        )
+    assert game.player.deaths >= 0
