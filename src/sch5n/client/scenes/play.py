@@ -26,6 +26,14 @@ from sch5n.client.inventory_mouse import BUTTONS, InventoryMouse
 from sch5n.client.keybinds import Action, Context
 from sch5n.client.recipe_book import RecipeBook
 from sch5n.client.render.batch import rgba
+from sch5n.client.render.minimap import (
+    MAP_TILES,
+    MiniMap,
+    block_colors,
+)
+from sch5n.client.render.minimap import (
+    SCALE as MAP_SCALE,
+)
 from sch5n.client.render.text import Anchor, TextStyle
 from sch5n.client.scenes.base import Scene
 from sch5n.client.scenes.settings import SettingsScene
@@ -79,6 +87,9 @@ ARMOR_LABEL = TextStyle(
     size=14, color=(220, 220, 230, 255), anchor=Anchor.BOTTOM_RIGHT
 )
 """Style of the text above the armor slots."""
+MOB_DOT = (230, 60, 60)
+PLAYER_DOT = (80, 220, 110)
+SELF_DOT = (250, 240, 120)
 HURT_FLASH_TICKS = 12
 HURT_FLASH_ALPHA = 0.3
 BOSS_BAR_WIDTH = 360
@@ -127,6 +138,8 @@ class PlayScene(Scene):
         self.chat = ChatBox()
         self._deaths_seen = 0
         self.death_ticks = 0
+        self.minimap_open = False
+        self.minimap: MiniMap | None = None
         self.hurt_ticks = 0
         """Ticks left of the red flash after taking damage."""
         self._health_seen: int | None = None
@@ -259,6 +272,9 @@ class PlayScene(Scene):
         if self._left:
             return
         self._left = True
+        if self.minimap is not None:
+            self.minimap.release()
+            self.minimap = None
         self.session.close()
         if self.server is not None:
             self.server.close("The host left the game")
@@ -424,6 +440,8 @@ class PlayScene(Scene):
                 self._jump_requested = True
             case Action.DEBUG:
                 self.debug = not self.debug
+            case Action.MINIMAP:
+                self.minimap_open = not self.minimap_open
             case Action.CHAT if not self.inventory_open:
                 self.chat.start()
                 self._skip_char = True
@@ -790,6 +808,8 @@ class PlayScene(Scene):
             self._draw_notice()
         self._draw_vitals()
         self._draw_boss()
+        if self.minimap_open:
+            self._draw_minimap()
         self._draw_hurt()
         if self.death_ticks:
             self._draw_death()
@@ -845,6 +865,48 @@ class PlayScene(Scene):
             (first.x - self.app.ui.outer_padding, first.bottom),
             ARMOR_LABEL,
         )
+
+    def _draw_minimap(self) -> None:
+        """Draw the map of the surroundings in the top right corner."""
+        player = self.player
+        if player is None:
+            return
+        app = self.app
+        if self.minimap is None:
+            self.minimap = MiniMap(
+                app.ctx,
+                block_colors(
+                    app.content.blocks,
+                    app.assets.textures_dir,
+                    app.assets.colorkey,
+                ),
+            )
+        size = self.tile_size
+        cx, cy = (int(v // size) for v in player.body.center)
+        pad = app.ui.outer_padding
+        x, y, _w, _h = self.minimap.draw(
+            app.batch,
+            self.world.tilemap,
+            (cx, cy),
+            (app.screen[0] - pad, pad),
+        )
+        half_w, half_h = MAP_TILES[0] // 2, MAP_TILES[1] // 2
+
+        def dot(pos: tuple[float, float], color: tuple[int, int, int]) -> None:
+            tx = int(pos[0] // size) - cx + half_w
+            ty = int(pos[1] // size) - cy + half_h
+            if 0 <= tx < MAP_TILES[0] and 0 <= ty < MAP_TILES[1]:
+                app.batch.shape(
+                    (x + tx * MAP_SCALE - 1, y + ty * MAP_SCALE - 1, 4, 4),
+                    rgba(color),
+                )
+
+        for mob in self.world.mobs.values():
+            dot(mob.body.center, MOB_DOT)
+        for other_id, other in self.world.players.items():
+            if other_id != self.world.local_id:
+                dot(other.body.center, PLAYER_DOT)
+        dot(player.body.center, SELF_DOT)
 
     def _draw_boss(self) -> None:
         """Show the health of a boss that is around, at the top."""

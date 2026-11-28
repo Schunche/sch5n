@@ -379,3 +379,12 @@ Work done on the `claude/auto` branch, newest last.
 ## Fuzz test
 
 - `tests/test_fuzz.py` sends 600 rounds of random, well formed messages (inputs with wild targets, every inventory action with wild slots, chat commands, chest and bed clicks) at a server through the in-memory connection; it must keep running (kicked clients rejoin). Seeds 5 to 8 were run.
+
+## Minimap
+
+- Key M (rebindable: `Action.MINIMAP`) shows a 128x96 tile map around the
+  player in the top right, 2 px per tile, colored with the average color of
+  each block's texture (`client/render/minimap.py`); creatures are red dots,
+  other players green, you yellow. It is one small texture updated per frame
+  while shown.
+- Tests: `tests/test_minimap.py`, `tests/test_render.py`.

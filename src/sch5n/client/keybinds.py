@@ -70,6 +70,7 @@ class Action(StrEnum):
     INVENTORY = "inventory"
     DEBUG = "debug"
     CHAT = "chat"
+    MINIMAP = "minimap"
     HOTBAR_NEXT = "hotbar_next"
     HOTBAR_PREVIOUS = "hotbar_previous"
     HOTBAR_1 = "hotbar_1"
@@ -346,6 +347,7 @@ DEFAULTS: dict[Context, dict[Action, tuple[str, ...]]] = {
         Action.INVENTORY: ("key:TAB",),
         Action.DEBUG: ("key:F3",),
         Action.CHAT: ("key:T", "key:ENTER"),
+        Action.MINIMAP: ("key:M",),
         Action.HOTBAR_NEXT: ("wheel:DOWN",),
         Action.HOTBAR_PREVIOUS: ("wheel:UP",),
     }

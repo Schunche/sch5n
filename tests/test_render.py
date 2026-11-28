@@ -1661,3 +1661,21 @@ def test_rain_veils_the_screen_but_not_under_a_roof(app: App) -> None:
     dry = draw(app, play).astype(int).sum()
     assert rainy < dry
     play.leave()
+
+
+def test_the_minimap_toggles_and_draws(app: App) -> None:
+    """The M key shows the map in the corner; it changes the picture."""
+    play = PlayScene.singleplayer(app)
+    for _ in range(WARMUP_TICKS):
+        play.tick()
+    without = draw(app, play).astype(int)
+    play.on_event(KeyEvent(glfw.KEY_M, glfw.PRESS, 0))
+    assert play.minimap_open
+    with_map = draw(app, play).astype(int)
+    assert play.minimap is not None
+    corner = with_map[: app.screen[1] // 3, -app.screen[0] // 3 :]
+    before = without[: app.screen[1] // 3, -app.screen[0] // 3 :]
+    assert (corner != before).any()
+    play.on_event(KeyEvent(glfw.KEY_M, glfw.PRESS, 0))
+    assert not play.minimap_open
+    play.leave()
