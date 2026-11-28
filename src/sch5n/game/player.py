@@ -9,13 +9,13 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sch5n.game.physics import Body, approach, move_and_collide
-from sch5n.game.vitals import Vitals
 
 if TYPE_CHECKING:
     from sch5n.game.config import GameConfig, GameMode
     from sch5n.game.content import ItemDef
     from sch5n.game.inventory import Inventory
     from sch5n.game.physics import Collisions
+    from sch5n.game.vitals import Vitals
     from sch5n.world.tilemap import TileMap
 
 
@@ -76,7 +76,6 @@ class Player:
         """Ticks since `action` last changed."""
         self.use_cooldown = 0
         """Ticks since the held item was last used."""
-        self.vitals = Vitals()
         self.mode = mode
         self.jump_hold = 0
         """Ticks the current jump may still be held to rise higher."""
@@ -89,6 +88,11 @@ class Player:
         if action != self.action:
             self.action = action
             self.action_age = 0
+
+    @property
+    def vitals(self) -> Vitals:
+        """Health and hunger, kept with the inventory."""
+        return self.inventory.vitals
 
     @property
     def is_airborne(self) -> bool:

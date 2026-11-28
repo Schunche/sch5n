@@ -46,7 +46,9 @@ Work done on the `claude/auto` branch, newest last.
   with food in hand eats one per use time when not full. The apple restores 5.
 - Protocol 6: `PlayerState` carries `health` and `hunger`. The server runs
   everything; clients only display it (bars at the bottom of the screen).
-- Not saved with worlds yet: vitals start full on joining.
+- Vitals live on the `Inventory`, so they are saved with worlds and kept
+  when a player leaves and returns (`health`/`hunger` keys; older saves start
+  full; loading never starts a player below 1 health).
 - Tests: `tests/test_vitals.py`, a sync test in `tests/test_server.py`.
 
 ## Grass

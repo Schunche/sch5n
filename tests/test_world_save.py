@@ -12,6 +12,7 @@ import pytest
 from sch5n.error.exceptions import ParseError
 from sch5n.game.inventory import Inventory, ItemStack
 from sch5n.game.session import Game, GameSetup
+from sch5n.game.vitals import MAX_HEALTH, MAX_HUNGER
 from sch5n.world.save import (
     SUFFIX,
     delete_world,
@@ -25,6 +26,8 @@ from sch5n.world.save import (
     world_path,
 )
 from tests.test_session import flat_world
+
+HUNGRY = 4
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -181,3 +184,35 @@ def test_saved_branches_load_as_sticks(content: Content) -> None:
     assert stack is not None
     assert (stack.item.name, stack.amount) == ("stick", 7)
     assert inventory_to_json(inventory)["slots"][0] == ["stick", 7]
+
+
+def test_health_and_hunger_are_saved(tmp_path: Path, content: Content) -> None:
+    """Vitals come back with the inventory; old saves start full."""
+    inventory = Inventory(content.game.inventory.size)
+    inventory.vitals.health = 7
+    inventory.vitals.hunger = 3
+    path = world_path(tmp_path, "vitals")
+    save_world(path, "vitals", flat_world(content), {"Ann": inventory})
+    loaded = load_world(path, content).inventories["Ann"]
+    assert (loaded.vitals.health, loaded.vitals.hunger) == (7, 3)
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["inventories"]["Ann"].update(health=-5, hunger=999)
+    path.write_text(json.dumps(data), encoding="utf-8")
+    clamped = load_world(path, content).inventories["Ann"].vitals
+    assert (clamped.health, clamped.hunger) == (1, MAX_HUNGER)
+    data["inventories"]["Ann"].pop("health")
+    path.write_text(json.dumps(data), encoding="utf-8")
+    assert (
+        load_world(path, content).inventories["Ann"].vitals.health
+        == MAX_HEALTH
+    )
+
+
+def test_vitals_survive_leaving_the_game(content: Content) -> None:
+    """A player who rejoins is as hungry as when leaving."""
+    game = Game(content, flat_world(content), GameSetup(host_player=False))
+    player_id = game.add_player("ann")
+    game.players[player_id].vitals.hunger = HUNGRY
+    game.remove_player(player_id)
+    again = game.add_player("ann")
+    assert game.players[again].vitals.hunger == HUNGRY

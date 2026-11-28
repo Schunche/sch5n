@@ -21,6 +21,7 @@ from sch5n.game.inventory import (
     Inventory,
     ItemStack,
 )
+from sch5n.game.vitals import MAX_HEALTH, MAX_HUNGER
 from sch5n.log.logger import LOGGER
 from sch5n.utility.path import user_dirs
 from sch5n.world.io import tilemap_from_json, tilemap_to_json
@@ -179,6 +180,8 @@ def inventory_to_json(inventory: Inventory) -> dict[str, Json]:
         "selected": inventory.selected,
         "slots": [_slot_to_json(slot) for slot in inventory],
         "crafting": [_slot_to_json(slot) for slot in inventory.crafting],
+        "health": inventory.vitals.health,
+        "hunger": inventory.vitals.hunger,
     }
 
 
@@ -229,6 +232,10 @@ def inventory_from_json(
         inventory.crafting[index] = _slot_from_json(slot, items)
     selected = data.get("selected", 0)
     inventory.select(selected if isinstance(selected, int) else 0)
+    health, hunger = data.get("health"), data.get("hunger")
+    if isinstance(health, int) and isinstance(hunger, int):
+        inventory.vitals.health = min(max(health, 1), MAX_HEALTH)
+        inventory.vitals.hunger = min(max(hunger, 0), MAX_HUNGER)
     return inventory
 
 

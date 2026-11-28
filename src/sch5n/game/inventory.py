@@ -7,6 +7,8 @@ import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from sch5n.game.vitals import Vitals
+
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
@@ -88,6 +90,9 @@ class Inventory:
         self.crafting: list[Slot] = [None] * CRAFTING_SIDE**2
         """The square crafting grid, row by row."""
         self.selected: int = 0
+        self.vitals = Vitals()
+        """Health and hunger of the owner. They travel with the inventory,
+        so saved worlds keep them."""
         """Index of the active hotbar slot."""
         for index, stack in enumerate(items):
             self.slots[index] = stack
