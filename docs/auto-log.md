@@ -579,3 +579,8 @@ Todo: nothing left from this list.
 
 - A short `pickup` blip plays when the item total in the inventory grows
   (not while the inventory is open, so moving stacks stays quiet).
+
+## Day announcements
+
+- Chat says "Day N begins" at every sunrise (also after sleeping through
+  the night). The game starts on day 1.

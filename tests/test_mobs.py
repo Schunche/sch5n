@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from sch5n.game.config import GameMode
-from sch5n.game.daylight import DAY_SECONDS, START, phase
+from sch5n.game.daylight import DAY_SECONDS, START, SUNRISE, phase
 from sch5n.game.inventory import ItemStack
 from sch5n.game.mobs import CONTACT_COOLDOWN, KINDS, Mob
 from sch5n.game.session import Game, GameSetup, TickInput
@@ -369,3 +369,17 @@ def test_sleeping_in_a_bed_skips_the_night(content: Content) -> None:
     game.announcements.clear()
     assert game.sleep_in(player, bed)  # by day nothing happens
     assert not game.announcements
+
+
+def test_a_new_day_is_announced_at_sunrise(content: Content) -> None:
+    """Each sunrise says which day begins; sleeping through the night too."""
+    game = make_game(content)
+    rate = game.config.tick_rate
+    game.announcements.clear()
+    game.ticks = round((1 - (START - SUNRISE)) * DAY_SECONDS * rate) - 3
+    for _ in range(10):
+        game.tick(TickInput())
+    assert game.announcements.count("Day 2 begins") == 1
+    for _ in range(10):
+        game.tick(TickInput())
+    assert game.announcements.count("Day 2 begins") == 1

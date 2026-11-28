@@ -12,7 +12,13 @@ import numpy as np
 from sch5n.game.ambient import Ambience
 from sch5n.game.config import GameMode
 from sch5n.game.content import AIR, TreePart
-from sch5n.game.daylight import DAY_SECONDS, daylight, phase
+from sch5n.game.daylight import (
+    DAY_SECONDS,
+    START,
+    SUNRISE,
+    daylight,
+    phase,
+)
 from sch5n.game.floating_item import FloatingItem
 from sch5n.game.inventory import CRAFTING_SIDE, Inventory, ItemStack
 from sch5n.game.mining import HitResult, can_place, fell_tree, hit_tile, log_of
@@ -187,6 +193,7 @@ class Game:
         """Arrows in flight by id."""
         self._next_projectile = 0
         self.chests: dict[tuple[int, int], Inventory] = {}
+        self._day: int | None = None
         self.furnaces: dict[tuple[int, int], Furnace] = {}
         """The fire of every furnace that has been opened, by tile."""
         """Contents of the storage blocks that have been opened or
@@ -273,6 +280,16 @@ class Game:
         if chest is None:
             chest = self.chests[x, y] = Inventory(block.spec.container)
         return chest
+
+    def _announce_days(self) -> None:
+        """Tell everyone when a new day starts (at the sunrise phase)."""
+        rate = self.config.tick_rate
+        day = (self.clock + round((START - SUNRISE) * DAY_SECONDS * rate)) // (
+            DAY_SECONDS * rate
+        )
+        if self._day is not None and day > self._day:
+            self.announcements.append(f"Day {day + 1} begins")
+        self._day = day
 
     def _tick_furnaces(self) -> None:
         rate = self.config.tick_rate
@@ -954,6 +971,7 @@ class Game:
         for player in self.players.values():
             self._fit_crafting_grid(player)
         self._tick_vitals()
+        self._announce_days()
         self._tick_mobs()
         self._tick_projectiles()
         self.ambience.tick(self.tilemap, view, self.config.tile_size)
