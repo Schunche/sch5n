@@ -17,7 +17,13 @@ from sch5n.client.render.batch import (
     rgba,
     sprite_instances,
 )
-from sch5n.client.render.daynight import NIGHT_TINT, darkness, sky_at
+from sch5n.client.render.daynight import (
+    NIGHT_TINT,
+    darkness,
+    draw_stars_and_moon,
+    sky_at,
+)
+from sch5n.client.render.sky import horizon_on_screen
 from sch5n.client.render.text import Anchor, TextStyle
 from sch5n.game.daylight import phase
 from sch5n.game.mining import durability_fraction
@@ -890,13 +896,17 @@ class WorldRenderer:
 
         game = app.content.game
         day_phase = phase(world.clock, game.tick_rate)
-        app.sky.draw(
-            sky_at(game.sky, day_phase),
-            camera,
-            app.screen,
-            world.horizon,
-        )
+        sky = sky_at(game.sky, day_phase)
+        app.sky.draw(sky, camera, app.screen, world.horizon)
         batch.begin(app.screen)
+        draw_stars_and_moon(
+            batch,
+            app.screen,
+            horizon_on_screen(
+                camera, world.horizon, app.screen[1], sky.parallax
+            ),
+            day_phase,
+        )
         view = camera.view(app.screen)
         draw_clouds(batch, app.assets, world, view.center, app.screen)
 

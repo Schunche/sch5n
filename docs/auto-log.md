@@ -173,3 +173,5 @@ Work done on the `claude/auto` branch, newest last.
 - Extra tests for edge cases: a server saved and restored keeps chests,
   health and hunger; wild chest coordinates (huge or negative) are
   harmless.
+- Night sky: a fixed scatter of stars and a moon (opposite the sun) fade in
+  with the dark (`draw_stars_and_moon`). Cosmetic, no art needed.

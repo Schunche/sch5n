@@ -1536,3 +1536,22 @@ def test_creatures_and_the_death_screen_draw(app: App) -> None:
         play.tick()
     assert play.death_ticks == 0
     play.leave()
+
+
+def test_night_sky_has_stars(app: App) -> None:
+    """At midnight the sky is darker than at noon and holds bright dots."""
+    play = PlayScene.singleplayer(app)
+    for _ in range(WARMUP_TICKS):
+        play.tick()
+    rate = app.content.game.tick_rate
+    from sch5n.game.daylight import DAY_SECONDS, START  # ruff: ignore[import-outside-top-level]
+
+    def at(day_phase: float) -> np.ndarray:
+        play.world.clock = int(((day_phase - START) % 1) * DAY_SECONDS * rate)
+        return draw(app, play)
+
+    noon, midnight = at(0.5), at(0.0)
+    assert midnight.astype(int).sum() < noon.astype(int).sum() / 2
+    top = midnight[: app.screen[1] // 4].astype(int).sum(axis=2)
+    assert (top > 400).any()  # ruff: ignore[magic-value-comparison]
+    play.leave()
