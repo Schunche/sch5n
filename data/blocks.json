@@ -16,7 +16,7 @@
         "oak_log_leaf": {"textures": [["tile/oakLog/0", "tile/oakLeaf/0"]], "durability": 300, "tool": "axe", "tree": "trunk", "drop": "oak_log", "trim": {"tool": "lopper", "into": "oak_log", "durability": 50}, "extra_drops": [{"item": "stick", "chance": 0.5, "min_amount": 1, "max_amount": 2}, {"item": "leaf", "chance": 0.7, "min_amount": 1, "max_amount": 2}, {"item": "bird_nest", "chance": 0.03}, {"item": "oak_sapling", "chance": 0.08}, {"item": "apple", "chance": 0.05}], "particle": "leaf", "aliases": ["oakLogLeaf"]},
         "cobblestone": {"textures": ["tile/cobblestone/0"], "solid": true, "tool": "pickaxe", "drop": "cobblestone"},
         "oak_planks": {"textures": ["tile/oakPlanks/0"], "solid": true, "durability": 200, "tool": "axe", "drop": "oak_planks"},
-        "grass": {"textures": ["tile/grass/0"], "solid": true, "durability": 100, "tool": "shovel", "slower_tools": ["pickaxe"], "drop": "dirt_block"},
+        "grass": {"textures": ["tile/grass/0"], "solid": true, "durability": 100, "tool": "shovel", "slower_tools": ["pickaxe"], "drop": "dirt_block", "spreads_onto": ["dirt"]},
         "oak_sapling": {"textures": ["item/oak_sapling"], "durability": 25, "tool": "lopper", "drop": "oak_sapling", "plant_on": ["dirt", "grass"], "grows_after": [60, 120], "hand_pickup": true},
         "crafting_bench": {"textures": ["tile/craftingBench/0", "tile/craftingBench/1"], "durability": 200, "tool": "axe", "drop": "crafting_bench", "crafting_side": 3}
     }

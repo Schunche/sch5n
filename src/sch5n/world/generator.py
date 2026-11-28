@@ -143,12 +143,22 @@ class _Generator:
             )
         return count
 
+    def grow_grass(self) -> None:
+        """Cover every dirt tile open to the sky with grass."""
+        spec = self.spec
+        grass = self.tilemap.blocks.id_of("grass")
+        for x in range(spec.left, spec.right):
+            y = self.tilemap.surface_y(x, spec.top, spec.bottom)
+            if y is not None and self.tilemap.get(x, y) == self.dirt:
+                self.tilemap.set(x, y, grass)
+
     def run(self) -> TileMap:
         spec = self.spec
         self.fill_layers()
         stone = self.scatter(self.stone, spec.top, spec.dirt_until, 0.003)
         dirt = self.scatter(self.dirt, spec.dirt_until, spec.bottom, 0.004)
         LOGGER.info("Strokes: %s stone in dirt, %s dirt in stone", stone, dirt)
+        self.grow_grass()
         ores = [pair[int(self.rng.integers(len(pair)))] for pair in ORE_PAIRS]
         LOGGER.info("This world contains the ores: %s", ", ".join(ores))
         return self.tilemap

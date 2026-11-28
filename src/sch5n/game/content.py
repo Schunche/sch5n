@@ -95,6 +95,9 @@ class BlockSpec(_Model):
     """Legacy names accepted when loading maps."""
     plant_on: tuple[str, ...] = ()
     """For plants: the blocks it can be planted on."""
+    spreads_onto: tuple[str, ...] = ()
+    """For grass: the blocks it slowly turns into itself when they lie
+    open to the sky next to it."""
     grows_after: tuple[float, float] | None = None
     """For saplings: the shortest and longest seconds until it is a tree."""
     crafting_side: int | None = Field(
@@ -237,6 +240,23 @@ class ItemDef:
 class BlockRegistry:
     """Maps block names to dense integer ids used by the tilemap."""
 
+    def _check_references(self) -> None:
+        """Check the block names that blocks refer to.
+
+        Raises:
+            ValueError: A block names a block that does not exist.
+
+        """
+        for block in self._by_name.values():
+            for field, names in (
+                ("plant_on", block.spec.plant_on),
+                ("spreads_onto", block.spec.spreads_onto),
+            ):
+                for name in names:
+                    if name not in self._by_name:
+                        msg = f"{block.name}: unknown {field} {name!r}"
+                        raise ValueError(msg)
+
     def __init__(self, data: BlocksFile) -> None:
         """Register all blocks. Id 0 is reserved for air.
 
@@ -270,11 +290,7 @@ class BlockRegistry:
                 msg = f"{block.name}: unknown trim into {trim.into!r}"
                 raise ValueError(msg)
 
-        for block in self._by_name.values():
-            for ground in block.spec.plant_on:
-                if ground not in self._by_name:
-                    msg = f"{block.name}: unknown plant_on {ground!r}"
-                    raise ValueError(msg)
+        self._check_references()
 
         count = len(self._blocks)
         self.solid = np.zeros(count, dtype=np.bool_)

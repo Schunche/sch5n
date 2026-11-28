@@ -511,3 +511,31 @@ def test_the_lopper_is_the_sapling_tool(
     game.inventory.select(slot)
     run(game, 60, use=True, target=(3, 9))
     assert (game.tilemap.get(3, 9) == AIR) is breaks
+
+
+GRASS_TICKS = 6 * 400
+"""Enough ticks for grass to try every column of the flat world."""
+
+
+def test_grass_spreads_over_open_dirt(content: Content) -> None:
+    """Grass covers open dirt beside it, but not dirt under a block."""
+    tilemap = flat_world(content)
+    grass = content.blocks.id_of("grass")
+    dirt = content.blocks.id_of("dirt")
+    tilemap.set(0, 10, grass)
+    tilemap.set(5, 9, dirt)  # A block sitting on the surface.
+    game = Game(content, tilemap, GameSetup(seed=1, spawn=(0, 0)))
+    run(game, GRASS_TICKS * 4)
+    assert tilemap.get(1, 10) == grass
+    assert tilemap.get(-1, 10) == grass
+    assert tilemap.get(0, 11) == dirt  # Not at the surface.
+    assert tilemap.get(5, 10) == dirt  # Covered by the block above.
+    assert tilemap.get(5, 9) == grass  # The block's top is open to the sky.
+
+
+def test_grass_needs_a_neighbour(content: Content) -> None:
+    """Dirt far from any grass stays dirt."""
+    tilemap = flat_world(content)
+    game = Game(content, tilemap, GameSetup(seed=1, spawn=(0, 0)))
+    run(game, GRASS_TICKS)
+    assert tilemap.get(0, 10) == content.blocks.id_of("dirt")

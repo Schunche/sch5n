@@ -29,6 +29,13 @@ OAK = (
 """A grown oak, top row first. The sapling's tile is the bottom of the
 trunk, in the middle column."""
 OAK_BLOCKS = {"o": "oak_leaf", "B": "oak_log_leaf", "L": "oak_log"}
+SKY_ROWS = 256
+"""Rows above the world's top searched for the surface."""
+SPREAD_EVERY = 6
+"""Ticks between tries of the grass to spread to a random column."""
+SPREAD_CHANCE = 0.25
+BOUNDS_REFRESH = 600
+"""Ticks the width of the world is remembered for picking columns."""
 RETRY_SECONDS = 5
 """How long a sapling without room waits before trying again."""
 
@@ -85,6 +92,9 @@ class Garden:
         self.tick_rate = tick_rate
         self.waiting: dict[IntTuple2, int] = {}
         """Ticks until each plant grows, by tile."""
+        self.ticks = 0
+        self._columns: tuple[int, int, int] | None = None
+        """Left, right and bottom of the world as of the last refresh."""
         plants = {b.id for b in tilemap.blocks if b.spec.grows_after}
         for x, y, block, _ in tilemap.iter_tiles():
             if block in plants:
@@ -107,6 +117,9 @@ class Garden:
                 is removed.
 
         """
+        self.ticks += 1
+        if self.ticks % SPREAD_EVERY == 0:
+            self._spread_grass()
         for (x, y), left in list(self.waiting.items()):
             block = self.tilemap.blocks.get(self.tilemap.get(x, y))
             if block is None or block.spec.grows_after is None:
@@ -121,3 +134,41 @@ class Garden:
                 del self.waiting[x, y]
             else:
                 self.waiting[x, y] = RETRY_SECONDS * self.tick_rate
+
+    def _world_columns(self) -> tuple[int, int, int] | None:
+        if self._columns is None or self.ticks % BOUNDS_REFRESH == 0:
+            bounds = self.tilemap.bounds()
+            self._columns = (
+                None if bounds is None else (bounds[0], bounds[2], bounds[3])
+            )
+        return self._columns
+
+    def _spread_grass(self) -> None:
+        """Let grass cover the dirt next to it, in a random column.
+
+        Only the topmost solid tile of the column counts, and it needs
+        open air above it, so caves and buried dirt stay as they are.
+        """
+        columns = self._world_columns()
+        if columns is None:
+            return
+        left, right, bottom = columns
+        blocks = self.tilemap.blocks
+        x = int(self.rng.integers(left, right))
+        y = self.tilemap.surface_y(x, -SKY_ROWS, bottom)
+        if y is None or self.rng.random() >= SPREAD_CHANCE:
+            return
+        ground = blocks.get(self.tilemap.get(x, y))
+        if ground is None or self.tilemap.get(x, y - 1) != AIR:
+            return
+        for grass in blocks:
+            if ground.name not in grass.spec.spreads_onto:
+                continue
+            near = ((x + dx, y + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1))
+            if any(
+                self.tilemap.get(nx, ny) == grass.id
+                for nx, ny in near
+                if (nx, ny) != (x, y)
+            ):
+                self.tilemap.set(x, y, grass.id)
+                return

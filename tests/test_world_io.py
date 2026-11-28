@@ -221,4 +221,21 @@ def test_generation_is_deterministic(content: Content) -> None:
     assert len(a) == 60 * 40
     assert a.bounds() == (0, 0, 60, 40)
     dirt, stone = content.blocks.id_of("dirt"), content.blocks.id_of("stone")
-    assert {block for _, _, block, _ in a.iter_tiles()} <= {dirt, stone}
+    grass = content.blocks.id_of("grass")
+    assert {block for _, _, block, _ in a.iter_tiles()} <= {dirt, stone, grass}
+
+
+def test_generated_worlds_have_grass_on_top(content: Content) -> None:
+    """Dirt open to the sky is grass, and nothing else is."""
+    tilemap = generate(content.blocks, WorldSpec(right=60, bottom=40), seed=3)
+    grass = content.blocks.id_of("grass")
+    surface = [tilemap.surface_y(x, 0, 40) for x in range(60)]
+    assert grass in {
+        tilemap.get(x, y) for x, y in enumerate(surface) if y is not None
+    }
+    covered = {
+        (x, y)
+        for x, y, block, _ in tilemap.iter_tiles()
+        if block == grass and tilemap.get(x, y - 1) != 0
+    }
+    assert not covered

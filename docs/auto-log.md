@@ -48,3 +48,14 @@ Work done on the `claude/auto` branch, newest last.
   everything; clients only display it (bars at the bottom of the screen).
 - Not saved with worlds yet: vitals start full on joining.
 - Tests: `tests/test_vitals.py`, a sync test in `tests/test_server.py`.
+
+## Grass
+
+- World generation covers dirt that is open to the sky with grass
+  (`generate`). The bundled maps are untouched.
+- Grass spreads (`spreads_onto` in `data/blocks.json`, handled by
+  `Garden`): every few ticks a random column's topmost solid tile turns to
+  grass when it is dirt with open air above and grass next to it. Saplings
+  already grew on grass.
+- Tests in `tests/test_session.py` and `tests/test_world_io.py`.
+- Not done: grass reverting to dirt when covered.
