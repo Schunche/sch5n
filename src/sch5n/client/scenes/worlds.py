@@ -23,6 +23,7 @@ from sch5n.client.window import CharEvent, KeyEvent, MouseButtonEvent
 from sch5n.client.world_view import load_start_map
 from sch5n.error.exceptions import ParseError
 from sch5n.game.config import Settings
+from sch5n.game.inventory import Inventory
 from sch5n.math.rect import Rect
 from sch5n.net.protocol import MAX_NAME_LENGTH as MAX_PLAYER_NAME_LENGTH
 from sch5n.world.generator import WorldSpec, generate
@@ -130,7 +131,7 @@ class WorldsScene(Scene):
         self.confirming: int | None = None
         """The world whose deletion awaits a second click."""
         self.buttons: list[Button] = []
-        self.generated = False
+        self.generated = True
         """Whether a new world is generated (biomes, trees, ores) instead of
         loaded from the start map."""
         self.message = ""
@@ -309,9 +310,17 @@ class WorldsScene(Scene):
             tilemap = generate(
                 self.app.content.blocks, spec, secrets.randbelow(2**32)
             )
+            # Generated worlds start from nothing; only the start map
+            # keeps the starting items.
+            inventories = {
+                self.app.settings.player_name: Inventory(
+                    self.app.content.game.inventory.size
+                )
+            }
         else:
             tilemap = load_start_map(self.app)
-        world = World(name, tilemap, {})
+            inventories = {}
+        world = World(name, tilemap, inventories)
         self.app.switch(
             PlayScene.singleplayer(
                 self.app, world, world_path(directory, name)

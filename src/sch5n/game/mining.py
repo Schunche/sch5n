@@ -104,6 +104,25 @@ def hit_tile(tilemap: TileMap, x: int, y: int, tool: ItemDef | None) -> Hit:
     if power <= 0:
         return Hit(HitResult.WRONG_TOOL, block)
 
+    return _wear(tilemap, x, y, block, power)
+
+
+def hand_hit(tilemap: TileMap, x: int, y: int) -> Hit:
+    """Hit a tile with an empty hand, which only breaks soft blocks.
+
+    Returns:
+        Hit: The outcome; `WRONG_TOOL` for blocks hands cannot break.
+
+    """
+    block = tilemap.blocks.get(tilemap.get(x, y))
+    if block is None or block.spec.hand_power <= 0:
+        return Hit(HitResult.WRONG_TOOL, block)
+    return _wear(tilemap, x, y, block, block.spec.hand_power)
+
+
+def _wear(
+    tilemap: TileMap, x: int, y: int, block: BlockDef, power: int
+) -> Hit:
     remaining = tilemap.damage.get((x, y), block.durability) - power
     if remaining > 0:
         tilemap.damage[x, y] = remaining

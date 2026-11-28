@@ -74,6 +74,9 @@ class BlockSpec(_Model):
     durability: int | None = None
     tool: str | None = None
     """Tool type that breaks it best. `None` means unbreakable."""
+    hand_power: int = Field(default=0, ge=0)
+    """Durability an empty hand removes per hit. Zero: hands cannot break
+    it."""
     min_power: int = Field(default=0, ge=0)
     """Least power of its own tool type that can break it. Weaker tools
     cannot dent it, so ores come in tiers."""

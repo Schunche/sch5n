@@ -21,7 +21,14 @@ from sch5n.game.daylight import (
 )
 from sch5n.game.floating_item import FloatingItem
 from sch5n.game.inventory import CRAFTING_SIDE, Inventory, ItemStack
-from sch5n.game.mining import HitResult, can_place, fell_tree, hit_tile, log_of
+from sch5n.game.mining import (
+    HitResult,
+    can_place,
+    fell_tree,
+    hand_hit,
+    hit_tile,
+    log_of,
+)
 from sch5n.game.mobs import (
     CONTACT_COOLDOWN,
     KINDS,
@@ -32,7 +39,6 @@ from sch5n.game.plants import Garden
 from sch5n.game.player import Player
 from sch5n.game.projectiles import ArrowWorld, Projectile, advance, aim
 from sch5n.game.smelting import Furnace, tick_furnace
-from sch5n.log.logger import LOGGER
 from sch5n.math.rect import Rect
 
 if TYPE_CHECKING:
@@ -141,6 +147,8 @@ MORNING = 0.3
 """Moment of the day (see `daylight.phase`) a night's sleep ends at."""
 RESPAWN_SAFE_TICKS = 180
 """Ticks a player who just respawned cannot be touched by creatures."""
+HAND_USE_TICKS = 24
+"""Ticks between punches of an empty hand."""
 SAFE_FALL = 7
 """Tiles a player may fall without harm."""
 FALL_DAMAGE = 1
@@ -231,9 +239,11 @@ class Game:
 
         """
         inventory = self._departed.pop(name, None) if name else None
+        if inventory is None:
+            inventory = self._starting_inventory()
         player = Player(
             self.config,
-            inventory or self._starting_inventory(),
+            inventory,
             self._spawn_point(self.setup.spawn),
             self.setup.mode,
             name=name,
@@ -567,10 +577,26 @@ class Game:
         else:
             self._use_tool_or_food(player, inp)
 
+    def _use_plain_item(
+        self, player: Player, item: ItemDef, inp: TickInput
+    ) -> None:
+        """Punch with a held item that is no tool, or build with it."""
+        self._punch(player, inp)
+        if (
+            inp.place
+            and inp.target is not None
+            and player.can_reach(inp.target)
+            and item.spec.places is not None
+        ):
+            self._place_held(player, item, inp.target)
+
     def _use_tool_or_food(self, player: Player, inp: TickInput) -> None:
         held = player.inventory.held
         if held is None or held.item.spec.food:
             self._use_by_hand(player, inp)
+            return
+        if not held.item.is_tool:
+            self._use_plain_item(player, held.item, inp)
             return
         if inp.target is None:
             return
@@ -583,8 +609,6 @@ class Game:
         if swing_tool(player, inp, self.config.tile_size):
             self._strike_mobs(player, held.item.spec.damage, (x, y))
             hit = hit_tile(self.tilemap, x, y, held.item)
-            if hit.result is HitResult.WRONG_TOOL and self.ticks % 10 == 0:
-                LOGGER.debug("Another tool is needed for %s", hit.block)
             if hit.result is HitResult.BROKEN and hit.block is not None:
                 self._broken(hit.block, (x, y))
             elif hit.result is HitResult.TRIMMED and hit.block is not None:
@@ -598,6 +622,7 @@ class Game:
         held = player.inventory.held
         if held is None:
             self._pick_by_hand(player, inp)
+            self._punch(player, inp)
         elif (
             inp.use
             and player.use_cooldown >= held.item.spec.use_time
@@ -630,6 +655,22 @@ class Game:
         player.start_swing(item, (x + 0.5) * size)
         player.inventory.consume_held()
         player.use_cooldown = 0
+
+    def _punch(self, player: Player, inp: TickInput) -> None:
+        """Break a soft block, like leaves, with an empty hand."""
+        if not inp.use or inp.target is None:
+            return
+        if player.use_cooldown < HAND_USE_TICKS:
+            return
+        if not player.can_reach(inp.target):
+            return
+        x, y = inp.target
+        hit = hand_hit(self.tilemap, x, y)
+        if hit.result is HitResult.WRONG_TOOL or hit.block is None:
+            return
+        player.use_cooldown = 0
+        if hit.result is HitResult.BROKEN:
+            self._broken(hit.block, (x, y))
 
     def _pick_by_hand(self, player: Player, inp: TickInput) -> None:
         """Take a block that an empty hand picks up whole, like a sapling."""
