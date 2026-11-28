@@ -7,6 +7,7 @@
             "fall": {"path": "mob/player/fall", "frame_ticks": 10, "loop": true},
             "slide": {"path": "mob/player/slide", "frame_ticks": 5, "loop": false},
             "wall_slide": {"path": "mob/player/wall_slide", "frame_ticks": 12, "loop": true},
+            "climb": {"path": "mob/player/climb", "frame_ticks": 8, "loop": true},
             "land": {"path": "mob/player/land", "frame_ticks": 4, "loop": false},
             "run_start": {"path": "mob/player/run_start", "frame_ticks": 5, "loop": false},
             "run_stop": {"path": "mob/player/run_stop", "frame_ticks": 7, "loop": false},

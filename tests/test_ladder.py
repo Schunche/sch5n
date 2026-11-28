@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from sch5n.game.crafting import crafted
 from sch5n.game.inventory import Inventory, ItemStack
 from sch5n.game.mining import can_place
+from sch5n.game.player import Action
 from sch5n.game.session import Game, GameSetup, TickInput
 from tests.test_session import flat_world
 
@@ -59,6 +60,7 @@ def test_the_player_climbs_while_jump_is_held(content: Content) -> None:
         game.tick(TickInput(jump_held=True))
     assert player.body.y < start - 2 * TILE
     assert player.on_ladder
+    assert player.action is Action.CLIMB
     high = player.body.y
     health = player.vitals.health
     for _ in range(CLIMB_TICKS):

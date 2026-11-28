@@ -29,6 +29,8 @@ class Action(StrEnum):
     FALL = "fall"
     """In the air, going down."""
     WALL_SLIDE = "wall_slide"
+    CLIMB = "climb"
+    """On a ladder."""
 
 
 @dataclass(slots=True)
@@ -242,7 +244,9 @@ class Player:
     def _choose_action(self, hits: Collisions, move_x: int) -> None:
         """Pick the action (and so the animation) for this tick."""
         self.wall_slide = hits.horizontal and self.is_airborne
-        if self.wall_slide:
+        if self.on_ladder:
+            self._set_action(Action.CLIMB)
+        elif self.wall_slide:
             self.body.vy = min(self.body.vy, self.tuning.wall_slide_speed)
             self.facing_left = hits.left
             self._set_action(Action.WALL_SLIDE)

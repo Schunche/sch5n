@@ -8,7 +8,7 @@ Work done on the `claude/auto` branch, newest last.
   increments and before usage runs out, as the user asked. If anything
   fails, write it in "Failing tests" below and commit; the next resume
   fixes it first.
-- Last full run: all tests passed (after ladders).
+- Last full run: all tests passed (after the climbing animation).
 
 ### Failing tests
 
@@ -512,3 +512,7 @@ on dirt or grass, grass blocks under a solid block turn to dirt.
   (`climb_speed`), otherwise the player sinks at most `ladder_slide_speed`.
   It stops falls, hangs from walls and from other ladders, and an empty
   hand picks it up. Placeholder art: `assets/textures/tile/ladder/0.png`.
+- Climbing has an animation: `Action.CLIMB`, clip `mob/player/climb` (two
+  frames, the wall slide pose and its mirror, so the arms swap), also for
+  the `armless` and `bare` variants, with shoulders in `rig.json`.
+  Placeholder art to replace: `mob/player/{climb,armless/climb,bare/climb}`.
