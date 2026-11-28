@@ -115,3 +115,20 @@ Work done on the `claude/auto` branch, newest last.
   recipes with the station's name.
 - Placeholder art: `assets/textures/tile/furnace/0.png` (cobblestone with
   a fire opening); replace it with real art.
+
+## Chests
+
+- Block `chest` (`"container": 27` in `data/blocks.json`), crafted from a
+  ring of eight oak planks on a 3x3 grid. Right click a chest within reach
+  to open it: its slots appear to the right of the inventory; left and
+  right clicks work like in the inventory, through the cursor.
+- Server authoritative: protocol 7 adds `ChestOpen`, `ChestClick`,
+  `ChestClose` and `ChestState`. The server checks reach and the slot
+  number, shares one chest between players who have it open, closes it for
+  a player who walks away or when it is broken, and drops its contents when
+  the block is broken (`Game.chests`, `Game.chest_at`).
+- Saved in worlds under `"chests"` (`"x;y"` to an inventory); chests whose
+  block is gone are not saved. Guests' "save a copy" does not include chests.
+- Placeholder art: `assets/textures/tile/chest/0.png`, drawn by script.
+- Tests in `tests/test_server.py`, `tests/test_world_save.py`,
+  `tests/test_render.py`.

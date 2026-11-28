@@ -1442,3 +1442,65 @@ def test_recipe_book_opens_and_draws(app: App) -> None:
     play.on_event(MouseButtonEvent(glfw.MOUSE_BUTTON_LEFT, glfw.PRESS, 0, pos))
     assert not play.book.open
     play.leave()
+
+
+def test_chest_opens_from_a_click_and_stores_items(app: App) -> None:
+    """Right clicking a chest opens it beside the inventory; slots work."""
+    play = PlayScene.singleplayer(app)
+    for _ in range(WARMUP_TICKS):
+        play.tick()
+    server = play.server
+    assert server is not None
+    player = play.player
+    assert player is not None
+    size = play.tile_size
+    tile = (
+        int(player.body.center[0] // size) + 1,
+        int((player.body.y + player.body.h) // size) - 1,
+    )
+    server.game.tilemap.set(*tile, app.content.blocks.id_of("chest"))
+    for _ in range(3):
+        play.tick()
+    center = (
+        (tile[0] + 0.5) * size,
+        (tile[1] + 0.5) * size,
+    )
+    left, top = play.camera.top_left(app.screen)
+    pos = (
+        (center[0] - left) * play.camera.zoom,
+        (center[1] - top) * play.camera.zoom,
+    )
+    play.on_event(
+        MouseButtonEvent(glfw.MOUSE_BUTTON_RIGHT, glfw.PRESS, 0, pos)
+    )
+    for _ in range(3):
+        play.tick()
+    assert play.inventory_open
+    assert play.world.chest is not None
+    slot_pos = play.chest_layout.slot_rect(0).center
+    # Pick up the first hotbar item, then put it into the chest.
+    first = play.inventory_layout.slot_rect(0).center
+    held = play.world.inventory[0]
+    assert held is not None
+    play.on_event(
+        MouseButtonEvent(glfw.MOUSE_BUTTON_LEFT, glfw.PRESS, 0, first)
+    )
+    play.on_event(
+        MouseButtonEvent(glfw.MOUSE_BUTTON_LEFT, glfw.RELEASE, 0, first)
+    )
+    for _ in range(3):
+        play.tick()
+    play.on_event(
+        MouseButtonEvent(glfw.MOUSE_BUTTON_LEFT, glfw.PRESS, 0, slot_pos)
+    )
+    for _ in range(3):
+        play.tick()
+    stored = play.world.chest[0]
+    assert stored is not None
+    assert stored.item.name == held.item.name
+    assert draw(app, play).std() > 0
+    play.on_event(KeyEvent(glfw.KEY_ESCAPE, glfw.PRESS, 0))
+    for _ in range(3):
+        play.tick()
+    assert play.world.chest is None
+    play.leave()

@@ -8,13 +8,20 @@ it to the local network makes that server listen for other players too.
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 import glfw
 
 from sch5n.client.camera import Camera
 from sch5n.client.chat import ChatBox
-from sch5n.client.hud import Hud, VitalsLook, draw_vitals, item_tooltip
+from sch5n.client.hud import (
+    Hud,
+    SlotLook,
+    VitalsLook,
+    draw_vitals,
+    item_tooltip,
+)
 from sch5n.client.inventory_mouse import BUTTONS, InventoryMouse
 from sch5n.client.keybinds import Action, Context
 from sch5n.client.recipe_book import RecipeBook
@@ -61,6 +68,8 @@ if TYPE_CHECKING:
 NOTICE_TICKS = 600
 """How long a notice, like the LAN address, stays on screen."""
 NOTICE_SIZE = 16
+CHEST_COLUMNS = 9
+"""Slots per row in an open chest."""
 CARET_TICKS = 30
 """Ticks the chat caret is on or off."""
 
@@ -279,6 +288,20 @@ class PlayScene(Scene):
             inventory.columns, inventory.size, app.settings.gui_size, app.ui
         )
         self._lay_out_crafting()
+        self._lay_out_chest()
+
+    def _lay_out_chest(self) -> None:
+        """Place the grid of an open chest right of the inventory."""
+        bounds = self.inventory_layout.bounds(hotbar_only=False)
+        gap = self.app.ui.outer_padding
+        layout = self.inventory_layout
+        self.chest_layout = replace(
+            layout,
+            columns=CHEST_COLUMNS,
+            slot_count=self.app.content.blocks.by_name("chest").spec.container
+            or CHEST_COLUMNS,
+            origin=(bounds.right + 2 * gap + layout.border, layout.origin[1]),
+        )
 
     def _lay_out_crafting(self) -> None:
         """Place the grid, whatever size the server says it has."""
@@ -329,6 +352,14 @@ class PlayScene(Scene):
         ]
 
     def _over_gui(self, pos: tuple[float, float]) -> bool:
+        if (
+            self.inventory_open
+            and self.world.chest is not None
+            and self.chest_layout.bounds(hotbar_only=False).contains_point(
+                *pos
+            )
+        ):
+            return True
         if self.inventory_layout.bounds(
             hotbar_only=not self.inventory_open
         ).contains_point(*pos):
@@ -343,6 +374,7 @@ class PlayScene(Scene):
         self.inventory_open = not self.inventory_open
         if not self.inventory_open:
             self.mouse.cancel()
+            self.session.close_chest()
             self.session.inventory(InventoryAction.CLOSE)
 
     def _on_action(self, action: Action) -> None:
@@ -380,6 +412,8 @@ class PlayScene(Scene):
             if event.button == glfw.MOUSE_BUTTON_LEFT:
                 self.session.inventory(InventoryAction.SELECT, slot)
             return True
+        if self._click_chest(event):
+            return True
         slot = self._slot_under(event.pos)
         if slot is not None:
             self.mouse.press(event, slot, self.world.inventory)
@@ -391,16 +425,76 @@ class PlayScene(Scene):
                     if shift
                     else InventoryAction.CRAFT
                 )
-        elif hit_button(self.buttons, event.pos) == "settings":
-            self.mouse.cancel()
-            self._open_settings()
-        elif hit_button(self.buttons, event.pos) == "recipes":
-            self.mouse.cancel()
-            self.book.open = not self.book.open
-        elif self.book.contains(event.pos):
-            pass
         else:
+            return self._click_button_or_book(event.pos)
+        return True
+
+    def _click_button_or_book(self, pos: tuple[float, float]) -> bool:
+        """Press the settings or recipes button.
+
+        Returns:
+            bool: Whether the click hit a button or the recipe book.
+
+        """
+        match hit_button(self.buttons, pos):
+            case "settings":
+                self.mouse.cancel()
+                self._open_settings()
+            case "recipes":
+                self.mouse.cancel()
+                self.book.open = not self.book.open
+            case _:
+                return self.book.contains(pos)
+        return True
+
+    def _chest_slot_at(self, pos: tuple[float, float]) -> int | None:
+        if self.world.chest is None:
+            return None
+        return self.chest_layout.slot_at(pos, hotbar_only=False)
+
+    def _click_chest(self, event: MouseButtonEvent) -> bool:
+        """Click a slot of the open chest.
+
+        Returns:
+            bool: Whether the click hit one.
+
+        """
+        slot = self._chest_slot_at(event.pos)
+        if slot is None or event.button not in BUTTONS:
+            return slot is not None
+        self.mouse.cancel()
+        right = event.button == glfw.MOUSE_BUTTON_RIGHT
+        self.session.click_chest(slot, right=right)
+        return True
+
+    def _try_open_chest(self, event: MouseButtonEvent) -> bool:
+        """Open the chest under the mouse, if there is one in reach.
+
+        Returns:
+            bool: Whether a chest was opened.
+
+        """
+        player = self.player
+        if (
+            player is None
+            or event.button != glfw.MOUSE_BUTTON_RIGHT
+            or self._over_gui(event.pos)
+        ):
             return False
+        wx, wy = self.camera.screen_to_world(event.pos, self.app.screen)
+        tile = (
+            math.floor(wx / self.tile_size),
+            math.floor(wy / self.tile_size),
+        )
+        block = self.world.tilemap.blocks.get(self.world.tilemap.get(*tile))
+        if (
+            block is None
+            or block.spec.container is None
+            or not player.can_reach(tile)
+        ):
+            return False
+        self.session.open_chest(*tile)
+        self.inventory_open = True
         return True
 
     def _slot_under(self, pos: tuple[float, float]) -> int | None:
@@ -441,6 +535,10 @@ class PlayScene(Scene):
                     self._open_settings()
                 return
             case MouseButtonEvent() if event.pressed and self._on_gui_click(
+                event
+            ):
+                return
+            case MouseButtonEvent() if event.pressed and self._try_open_chest(
                 event
             ):
                 return
@@ -569,6 +667,7 @@ class PlayScene(Scene):
                 crafted(inventory, app.content),
                 mouse,
             )
+            self._draw_chest(mouse)
             self.book.draw(batch, app.text, app.ui, self.hud, inventory)
             self._draw_station()
             self.hud.draw_cursor_stack(batch, inventory, mouse)
@@ -607,6 +706,22 @@ class PlayScene(Scene):
             (vitals.hunger, MAX_HUNGER),
         )
 
+    def _draw_chest(self, mouse: tuple[float, float]) -> None:
+        """Draw the slots of the open chest."""
+        chest = self.world.chest
+        if chest is None:
+            return
+        layout = self.chest_layout
+        hovered = layout.slot_at(mouse, hotbar_only=False)
+        for index in range(len(chest)):
+            self.hud.draw_slot(
+                self.app.batch,
+                layout.slot_rect(index),
+                chest[index],
+                layout.border,
+                SlotLook(hovered=index == hovered, selected=False, alpha=1.0),
+            )
+
     def _draw_station(self) -> None:
         """Name the crafting station in reach, if the grid is enlarged."""
         side = self.world.inventory.crafting_side
@@ -632,6 +747,9 @@ class PlayScene(Scene):
         inventory = self.world.inventory
         if not self.inventory_open or inventory.cursor is not None:
             return None
+        chest_slot = self._chest_slot_at(mouse)
+        if chest_slot is not None and self.world.chest is not None:
+            return self.world.chest[chest_slot]
         slot = self.inventory_layout.slot_at(mouse, hotbar_only=False)
         if slot is not None:
             return inventory[slot]
