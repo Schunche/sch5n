@@ -584,3 +584,6 @@ Todo: nothing left from this list.
 
 - Chat says "Day N begins" at every sunrise (also after sleeping through
   the night). The game starts on day 1.
+
+## Desktop shortcuts
+- `install-desktop.sh --desktop` copies the app-menu entry to the Desktop; new `install-desktop.bat` makes Windows Start menu/Desktop shortcuts. Paths are resolved at install time. Players only (play.sh installs the menu entry; dev setup doesn't).

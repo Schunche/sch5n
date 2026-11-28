@@ -15,7 +15,9 @@ removing uv.
 
 On Linux the taskbar icon comes from a desktop entry. `play.sh` installs it;
 if you start the game another way, run `./install-desktop.sh` once, and again
-after moving the game folder.
+after moving the game folder. `./install-desktop.sh --desktop` also adds a
+Desktop shortcut. On Windows, `install-desktop.bat` adds Start menu and Desktop
+shortcuts. The shortcuts start the normal game, never the dev tools.
 
 ### Python 3.15
 
