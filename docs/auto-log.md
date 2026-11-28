@@ -485,3 +485,11 @@ Work done on the `claude/auto` branch, newest last.
   `FILL_RECIPE_ALL` inventory actions (protocol 11) and `fill_recipe` in
   `game/crafting.py`. Recipes that do not fit the grid or need a station out
   of reach do nothing.
+
+## Ladders
+
+- Block and item `ladder`: 7 sticks in an H on the 3x3 grid make 3. It is
+  walk-through (`climbable` block field); inside it, holding jump climbs
+  (`climb_speed`), otherwise the player sinks at most `ladder_slide_speed`.
+  It stops falls, hangs from walls and from other ladders, and an empty
+  hand picks it up. Placeholder art: `assets/textures/tile/ladder/0.png`.

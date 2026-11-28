@@ -78,6 +78,10 @@ class PlayerConfig(_Model):
     wall_jump_velocity: tuple[float, float] = (4.5, 5.0)
     """Push away from the wall and lift."""
     wall_slide_speed: float = 1.5
+    climb_speed: float = 2.5
+    """Upward speed on a ladder while jump is held."""
+    ladder_slide_speed: float = 1.5
+    """Fastest fall on a ladder."""
     airborne_after_ticks: int = 4
     reach: float = Field(default=5.0, gt=0)
     """How far, in tiles from the body's middle, blocks can be used."""

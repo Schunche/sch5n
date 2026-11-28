@@ -85,6 +85,8 @@ class Player:
         self.swing: Swing | None = None
         """The item swing in progress, if any."""
         self.jump_speed = self.tuning.jump_velocity
+        self.on_ladder = False
+        """Whether the body is inside something climbable."""
         self.fall_peak = pos[1]
         """The highest y (smallest) since the feet last left the ground."""
         self.landed_from = 0.0
@@ -123,6 +125,7 @@ class Player:
         )
         self._walk(move_x, hits)
         self._fall(hits, jump_held=jump_held)
+        self._climb(tilemap, jump_held=jump_held)
         self._choose_action(hits, move_x)
         self._track_fall(hits)
         self.action_age += 1
@@ -177,11 +180,33 @@ class Player:
         else:
             body.vx = 0.0
 
+    def _climb(self, tilemap: TileMap, *, jump_held: bool) -> None:
+        """On a ladder, rise while jump is held and sink slowly otherwise."""
+        size = self.config.tile_size
+        body = self.body
+        self.on_ladder = tilemap.any_climbable(
+            math.floor(body.x / size),
+            math.floor(body.y / size),
+            math.ceil((body.x + body.w) / size),
+            math.ceil((body.y + body.h) / size),
+        )
+        if not self.on_ladder:
+            return
+        tuning = self.tuning
+        body.vy = (
+            -tuning.climb_speed
+            if jump_held
+            else min(body.vy, tuning.ladder_slide_speed)
+        )
+        self.jump_hold = 0
+        self.jumps = self.max_jumps
+        self.air_time = 0
+
     def _track_fall(self, hits: Collisions) -> None:
         """Measure falls: from the highest point to the landing."""
         body = self.body
         self.landed_from = 0.0
-        if hits.down or self.wall_slide:
+        if hits.down or self.wall_slide or self.on_ladder:
             if hits.down:
                 self.landed_from = (
                     body.y - self.fall_peak

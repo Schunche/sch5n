@@ -90,6 +90,7 @@
         {"pattern": ["II", "IS", " S"], "key": {"I": "iron_ingot", "S": "stick"}, "result": {"item": "iron_axe"}},
         {"pattern": ["I", "S", "S"], "key": {"I": "iron_ingot", "S": "stick"}, "result": {"item": "iron_shovel"}},
         {"pattern": ["I I", " S ", "S S"], "key": {"I": "iron_ingot", "S": "stick"}, "result": {"item": "iron_lopper"}},
+        {"pattern": ["S S", "SSS", "S S"], "key": {"S": "stick"}, "result": {"item": "ladder", "amount": 3}},
         {"ingredients": ["apple", "stick"], "station": "furnace", "result": {"item": "baked_apple"}}
     ]
 }

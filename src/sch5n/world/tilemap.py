@@ -168,6 +168,15 @@ class TileMap:
         """
         return bool(self.blocks.solid[self.region(x0, y0, x1, y1)].any())
 
+    def any_climbable(self, x0: int, y0: int, x1: int, y1: int) -> bool:
+        """Whether any tile in `[x0, x1) x [y0, y1)` can be climbed.
+
+        Returns:
+            bool: True if a ladder or the like is present.
+
+        """
+        return bool(self.blocks.climbable[self.region(x0, y0, x1, y1)].any())
+
     def iter_tiles(self) -> Iterator[tuple[int, int, int, int]]:
         """Iterate over non-air tiles as `(x, y, block, variant)`.
 

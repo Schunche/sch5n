@@ -198,7 +198,7 @@ def can_place(
 def _supports(tilemap: TileMap, x: int, y: int) -> bool:
     """Whether blocks can be built against a tile.
 
-    Solid blocks, logs and crafting stations can.
+    Solid blocks, logs, crafting stations and ladders can.
 
     Returns:
         bool: True for support.
@@ -210,4 +210,5 @@ def _supports(tilemap: TileMap, x: int, y: int) -> bool:
     return block is not None and (
         block.spec.tree is TreePart.TRUNK
         or block.spec.crafting_side is not None
+        or block.spec.climbable
     )

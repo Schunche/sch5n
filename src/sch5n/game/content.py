@@ -114,6 +114,8 @@ class BlockSpec(_Model):
     """Using it sets the spawn point of the player."""
     light: int = Field(default=0, ge=0, le=32)
     """How many tiles around it the block lights up at night."""
+    climbable: bool = False
+    """Players inside it can climb: jump goes up, otherwise they slide."""
 
 
 class BlocksFile(_Model):
@@ -315,6 +317,8 @@ class BlockRegistry:
         count = len(self._blocks)
         self.solid = np.zeros(count, dtype=np.bool_)
         """`solid[block_id]` lookup table."""
+        self.climbable = np.zeros(count, dtype=np.bool_)
+        """`climbable[block_id]` lookup table."""
         self.light = np.zeros(count, dtype=np.uint8)
         """`light[block_id]` lookup table, the radius it lights."""
         self.particle = np.zeros(count, dtype=np.bool_)
@@ -322,6 +326,7 @@ class BlockRegistry:
         for block in self._by_name.values():
             self.solid[block.id] = block.spec.solid
             self.light[block.id] = block.spec.light
+            self.climbable[block.id] = block.spec.climbable
             self.particle[block.id] = block.spec.particle is not None
 
     def __len__(self) -> int:
