@@ -321,7 +321,7 @@ class Server:
             self.clients.append(_Client(connection, self.game.ticks))
 
     def _unique_name(self, wanted: str) -> str:
-        name = " ".join(wanted.split())[:MAX_NAME_LENGTH] or "Player"
+        name = sanitize(wanted, MAX_NAME_LENGTH) or "Player"
         taken = {c.name for c in self.clients if c.player_id is not None}
         candidate, number = name, 2
         while candidate in taken:

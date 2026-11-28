@@ -1173,3 +1173,13 @@ def test_the_host_can_set_the_time(server: Server, content: Content) -> None:
     alice.say("/time noon")
     step(server, [alice, bob], 2)
     assert daylight(phase(bob.world.clock, rate)) == pytest.approx(1.0)
+
+
+def test_player_names_are_cleaned(server: Server, content: Content) -> None:
+    """Control and direction characters cannot get into names or chat."""
+    dirty = "Bo\x1b[2Jb" + chr(0x202E) + "x\x00"
+    bob = join(server, content, dirty)
+    step(server, [bob])
+    names = {p.name for p in server.game.players.values()}
+    assert names == {"Bo[2Jbx"}
+    assert ("join", "Bo[2Jbx", "") in lines(bob)
