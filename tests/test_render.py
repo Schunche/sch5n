@@ -1715,3 +1715,18 @@ def test_zoom_keys_step_through_whole_levels(app: App) -> None:
     assert 0 < play.camera.zoom < 1
     draw(app, play)
     play.leave()
+
+
+def test_picking_up_items_makes_a_sound(app: App) -> None:
+    """More items in the inventory than a tick ago play the pickup sound."""
+    play = PlayScene.singleplayer(app)
+    for _ in range(WARMUP_TICKS):
+        play.tick()
+    assert play.server is not None
+    app.audio.played.clear()
+    stack = ItemStack(app.content.items["apple"], 2)
+    play.server.game.player.inventory.add(stack)
+    for _ in range(3):
+        play.tick()
+    assert "pickup" in app.audio.played
+    play.leave()

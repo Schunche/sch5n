@@ -574,3 +574,8 @@ Todo: nothing left from this list.
 - The host can type `/give <item name> [amount]` (up to 1024) to put items
   in their inventory, for testing and building. Others are told it is for
   the host only.
+
+## Pickup sound
+
+- A short `pickup` blip plays when the item total in the inventory grows
+  (not while the inventory is open, so moving stacks stays quiet).

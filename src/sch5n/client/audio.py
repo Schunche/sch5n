@@ -58,6 +58,7 @@ def _recipes() -> dict[str, np.ndarray]:
         "hit": _noise(0.1, 7.0, low=0.2) * 0.6 + _tone(0.1, 300, 100, 6.0),
         "hurt": _tone(0.22, 260, 90, 4.0),
         "chat": _tone(0.1, 880, 1320, 5.0),
+        "pickup": _tone(0.06, 600, 900, 8.0),
         "craft": _tone(0.12, 520, 780, 4.0) + _tone(0.12, 780, 1040, 4.0),
     }
 

@@ -157,6 +157,8 @@ class PlayScene(Scene):
         self.book = RecipeBook(app.content)
         self._chat_seen = 0
         self._chat_sounded = 0
+        self._items_seen = 0
+        """Items held a tick ago, to hear pickups."""
         self.hints = Hints(app.tick_rate)
         self._skip_char = False
         """Ignore the character typed by the key that opened the chat."""
@@ -842,6 +844,10 @@ class PlayScene(Scene):
             heard.add("break" if new == 0 else "place" if old == 0 else "hit")
         for name in sorted(heard):
             audio.play(name, settings)
+        held = sum(s.amount for s in self.world.inventory.slots if s)
+        if held > self._items_seen > 0 and not self.inventory_open:
+            audio.play("pickup", settings, gain=0.5)
+        self._items_seen = held
         if self.session.chat_count > self._chat_sounded:
             audio.play("chat", settings, gain=0.6)
         self._chat_sounded = self.session.chat_count
