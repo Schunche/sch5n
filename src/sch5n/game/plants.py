@@ -57,6 +57,8 @@ TREES = {"oak": OAK, "birch": BIRCH, "pine": PINE}
 """Tree shapes by the wood; a sapling `<wood>_sapling` grows one."""
 SKY_ROWS = 256
 """Rows above the world's top searched for the surface."""
+SMOTHER_SECONDS = (20.0, 40.0)
+"""Shortest and longest time grass lives under a block placed on it."""
 SPREAD_EVERY = 6
 """Ticks between tries of the grass to spread to a random column."""
 SPREAD_CHANCE = 0.25
@@ -122,6 +124,8 @@ class Garden:
         self.tick_rate = tick_rate
         self.waiting: dict[IntTuple2, int] = {}
         """Ticks until each plant grows, by tile."""
+        self.smothering: dict[IntTuple2, int] = {}
+        """Ticks until grass dies under a block on top, by grass tile."""
         self.ticks = 0
         self._columns: tuple[int, int, int] | None = None
         """Left, right and bottom of the world as of the last refresh."""
@@ -131,8 +135,19 @@ class Garden:
                 self.plant(x, y)
 
     def plant(self, x: int, y: int) -> None:
-        """Start the clock of the plant at a tile."""
+        """Start the clock of what was placed at a tile.
+
+        A plant starts to grow. A solid block over grass starts to smother
+        the grass under it.
+        """
         block = self.tilemap.blocks.get(self.tilemap.get(x, y))
+        if block is not None and block.spec.solid:
+            under = self.tilemap.blocks.get(self.tilemap.get(x, y + 1))
+            if under is not None and under.spec.spreads_onto:
+                low, high = SMOTHER_SECONDS
+                seconds = float(self.rng.uniform(low, high))
+                self.smothering[x, y + 1] = round(seconds * self.tick_rate)
+            return
         if block is None or block.spec.grows_after is None:
             return
         low, high = block.spec.grows_after
@@ -150,6 +165,7 @@ class Garden:
         self.ticks += 1
         if self.ticks % SPREAD_EVERY == 0:
             self._spread_grass()
+        self._tick_smothering()
         for (x, y), left in list(self.waiting.items()):
             block = self.tilemap.blocks.get(self.tilemap.get(x, y))
             if block is None or block.spec.grows_after is None:
@@ -164,6 +180,23 @@ class Garden:
                 del self.waiting[x, y]
             else:
                 self.waiting[x, y] = RETRY_SECONDS * self.tick_rate
+
+    def _tick_smothering(self) -> None:
+        for (x, y), left in list(self.smothering.items()):
+            grass = self.tilemap.blocks.get(self.tilemap.get(x, y))
+            if (
+                grass is None
+                or not grass.spec.spreads_onto
+                or not self.tilemap.is_solid(x, y - 1)
+            ):
+                del self.smothering[x, y]
+            elif left > 1:
+                self.smothering[x, y] = left - 1
+            else:
+                del self.smothering[x, y]
+                self.tilemap.set(
+                    x, y, self.tilemap.blocks.id_of(grass.spec.spreads_onto[0])
+                )
 
     def _world_columns(self) -> tuple[int, int, int] | None:
         if self._columns is None or self.ticks % BOUNDS_REFRESH == 0:

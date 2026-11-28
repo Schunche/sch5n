@@ -158,3 +158,18 @@ def test_every_column_has_grass_or_sand_or_snow(content: Content) -> None:
         top = tiles.surface_y(x, spec.top, spec.bottom)
         assert top is not None
         assert tiles.get(x, top) != stone
+
+
+def test_plains_carry_some_tall_grass(content: Content) -> None:
+    """Tall grass stands on grass, not on sand or snow."""
+    spec = WorldSpec(left=-100, right=100, home=0)
+    tiles = generate(content.blocks, spec, 4)
+    plant = content.blocks.id_of("tall_grass")
+    grass = content.blocks.id_of("grass")
+    found = 0
+    for x in range(spec.left, spec.right):
+        for y in range(spec.top - 20, spec.top + 20):
+            if tiles.get(x, y) == plant:
+                found += 1
+                assert tiles.get(x, y + 1) == grass
+    assert found > 0

@@ -18,9 +18,8 @@ None.
 ### Priority list from the user (do first, in this order)
 
 Done: recipe book click fills the grid (shift: all sets), ladders, zoom,
-four armor slots.
-Todo: a separate smelting interface, grass plant drops and planting
-on dirt or grass, grass blocks under a solid block turn to dirt.
+four armor slots, tall grass, grass dying under blocks.
+Todo: a separate smelting interface.
 
 ## Multiplayer chat
 
@@ -533,3 +532,15 @@ on dirt or grass, grass blocks under a solid block turn to dirt.
   Placeholder art to replace: `assets/textures/item/*_boots.png` (the lower
   part of each leggings icon). The tips are hidden while the inventory is
   open.
+
+## Tall grass and dying grass
+
+- Breaking a grass block drops Tall Grass 30% of the time (extra drop). Tall
+  Grass is a walk-through plant (`tall_grass` block and item) that can be
+  planted on dirt or grass; an empty hand or a lopper picks it up. Generated
+  worlds carry it on a quarter of the grass in grass biomes (`GRASS_CHANCE`;
+  off with `trees=False`). Placeholder art: `tile/tall_grass/0.png`.
+- A solid block placed on grass starts a 20 to 40 second timer
+  (`SMOTHER_SECONDS`, `Garden.smothering`); when it runs out and the block is
+  still there, the grass becomes dirt. The older random check for buried
+  grass still runs too.

@@ -119,6 +119,7 @@
         "arrow": {"name": "Arrow", "description": "Ammunition for a bow.", "icon": "item/arrow", "drop_size": 16},
         "bow": {"name": "Bow", "description": "Hold the left mouse button to shoot arrows at the cursor.", "icon": "item/bow", "max_stack": 1, "use_time": 28, "ammo": "arrow", "shot_damage": 5, "shot_speed": 9.0, "drop_size": 32},
         "ladder": {"name": "Ladder", "description": "Climb it: hold jump to go up, or let go to slide down slowly.", "icon": "tile/ladder/0", "places": "ladder", "drop_size": 16},
+        "tall_grass": {"name": "Tall Grass", "description": "Plant it on dirt or grass. Walk right through it.", "icon": "tile/tall_grass/0", "places": "tall_grass", "drop_size": 16},
         "apple": {"name": "Apple", "description": "Fruit from an oak. Eat it to feel less hungry.", "icon": "item/apple", "drop_size": 16, "food": 5},
         "baked_apple": {"name": "Baked Apple", "description": "An apple cooked in a furnace. Fills you up more.", "icon": "item/apple", "drop_size": 16, "food": 9}
     }

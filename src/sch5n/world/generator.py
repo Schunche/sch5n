@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     from sch5n.game.content import BlockRegistry
 
 DIRT_ROWS = 24
+GRASS_CHANCE = 0.25
+"""Share of the grass columns that carry tall grass."""
 DIRT_STROKES = 0.0015
 """Density of dirt strokes in the stone, per tile."""
 SURFACE_ROWS = 4
@@ -62,7 +64,7 @@ class WorldSpec:
     top: int = 0
     bottom: int = 160
     trees: bool = True
-    """Whether trees stand on the surface."""
+    """Whether trees and tall grass decorate the surface."""
     home: int | None = None
     """A column in the plains where players start; the left edge if not
     given."""
@@ -239,6 +241,24 @@ class _Generator:
             x += 1
         return grown
 
+    def sprinkle_grass(self, band: tuple[int, int, Biome]) -> None:
+        """Plant tall grass on some of the grass of a biome."""
+        start, end, biome = band
+        if biome.top != "grass" or not self.spec.trees:
+            return
+        spec, rng = self.spec, self.rng
+        plant = self.tilemap.blocks.id_of("tall_grass")
+        grass = self.tilemap.blocks.id_of(biome.top)
+        for x in range(start, end):
+            y = self.tilemap.surface_y(x, spec.top, spec.bottom)
+            if (
+                y is not None
+                and self.tilemap.get(x, y) == grass
+                and self.tilemap.get(x, y - 1) == 0
+                and rng.random() < GRASS_CHANCE
+            ):
+                self.tilemap.set(x, y - 1, plant)
+
     def grow_surface(self) -> None:
         """Give every stretch of world its biome: ground cover and trees."""
         spec = self.spec
@@ -248,6 +268,8 @@ class _Generator:
             self.cover(band)
         for band in bands:
             trees += self.plant_trees(band)
+        for band in bands:
+            self.sprinkle_grass(band)
         LOGGER.info(
             "Biomes: %s; %s trees",
             ", ".join(f"{b.name} {a}-{z}" for a, z, b in bands),

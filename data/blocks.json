@@ -16,7 +16,7 @@
         "oak_log_leaf": {"textures": [["tile/oakLog/0", "tile/oakLeaf/0"]], "durability": 300, "tool": "axe", "tree": "trunk", "drop": "oak_log", "trim": {"tool": "lopper", "into": "oak_log", "durability": 50}, "extra_drops": [{"item": "stick", "chance": 0.5, "min_amount": 1, "max_amount": 2}, {"item": "leaf", "chance": 0.7, "min_amount": 1, "max_amount": 2}, {"item": "bird_nest", "chance": 0.03}, {"item": "oak_sapling", "chance": 0.08}, {"item": "apple", "chance": 0.05}], "particle": "leaf", "aliases": ["oakLogLeaf"]},
         "cobblestone": {"textures": ["tile/cobblestone/0"], "solid": true, "tool": "pickaxe", "drop": "cobblestone"},
         "oak_planks": {"textures": ["tile/oakPlanks/0"], "solid": true, "durability": 200, "tool": "axe", "drop": "oak_planks"},
-        "grass": {"textures": ["tile/grass/0"], "solid": true, "durability": 100, "tool": "shovel", "slower_tools": ["pickaxe"], "drop": "dirt_block", "spreads_onto": ["dirt"]},
+        "grass": {"textures": ["tile/grass/0"], "solid": true, "durability": 100, "tool": "shovel", "slower_tools": ["pickaxe"], "drop": "dirt_block", "extra_drops": [{"item": "tall_grass", "chance": 0.3}], "spreads_onto": ["dirt"]},
         "oak_sapling": {"textures": ["item/oak_sapling"], "durability": 25, "tool": "lopper", "drop": "oak_sapling", "plant_on": ["dirt", "grass"], "grows_after": [60, 120], "hand_pickup": true},
         "furnace": {"textures": ["tile/furnace/0"], "durability": 200, "tool": "pickaxe", "drop": "furnace", "station": "furnace"},
         "chest": {"textures": ["tile/chest/0"], "durability": 150, "tool": "axe", "drop": "chest", "container": 27},
@@ -33,6 +33,7 @@
         "sand": {"textures": ["tile/sand/0"], "solid": true, "durability": 100, "tool": "shovel", "slower_tools": ["pickaxe"], "drop": "sand_block"},
         "snow": {"textures": ["tile/snow/0"], "solid": true, "durability": 100, "tool": "shovel", "slower_tools": ["pickaxe"], "drop": "snow_block"},
         "bed": {"textures": ["tile/bed/0"], "durability": 60, "tool": "axe", "drop": "bed", "bed": true},
-        "ladder": {"textures": ["tile/ladder/0"], "durability": 20, "tool": "axe", "drop": "ladder", "climbable": true, "hand_pickup": true}
+        "ladder": {"textures": ["tile/ladder/0"], "durability": 20, "tool": "axe", "drop": "ladder", "climbable": true, "hand_pickup": true},
+        "tall_grass": {"textures": ["tile/tall_grass/0"], "durability": 5, "tool": "lopper", "drop": "tall_grass", "plant_on": ["dirt", "grass"], "hand_pickup": true}
     }
 }
