@@ -67,6 +67,17 @@ def item_tooltip(stack: ItemStack, tick_rate: int) -> list[TooltipLine]:
     if item.is_tool:
         seconds = spec.use_time / tick_rate
         lines.append(TooltipLine(f"Swings in {seconds:.2f} s", LineKind.STAT))
+    if item.is_tool and spec.damage:
+        lines.append(TooltipLine(f"Damage {spec.damage}", LineKind.STAT))
+    if spec.ammo:
+        lines.append(
+            TooltipLine(
+                f"Shoots {spec.ammo}s for {spec.shot_damage} damage",
+                LineKind.STAT,
+            )
+        )
+    if spec.armor:
+        lines.append(TooltipLine(f"Defense {spec.defense}", LineKind.STAT))
     if spec.food:
         lines.append(
             TooltipLine(f"Restores {spec.food} hunger", LineKind.STAT)

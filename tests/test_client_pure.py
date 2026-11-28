@@ -328,3 +328,15 @@ def test_grid_layout_scrolls_by_rows() -> None:
     assert grid.cell_at((101, 139), 0) is None  # a hidden row
     assert grid.cell_at((101 + 2 * 44, 95), 1) is None  # past the last cell
     assert (grid.area.w, grid.area.h) == (172, 84)
+
+
+def test_tooltips_show_damage_defense_and_ammo(content: Content) -> None:
+    """Swords, armor and bows say what they do."""
+
+    def stats(name: str) -> list[str]:
+        lines = item_tooltip(ItemStack(content.items[name]), 60)
+        return [line.text for line in lines if line.kind is LineKind.STAT]
+
+    assert "Damage 8" in stats("iron_sword")
+    assert "Defense 3" in stats("iron_chestplate")
+    assert any(text.startswith("Shoots arrows") for text in stats("bow"))

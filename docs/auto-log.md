@@ -371,3 +371,7 @@ Work done on the `claude/auto` branch, newest last.
   the wind); `WorldRenderer.draw_rain` fades it out under a roof (a solid
   tile above the camera).
 - Tests: `tests/test_weather.py`, `tests/test_render.py`.
+
+## Tooltips
+
+- Tooltips of swords/tools show "Damage n", armor "Defense n", bows what they shoot. Armor descriptions no longer repeat the defense.
