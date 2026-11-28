@@ -88,3 +88,16 @@ Work done on the `claude/auto` branch, newest last.
   below the inventory in a narrow window. Client side only; the server still
   decides what crafting does.
 - Tests: `tests/test_recipe_book.py`, a render test in `tests/test_render.py`.
+
+## Ores, smelting and metal tools
+
+- Every ore block (copper to platinum) is now breakable with a pickaxe, the
+  harder metals take longer, and drops `<metal>_ore`.
+- Smelting: a shapeless recipe, one ore and two sticks as fuel, makes an
+  ingot (copper and iron only so far; the other ores are collectable for
+  later). There is no furnace block yet.
+- Copper and iron pickaxe, axe, shovel and lopper recipes from ingots.
+- Placeholder art (drawn by script, please replace):
+  `assets/textures/item/copper_ingot.png`,
+  `assets/textures/item/iron_ingot.png`. Ore items reuse the block textures.
+- Tests in `tests/test_crafting.py`.

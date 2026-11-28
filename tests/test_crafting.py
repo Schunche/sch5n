@@ -347,3 +347,51 @@ def test_stowing_keeps_what_does_not_fit(
     inventory.stow_crafting(2)
     assert inventory.crafting[2] is not None
     assert inventory.crafting[2].amount == UNMOVED
+
+
+ORES = (
+    "copper",
+    "tin",
+    "iron",
+    "lead",
+    "silver",
+    "tungsten",
+    "gold",
+    "platinum",
+)
+
+
+@pytest.mark.parametrize("ore", ORES)
+def test_ores_need_a_pickaxe_and_drop_ore(content: Content, ore: str) -> None:
+    """Ore blocks are dug with a pickaxe and give their raw ore."""
+    block = content.blocks.by_name(ore)
+    assert block.spec.tool == "pickaxe"
+    assert block.spec.drop == f"{ore}_ore"
+    assert f"{ore}_ore" in content.items
+    assert block.durability > content.blocks.by_name("stone").durability
+
+
+@pytest.mark.parametrize("metal", ["copper", "iron"])
+def test_metal_tools_are_made_from_ingots(
+    content: Content, inventory: Inventory, metal: str
+) -> None:
+    """Ore and sticks smelt into an ingot; ingots make the four tools."""
+    names = {"O": f"{metal}_ore", "I": f"{metal}_ingot", "S": "stick"}
+
+    def lay(*rows: str) -> str | None:
+        inventory.resize_crafting(len(rows))
+        for index, symbol in enumerate("".join(rows)):
+            inventory.crafting[index] = (
+                ItemStack(content.items[names[symbol]])
+                if symbol != " "
+                else None
+            )
+        result = crafted(inventory, content)
+        return result and result.item.name
+
+    assert lay("OS ", "S  ", "   ") == f"{metal}_ingot"
+    assert lay("III", " S ", " S ") == f"{metal}_pickaxe"
+    assert lay("II ", "IS ", " S ") == f"{metal}_axe"
+    assert lay("I  ", "S  ", "S  ") == f"{metal}_shovel"
+    assert lay("I I", " S ", "S S") == f"{metal}_lopper"
+    assert lay("III", " S ", "   ") is None
