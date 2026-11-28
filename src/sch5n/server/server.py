@@ -23,7 +23,7 @@ from sch5n.game.chat import (
 from sch5n.game.commands import run_command
 from sch5n.game.config import MAX_PLAYERS
 from sch5n.game.crafting import craft, craft_all, fill_recipe
-from sch5n.game.inventory import MAX_CRAFTING_SIDE
+from sch5n.game.inventory import MAX_CRAFTING_SIDE, ItemStack
 from sch5n.game.session import Game, GameSetup, TickInput
 from sch5n.game.smelting import FUEL, INPUT
 from sch5n.log.logger import LOGGER
@@ -64,7 +64,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from sch5n.game.content import Content
-    from sch5n.game.inventory import Inventory, ItemStack, Slot
+    from sch5n.game.inventory import Inventory, Slot
     from sch5n.game.player import Player
     from sch5n.net.connection import Connection
     from sch5n.net.protocol import ClientMessage, ServerMessage
@@ -73,6 +73,8 @@ if TYPE_CHECKING:
     type ServerSide = Connection[ServerMessage, ClientMessage]
     type ClientSide = Connection[ClientMessage, ServerMessage]
 
+MAX_GIVE = 1024
+"""Most items one `/give` hands over."""
 TIMES = {
     "sunrise": 0.25,
     "day": 0.35,
@@ -471,6 +473,27 @@ class Server:
         self.game.set_time(moment)
         self.say(f"The time was set to {argument.strip().lower()}")
 
+    def _give(self, client: _Client, argument: str) -> None:
+        """Give the host items: `/give <item> [amount]`."""
+        if not self.host or client.name != self.host:
+            _tell(client, "Only the host can do that.")
+            return
+        words = argument.split()
+        amount = 1
+        if words and words[-1].isdigit():
+            amount = max(1, min(int(words.pop()), MAX_GIVE))
+        name = "_".join(words).lower()
+        items = self.game.content.items
+        if client.player_id is None or name not in items:
+            _tell(client, "Use /give <item name> [amount].")
+            return
+        item = items[name]
+        left = self.game.players[client.player_id].inventory.add(
+            ItemStack(item, amount)
+        )
+        given = amount - (left.amount if left else 0)
+        _tell(client, f"Gave {given} {item.spec.name}.")
+
     def _go_home(self, client: _Client) -> None:
         if client.player_id is None:
             return
@@ -484,6 +507,9 @@ class Server:
             return
         if command.lower() == "time":
             self._set_time(client, argument)
+            return
+        if command.lower() == "give":
+            self._give(client, argument)
             return
         if command.lower() == "home":
             self._go_home(client)

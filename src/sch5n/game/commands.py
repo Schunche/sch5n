@@ -25,6 +25,7 @@ HELP = (
     "Whisper with /msg <player> <text>.",
     "Go to your bed or the spawn with /home.",
     "The host also has /kick, /mute and /unmute <player>, and /time <moment>.",
+    "The host can /give <item name> [amount] too.",
     "T or Enter opens the chat, Esc closes it.",
 )
 

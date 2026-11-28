@@ -1276,3 +1276,28 @@ def test_shift_click_sorts_ore_and_fuel_into_the_furnace(
     assert furnace.slots[1].item.name == "stick"
     assert furnace.slots[2] is None
     assert inventory.slots[2] is not None
+
+
+def test_the_host_can_give_items(server: Server, content: Content) -> None:
+    """/give works for the host only, by item name, with an amount."""
+    server.host = "alice"
+    alice = join(server, content, "alice")
+    bob = join(server, content, "bob")
+    step(server, [alice, bob])
+    alice.say("/give iron pickaxe")
+    alice.say("/give Gold Ore 12")
+    alice.say("/give nonsense")
+    bob.say("/give iron pickaxe")
+    step(server, [alice, bob], 2)
+    held = {}
+    for player in server.game.players.values():
+        held[player.name] = {
+            s.item.name: s.amount for s in player.inventory.slots if s
+        }
+    assert held["alice"]["gold_ore"] == 12  # ruff: ignore[magic-value-comparison]
+    assert held["alice"]["iron_pickaxe"] >= 1
+    assert "gold_ore" not in held["bob"]
+    said = [m.text for m in alice.chat if m.kind is ChatKind.SYSTEM]
+    assert "Gave 12 Gold Ore." in said
+    assert "Use /give <item name> [amount]." in said
+    assert any("Only the host" in m.text for m in bob.chat)

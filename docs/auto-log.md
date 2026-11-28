@@ -568,3 +568,9 @@ Todo: nothing left from this list.
   40 (iron or lead pickaxe), gold 55 (silver or tungsten), platinum 70 (gold).
   Copper and tin need none. Ore item tooltips say which pickaxe to bring.
   A too weak tool does nothing to the block (like a wrong tool).
+
+## /give
+
+- The host can type `/give <item name> [amount]` (up to 1024) to put items
+  in their inventory, for testing and building. Others are told it is for
+  the host only.
