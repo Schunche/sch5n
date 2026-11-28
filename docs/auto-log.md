@@ -207,3 +207,11 @@ Work done on the `claude/auto` branch, newest last.
 
 - Server: 16 players in memory on a 1200x600 and a 6000x3000 world take about 2 ms per tick (budget 16.7 ms), 3 ms with the mob cap reached. The cost does not grow with the world size. World generation of 6000x3000 takes about 12 s, once.
 - Client: the light map was the one hot spot when zoomed out (400 torches, 12 ms). The glow of each radius is now computed once and stamped, giving 5 ms in that extreme case, 1-3 ms normally.
+
+## Zombies
+
+- A second night creature: the zombie (16x32, 14 health, touch hurts 3,
+  sees 18 tiles) drops `cloth`. Kinds now have a spawn `weight`
+  (slime 2, zombie 1) and `Game._pick_kind` chooses one.
+- Placeholder art to replace: `assets/textures/mob/zombie.png`,
+  `assets/textures/item/cloth.png`.

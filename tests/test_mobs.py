@@ -192,3 +192,24 @@ def test_no_creatures_appear_next_to_a_torch(content: Content) -> None:
     for _ in range(900):
         game.tick(TickInput())
     assert not game.mobs
+
+
+def test_zombies_hit_harder_and_drop_cloth(content: Content) -> None:
+    """A zombie is tougher than a slime; its touch hurts more."""
+    zombie = KINDS["zombie"]
+    assert zombie.health > SLIME.health
+    assert zombie.damage > SLIME.damage
+    assert zombie.drop in content.items
+    game = make_game(content)
+    mob = Mob(zombie, (game.player.body.x, GROUND - zombie.size[1]))
+    game.mobs[500] = mob
+    before = game.player.vitals.health
+    game.tick(TickInput())
+    assert game.player.vitals.health == before - zombie.damage
+
+
+def test_both_kinds_spawn_at_night(content: Content) -> None:
+    """Over many tries the dark brings slimes and zombies."""
+    game = make_game(content)
+    seen = {game._pick_kind().name for _ in range(200)}  # ruff: ignore[private-member-access]
+    assert seen == set(KINDS)

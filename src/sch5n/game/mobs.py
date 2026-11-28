@@ -31,6 +31,8 @@ class MobKind:
     drop: str
     """Item that may drop when it dies."""
     drop_chance: float
+    weight: int = 1
+    """How often it is picked to spawn, next to the other kinds."""
 
 
 KINDS = {
@@ -44,7 +46,19 @@ KINDS = {
         sight=14.0,
         drop="slime_ball",
         drop_chance=0.7,
-    )
+        weight=2,
+    ),
+    "zombie": MobKind(
+        name="zombie",
+        size=(16, 32),
+        health=14,
+        speed=0.4,
+        jump=3.6,
+        damage=3,
+        sight=18.0,
+        drop="cloth",
+        drop_chance=0.5,
+    ),
 }
 """Every kind by name; each has a texture `mob/<name>.png`."""
 HURT_TICKS = 12

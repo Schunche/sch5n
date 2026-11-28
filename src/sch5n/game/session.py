@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
     from sch5n.game.content import BlockDef, Content, ItemDef
+    from sch5n.game.mobs import MobKind
     from sch5n.world.tilemap import TileMap
 
 SPAWN_SEARCH_DEPTH = 512
@@ -612,6 +613,13 @@ class Game:
             self._respawn(player)
             self.announcements.append(f"{player.name or "A player"} {cause}")
 
+    def _pick_kind(self) -> MobKind:
+        kinds = list(KINDS.values())
+        weights = np.array([kind.weight for kind in kinds], dtype=float)
+        return kinds[
+            int(self.rng.choice(len(kinds), p=weights / weights.sum()))
+        ]
+
     def _spawn_mob(self) -> None:
         """Try to bring a creature out of the dark near a random player."""
         if not self.players:
@@ -631,7 +639,7 @@ class Game:
         )
         if surface is None:
             return
-        kind = KINDS["slime"]
+        kind = self._pick_kind()
         top = (surface * size) - kind.size[1]
         mob = Mob(kind, (column * size + (size - kind.size[0]) / 2, top))
         lit = self.tilemap.region(
