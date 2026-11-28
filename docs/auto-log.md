@@ -375,3 +375,7 @@ Work done on the `claude/auto` branch, newest last.
 ## Tooltips
 
 - Tooltips of swords/tools show "Damage n", armor "Defense n", bows what they shoot. Armor descriptions no longer repeat the defense.
+
+## Fuzz test
+
+- `tests/test_fuzz.py` sends 600 rounds of random, well formed messages (inputs with wild targets, every inventory action with wild slots, chat commands, chest and bed clicks) at a server through the in-memory connection; it must keep running (kicked clients rejoin). Seeds 5 to 8 were run.
