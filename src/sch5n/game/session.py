@@ -353,6 +353,10 @@ class Game:
         player.inventory.home = tile
         return True
 
+    def go_home(self, player: Player) -> None:
+        """Take a player to their bed, or to spawn without one."""
+        self._respawn(player)
+
     def _respawn(self, player: Player) -> None:
         """Put a player back at spawn, at rest. The inventory is kept."""
         body = player.body

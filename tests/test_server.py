@@ -1205,3 +1205,18 @@ def test_player_names_are_cleaned(server: Server, content: Content) -> None:
     names = {p.name for p in server.game.players.values()}
     assert names == {"Bo[2Jbx"}
     assert ("join", "Bo[2Jbx", "") in lines(bob)
+
+
+def test_home_takes_a_player_back_to_spawn(
+    server: Server, content: Content
+) -> None:
+    """/home moves the player to spawn and says so."""
+    alice = join(server, content, "alice")
+    step(server, [alice])
+    player = next(iter(server.game.players.values()))
+    player.body.x += 900
+    far = player.body.x
+    alice.say("/home")
+    step(server, [alice], 2)
+    assert player.body.x < far
+    assert any(m.text == "You are home." for m in alice.chat)

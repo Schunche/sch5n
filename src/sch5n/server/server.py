@@ -463,6 +463,12 @@ class Server:
         self.game.set_time(moment)
         self.say(f"The time was set to {argument.strip().lower()}")
 
+    def _go_home(self, client: _Client) -> None:
+        if client.player_id is None:
+            return
+        self.game.go_home(self.game.players[client.player_id])
+        _tell(client, "You are home.")
+
     def _command(self, client: _Client, text: str) -> None:
         command, _, argument = text.removeprefix("/").partition(" ")
         if command.lower() in {"kick", "mute", "unmute"}:
@@ -470,6 +476,9 @@ class Server:
             return
         if command.lower() == "time":
             self._set_time(client, argument)
+            return
+        if command.lower() == "home":
+            self._go_home(client)
             return
         if command.lower() in {"msg", "w", "whisper", "tell"}:
             self._whisper(client, argument)

@@ -445,3 +445,8 @@ Work done on the `claude/auto` branch, newest last.
 - At half health the King Slime calls two slimes to its sides, once, and
   says so in chat. Helpers are ordinary slimes and may exceed the usual
   creature cap. No new art.
+
+## /home
+
+- `/home` in chat sends the player to their bed or the spawn point
+  (`Game.go_home`), with the usual 3 seconds of safety after respawning.

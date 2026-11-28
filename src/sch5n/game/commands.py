@@ -23,6 +23,7 @@ MAX_RECIPE_LINES = 6
 HELP = (
     "Commands: /help, /players, /recipes <item>, /me <action>",
     "Whisper with /msg <player> <text>.",
+    "Go to your bed or the spawn with /home.",
     "The host also has /kick, /mute and /unmute <player>, and /time <moment>.",
     "T or Enter opens the chat, Esc closes it.",
 )

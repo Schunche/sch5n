@@ -125,7 +125,7 @@ Default game controls:
 | Space | Jump (wall jump while sliding on a wall) |
 | Left mouse | Use the held item: shovel for dirt, pickaxe for stone (it digs dirt too, slower), axe for trees (a broken log fells the tree above it), lopper for leaves (the axe cuts them too, slower). Blocks are within reach up to `player.reach` (5) tiles away |
 | Right mouse | Place the held block; on a chest, open it; on a bed, set your spawn point. Food in hand: hold the left mouse button to eat |
-| T / Enter | Chat (Enter sends, Esc cancels, Up/Down recall your messages, PageUp/PageDown scroll). `/help` lists the commands |
+| T / Enter | Chat (Enter sends, Esc cancels, Up/Down recall your messages, PageUp/PageDown scroll). `/help` lists the commands; `/home` takes you to your bed or spawn |
 | Wheel, 1-0 | Select hotbar slot |
 | M | Show or hide the minimap (the world around you, creatures in red, other players in green) |
 | Tab | Inventory: left click picks up / swaps / merges, right click splits / places one, shift + click moves a stack (into a chest, onto the body, or between hotbar and the rest). Armor goes in the three slots right of the crafting grid. The Recipes button lists every recipe |
