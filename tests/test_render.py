@@ -1623,3 +1623,17 @@ def test_taking_damage_flashes_the_screen(app: App) -> None:
         play.tick()
     assert play.hurt_ticks == 0
     play.leave()
+
+
+def test_debug_lines_show_the_time_of_day(app: App) -> None:
+    """The F3 lines tell the time and day, and the creature count."""
+    play = PlayScene.singleplayer(app)
+    for _ in range(3):
+        play.tick()
+    lines = play.debug_lines()
+    clock = next(line for line in lines if line.startswith("time "))
+    assert ", day 1" in clock
+    assert any(line.endswith("creatures") for line in lines)
+    play.debug = True
+    play.render()
+    play.leave()

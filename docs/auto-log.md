@@ -326,3 +326,7 @@ Work done on the `claude/auto` branch, newest last.
 ## Whispers
 
 - `/msg <player> <text>` (also /w, /whisper, /tell) sends a private line; the receiver sees "name (private)", the sender a "To ..." line. Works with spaces in names, respects mute. Test in `tests/test_server.py`.
+
+## Debug clock
+
+- F3 shows the time of day and day number and the number of creatures.

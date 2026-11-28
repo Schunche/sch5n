@@ -49,6 +49,7 @@ from sch5n.client.world_view import (
 )
 from sch5n.game.config import GameMode
 from sch5n.game.crafting import crafted
+from sch5n.game.daylight import DAY_SECONDS, phase
 from sch5n.game.session import GameSetup, TickInput
 from sch5n.game.vitals import MAX_HEALTH, MAX_HUNGER
 from sch5n.log.logger import LOGGER
@@ -950,6 +951,13 @@ class PlayScene(Scene):
             ),
         )
 
+    def _clock_line(self) -> str:
+        rate = self.app.tick_rate
+        day_ticks = DAY_SECONDS * rate
+        hours = phase(self.world.clock, rate) * 24
+        day = self.world.clock // day_ticks + 1
+        return f"time {int(hours):02d}:{int(hours % 1 * 60):02d}, day {day}"
+
     def debug_lines(self) -> list[str]:
         """Technical information shown with F3.
 
@@ -974,6 +982,8 @@ class PlayScene(Scene):
                 f"{len(world.floating_items)} items"
             ),
             f"wind {world.ambience.wind.strength:+.2f}",
+            self._clock_line(),
+            f"{len(world.mobs)} creatures",
             f"{world.server_name}: {len(world.players)} players",
             (
                 f"{len(world.pending)} inputs ahead of the server "
