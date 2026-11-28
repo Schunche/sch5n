@@ -18,6 +18,7 @@
         "oak_planks": {"textures": ["tile/oakPlanks/0"], "solid": true, "durability": 200, "tool": "axe", "drop": "oak_planks"},
         "grass": {"textures": ["tile/grass/0"], "solid": true, "durability": 100, "tool": "shovel", "slower_tools": ["pickaxe"], "drop": "dirt_block", "spreads_onto": ["dirt"]},
         "oak_sapling": {"textures": ["item/oak_sapling"], "durability": 25, "tool": "lopper", "drop": "oak_sapling", "plant_on": ["dirt", "grass"], "grows_after": [60, 120], "hand_pickup": true},
+        "furnace": {"textures": ["tile/furnace/0"], "durability": 200, "tool": "pickaxe", "drop": "furnace", "station": "furnace"},
         "crafting_bench": {"textures": ["tile/craftingBench/0", "tile/craftingBench/1"], "durability": 200, "tool": "axe", "drop": "crafting_bench", "crafting_side": 3}
     }
 }

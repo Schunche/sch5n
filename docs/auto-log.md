@@ -95,9 +95,23 @@ Work done on the `claude/auto` branch, newest last.
   harder metals take longer, and drops `<metal>_ore`.
 - Smelting: a shapeless recipe, one ore and two sticks as fuel, makes an
   ingot (copper and iron only so far; the other ores are collectable for
-  later). There is no furnace block yet.
+  later). It needs a furnace in reach (below).
 - Copper and iron pickaxe, axe, shovel and lopper recipes from ingots.
 - Placeholder art (drawn by script, please replace):
   `assets/textures/item/copper_ingot.png`,
   `assets/textures/item/iron_ingot.png`. Ore items reuse the block textures.
 - Tests in `tests/test_crafting.py`.
+
+## Furnace and recipe stations
+
+- Recipes may require a `station` (e.g. `"station": "furnace"` in
+  `data/recipes.json`); blocks declare which station they are with
+  `"station": "furnace"` in `data/blocks.json`. The server finds the
+  stations within reach (`Game._stations_near`), stores them on the
+  inventory and sends them in `InventoryState.stations`, so clients show
+  the same result the server crafts.
+- New furnace block and item: eight cobblestones in a ring on a 3x3 grid.
+  Ore smelting now needs one in reach. The recipe book labels station
+  recipes with the station's name.
+- Placeholder art: `assets/textures/tile/furnace/0.png` (cobblestone with
+  a fire opening); replace it with real art.

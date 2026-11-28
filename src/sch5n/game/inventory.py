@@ -91,6 +91,8 @@ class Inventory:
         """The square crafting grid, row by row."""
         self.selected: int = 0
         self.vitals = Vitals()
+        self.stations: frozenset[str] = frozenset()
+        """Names of the crafting stations in reach, set by the server."""
         """Health and hunger of the owner. They travel with the inventory,
         so saved worlds keep them."""
         """Index of the active hotbar slot."""

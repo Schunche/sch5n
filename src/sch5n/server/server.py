@@ -167,6 +167,7 @@ def inventory_state(inventory: Inventory) -> InventoryState:
         cursor=_stack_state(inventory.cursor),
         selected=inventory.selected,
         crafting=[_stack_state(slot) for slot in inventory.crafting],
+        stations=sorted(inventory.stations),
     )
 
 

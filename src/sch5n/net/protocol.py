@@ -230,6 +230,8 @@ class InventoryState(_Message):
     cursor: StackState | None
     selected: int
     crafting: list[StackState | None]
+    stations: list[str] = []
+    """Crafting stations in reach, which some recipes need."""
 
 
 class ChatMessage(_Message):

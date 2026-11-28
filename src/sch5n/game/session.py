@@ -305,11 +305,12 @@ class Game:
                     (int(body.center[0] // size), int(body.y // size)),
                 )
 
-    def _crafting_side(self, player: Player) -> int:
-        """Find the side of the grid a player has.
+    def _stations_near(self, player: Player) -> tuple[int, frozenset[str]]:
+        """Find what crafting a player has in reach.
 
         Returns:
-            int: Larger than usual near a crafting station.
+            tuple[int, frozenset[str]]: The grid side, larger than usual
+            near a bench, and the names of the stations in reach.
 
         """
         size = self.config.tile_size
@@ -319,21 +320,25 @@ class Game:
             cx - around, cy - around, cx + around + 1, cy + around + 1
         )
         side = CRAFTING_SIDE
+        names: set[str] = set()
         for block in self.content.blocks:
-            grid = block.spec.crafting_side
-            if grid is None or grid <= side:
+            grid, station = block.spec.crafting_side, block.spec.station
+            if grid is None and station is None:
                 continue
             ys, xs = np.nonzero(near == block.id)
             if any(
                 player.can_reach((cx - around + x, cy - around + y))
                 for x, y in zip(xs.tolist(), ys.tolist(), strict=True)
             ):
-                side = grid
-        return side
+                side = max(side, grid or side)
+                if station is not None:
+                    names.add(station)
+        return side, frozenset(names)
 
     def _fit_crafting_grid(self, player: Player) -> None:
         """Grow or shrink a player's grid with the stations in reach."""
-        side = self._crafting_side(player)
+        side, stations = self._stations_near(player)
+        player.inventory.stations = stations
         if side != player.inventory.crafting_side:
             self._stow(player, player.inventory.resize_crafting(side))
 

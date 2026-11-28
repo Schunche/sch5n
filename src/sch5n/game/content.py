@@ -100,6 +100,8 @@ class BlockSpec(_Model):
     open to the sky next to it."""
     grows_after: tuple[float, float] | None = None
     """For saplings: the shortest and longest seconds until it is a tree."""
+    station: str | None = None
+    """For stations: a name recipes can require, like `furnace`."""
     crafting_side: int | None = Field(
         default=None, ge=CRAFTING_SIDE, le=MAX_CRAFTING_SIDE
     )
@@ -166,6 +168,8 @@ class RecipeSpec(_Model):
     pattern: tuple[str, ...] = Field(default=(), max_length=MAX_CRAFTING_SIDE)
     key: dict[str, str | tuple[str, ...]] = Field(default_factory=dict)
     result: RecipeResult
+    station: str | None = None
+    """A station, named by its block's `station`, that must be in reach."""
 
     def choices(self, symbol: str) -> tuple[str, ...]:
         """List the items a pattern symbol stands for.

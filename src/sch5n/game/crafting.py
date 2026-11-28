@@ -72,7 +72,13 @@ def find_recipe(inventory: Inventory, content: Content) -> RecipeSpec | None:
     names = [None if s is None else s.item.name for s in inventory.crafting]
     shape = _trim([names[y * side : (y + 1) * side] for y in range(side)])
     return next(
-        (r for r in content.recipes if _matches(r, shape, content)), None
+        (
+            r
+            for r in content.recipes
+            if (r.station is None or r.station in inventory.stations)
+            and _matches(r, shape, content)
+        ),
+        None,
     )
 
 

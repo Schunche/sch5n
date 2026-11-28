@@ -44,6 +44,8 @@ class Entry:
     needs: tuple[Need, ...]
     grid: str
     """Smallest grid it fits, like `2x2`, empty for shapeless recipes."""
+    station: str = ""
+    """Station it needs, like `furnace`."""
 
 
 def needs_of(recipe: RecipeSpec, content: Content) -> tuple[Need, ...]:
@@ -83,6 +85,7 @@ def entries(content: Content) -> list[Entry]:
             f"{len(recipe.pattern[0])}x{len(recipe.pattern)}"
             if recipe.pattern
             else "",
+            recipe.station or "",
         )
         for recipe in content.recipes
     ]
@@ -249,10 +252,11 @@ class RecipeBook:
                 (x + step / 2, cy),
             )
             x += step
-        if entry.grid:
+        label = entry.station.capitalize() or entry.grid
+        if label:
             text.draw(
                 batch,
-                entry.grid,
+                label,
                 (row.right - 2, row.bottom - 2),
                 TextStyle(
                     size=SMALL_SIZE,

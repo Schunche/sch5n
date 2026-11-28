@@ -389,9 +389,37 @@ def test_metal_tools_are_made_from_ingots(
         result = crafted(inventory, content)
         return result and result.item.name
 
+    assert lay("OS ", "S  ", "   ") is None  # No furnace in reach.
+    inventory.stations = frozenset({"furnace"})
     assert lay("OS ", "S  ", "   ") == f"{metal}_ingot"
     assert lay("III", " S ", " S ") == f"{metal}_pickaxe"
     assert lay("II ", "IS ", " S ") == f"{metal}_axe"
     assert lay("I  ", "S  ", "S  ") == f"{metal}_shovel"
     assert lay("I I", " S ", "S S") == f"{metal}_lopper"
     assert lay("III", " S ", "   ") is None
+
+
+def test_a_furnace_in_reach_allows_smelting(content: Content) -> None:
+    """The server tells the inventory which stations are near."""
+    tilemap = flat_world(content)
+    game = Game(content, tilemap, GameSetup(seed=1, spawn=(0, 0)))
+    game.tick(TickInput())
+    assert game.inventory.stations == frozenset()
+    x, y = int(game.player.body.center[0] // 32), 9
+    tilemap.set(x + 1, y, content.blocks.id_of("furnace"))
+    game.tick(TickInput())
+    assert game.inventory.stations == {"furnace"}
+    assert game.inventory.crafting_side == CRAFTING_SIDE
+    game.player.body.x += 20 * content.game.tile_size
+    game.tick(TickInput())
+    assert game.inventory.stations == frozenset()
+
+
+def test_the_furnace_is_made_from_cobblestone(
+    content: Content, inventory: Inventory
+) -> None:
+    """A ring of eight cobblestones makes a furnace."""
+    fill(inventory, content, "CCC", "C C", "CCC")
+    result = crafted(inventory, content)
+    assert result is not None
+    assert result.item.name == "furnace"

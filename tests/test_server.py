@@ -1014,3 +1014,18 @@ def test_the_host_can_mute_and_kick(server: Server, content: Content) -> None:
     assert ("leave", "bob", "") in lines(alice)
     assert any("Nobody is called" in m.text for m in alice.chat)
     assert alice.state is SessionState.PLAYING
+
+
+def test_stations_in_reach_reach_the_client(
+    server: Server, content: Content
+) -> None:
+    """A client can tell which recipes need a station it stands near."""
+    alice = join(server, content)
+    player = next(iter(server.game.players.values()))
+    x = int(player.body.center[0] // content.game.tile_size)
+    server.game.tilemap.set(
+        x + 1, SURFACE - 1, content.blocks.id_of("furnace")
+    )
+    step(server, [alice], 3)
+    assert alice.world is not None
+    assert alice.world.inventory.stations == {"furnace"}

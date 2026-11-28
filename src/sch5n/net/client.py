@@ -349,6 +349,7 @@ class ClientWorld:
         inventory.slots = slots
         inventory.cursor = cursor
         inventory.crafting = crafting
+        inventory.stations = frozenset(state.stations)
         inventory.select(state.selected)
 
     def tick_ambience(self, view: Rect | None) -> None:
