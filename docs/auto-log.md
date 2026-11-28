@@ -17,8 +17,8 @@ None.
 
 ### Priority list from the user (do first, in this order)
 
-Done: recipe book click fills the grid (shift: all sets), ladders.
-Todo: zoom in and out in play, a separate smelting interface, four armor
+Done: recipe book click fills the grid (shift: all sets), ladders, zoom.
+Todo: a separate smelting interface, four armor
 slots (helmet, chestplate, leggings, boots), grass plant drops and planting
 on dirt or grass, grass blocks under a solid block turn to dirt.
 
@@ -517,3 +517,10 @@ on dirt or grass, grass blocks under a solid block turn to dirt.
   frames, the wall slide pose and its mirror, so the arms swap), also for
   the `armless` and `bare` variants, with shoulders in `rig.json`.
   Placeholder art to replace: `mob/player/{climb,armless/climb,bare/climb}`.
+
+## Zoom
+
+- In play, `+` / `-` (also the keypad) or Ctrl + wheel step the camera through
+  0.5x, 1x, 2x and 3x (`ZOOM_LEVELS`), whole numbers or halves so pixel art
+  stays sharp. They are the `ZOOM_IN` / `ZOOM_OUT` actions of the game
+  context and can be rebound.

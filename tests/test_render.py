@@ -1695,3 +1695,23 @@ def test_the_worlds_screen_can_generate_terrain(app: App) -> None:
     tiles = play.server.game.tilemap
     assert tiles.chunks
     assert tiles.get(0, -60) == 0
+
+
+def test_zoom_keys_step_through_whole_levels(app: App) -> None:
+    """Plus and minus zoom the world, within a sensible range."""
+    play = PlayScene.singleplayer(app)
+    for _ in range(WARMUP_TICKS):
+        play.tick()
+    assert play.camera.zoom == pytest.approx(1.0)
+    play.on_event(KeyEvent(glfw.KEY_EQUAL, glfw.PRESS, 0))
+    assert play.camera.zoom == pytest.approx(2.0)
+    for _ in range(5):
+        play.on_event(KeyEvent(glfw.KEY_KP_ADD, glfw.PRESS, 0))
+    top = play.camera.zoom
+    play.on_event(KeyEvent(glfw.KEY_KP_ADD, glfw.PRESS, 0))
+    assert play.camera.zoom == pytest.approx(top)
+    for _ in range(8):
+        play.on_event(KeyEvent(glfw.KEY_MINUS, glfw.PRESS, 0))
+    assert 0 < play.camera.zoom < 1
+    draw(app, play)
+    play.leave()

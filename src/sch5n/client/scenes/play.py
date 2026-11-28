@@ -93,6 +93,8 @@ PLAYER_DOT = (80, 220, 110)
 SELF_DOT = (250, 240, 120)
 HURT_FLASH_TICKS = 12
 HINT_Y = 48
+ZOOM_LEVELS = (0.5, 1.0, 2.0, 3.0)
+"""World zoom steps: whole numbers or halves, so pixels stay sharp."""
 NIGHT_BELOW = 0.35
 """Daylight under which the night tip is given."""
 SOUND_RANGE = 24
@@ -450,6 +452,8 @@ class PlayScene(Scene):
                 self.debug = not self.debug
             case Action.MINIMAP:
                 self.minimap_open = not self.minimap_open
+            case Action.ZOOM_IN | Action.ZOOM_OUT:
+                self._zoom_by(1 if action is Action.ZOOM_IN else -1)
             case Action.CHAT if not self.inventory_open:
                 self.chat.start()
                 self._skip_char = True
@@ -608,6 +612,17 @@ class PlayScene(Scene):
 
     def _open_settings(self) -> None:
         self.app.switch(SettingsScene(self.app, back=self, in_game=True))
+
+    def _zoom_by(self, steps: int) -> None:
+        """Zoom the world view in or out along `ZOOM_LEVELS`."""
+        camera = self.camera
+        nearest = min(
+            range(len(ZOOM_LEVELS)),
+            key=lambda i: abs(ZOOM_LEVELS[i] - camera.zoom),
+        )
+        camera.zoom = ZOOM_LEVELS[
+            max(0, min(len(ZOOM_LEVELS) - 1, nearest + steps))
+        ]
 
     def _on_chat_event(self, event: Event) -> None:
         """Type into the open chat box."""

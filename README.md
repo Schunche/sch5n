@@ -127,6 +127,7 @@ Default game controls:
 | Right mouse | Place the held block; on a chest, open it; on a bed, set your spawn point. Food in hand: hold the left mouse button to eat |
 | T / Enter | Chat (Enter sends, Esc cancels, Up/Down recall your messages, PageUp/PageDown scroll). `/help` lists the commands; `/home` takes you to your bed or spawn |
 | Wheel, 1-0 | Select hotbar slot |
+| + / - (or Ctrl + wheel) | Zoom the world in or out: 0.5x, 1x, 2x or 3x |
 | M | Show or hide the minimap (the world around you, creatures in red, other players in green) |
 | Tab | Inventory: left click picks up / swaps / merges, right click splits / places one, shift + click moves a stack (into a chest, onto the body, or between hotbar and the rest). Armor goes in the three slots right of the crafting grid. The Recipes button lists every recipe |
 | Esc | Close inventory, open settings |

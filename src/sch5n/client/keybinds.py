@@ -348,6 +348,8 @@ DEFAULTS: dict[Context, dict[Action, tuple[str, ...]]] = {
         Action.DEBUG: ("key:F3",),
         Action.CHAT: ("key:T", "key:ENTER"),
         Action.MINIMAP: ("key:M",),
+        Action.ZOOM_IN: ("key:EQUAL", "key:KP_ADD", "ctrl+wheel:UP"),
+        Action.ZOOM_OUT: ("key:MINUS", "key:KP_SUBTRACT", "ctrl+wheel:DOWN"),
         Action.HOTBAR_NEXT: ("wheel:DOWN",),
         Action.HOTBAR_PREVIOUS: ("wheel:UP",),
     }
