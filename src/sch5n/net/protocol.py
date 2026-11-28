@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from sch5n.game.content import Content
     from sch5n.world.tilemap import TileMap
 
-PROTOCOL_VERSION = 11
+PROTOCOL_VERSION = 12
 """Raised whenever messages change incompatibly."""
 MAX_CLIENT_FRAME = 4096
 """Largest message a client may send, in bytes."""
@@ -399,7 +399,11 @@ def content_fingerprint(content: Content) -> str:
     blocks = sorted((block.id, block.name) for block in content.blocks)
     items = sorted(item.name for item in content.items)
     recipes = [recipe.model_dump() for recipe in content.recipes]
-    data = json.dumps([blocks, items, recipes]).encode()
+    smelting = [
+        content.smelting[name].model_dump()
+        for name in sorted(content.smelting)
+    ]
+    data = json.dumps([blocks, items, recipes, smelting]).encode()
     return hashlib.sha256(data).hexdigest()[:16]
 
 

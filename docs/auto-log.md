@@ -19,7 +19,7 @@ None.
 
 Done: recipe book click fills the grid (shift: all sets), ladders, zoom,
 four armor slots, tall grass, grass dying under blocks.
-Todo: a separate smelting interface.
+Todo: nothing left from this list.
 
 ## Multiplayer chat
 
@@ -544,3 +544,18 @@ Todo: a separate smelting interface.
   (`SMOTHER_SECONDS`, `Garden.smothering`); when it runs out and the block is
   still there, the grass becomes dirt. The older random check for buried
   grass still runs too.
+
+## Furnace with its own interface
+
+- The furnace is now a 3 slot container (Ore, Fuel, Result), opened with a
+  right click like a chest, not a recipe in the crafting grid. `Game` ticks
+  every opened furnace (`game/smelting.py`): fuel (`fuel` seconds on items:
+  stick 8, plank 12, log 30) is lit only when there is something to smelt
+  and room for the result; an item takes `seconds` (6 by default) while it
+  burns. The fire (burning ticks, progress) is not saved; contents are.
+- Smelting data moved to `smelting` in `recipes.json` (`SmeltSpec`, in
+  `Content.smelting` by input item); the nine station recipes (8 ores and the
+  baked apple) left the grid recipes. Protocol 12 (the content fingerprint
+  includes smelting). `Inventory` may now have fewer than 10 slots.
+- The recipe book does not list smelting yet. Shift click puts items into
+  the first free slot, so put the ore in first.

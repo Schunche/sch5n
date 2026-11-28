@@ -84,11 +84,11 @@ class Inventory:  # ruff: ignore[too-many-public-methods]
         """Create an inventory, filling `items` into the first slots.
 
         Raises:
-            ValueError: `size` is smaller than the hotbar.
+            ValueError: `size` is less than one.
 
         """
-        if size < HOTBAR_SIZE:
-            msg = f"Inventory needs at least {HOTBAR_SIZE} slots"
+        if size < 1:
+            msg = "Inventory needs at least one slot"
             raise ValueError(msg)
         self.slots: list[Slot] = [None] * size
         self.cursor: Slot = None

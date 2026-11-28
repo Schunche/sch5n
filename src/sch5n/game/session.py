@@ -25,6 +25,7 @@ from sch5n.game.mobs import (
 from sch5n.game.plants import Garden
 from sch5n.game.player import Player
 from sch5n.game.projectiles import ArrowWorld, Projectile, advance, aim
+from sch5n.game.smelting import Furnace, tick_furnace
 from sch5n.log.logger import LOGGER
 from sch5n.math.rect import Rect
 
@@ -186,6 +187,8 @@ class Game:
         """Arrows in flight by id."""
         self._next_projectile = 0
         self.chests: dict[tuple[int, int], Inventory] = {}
+        self.furnaces: dict[tuple[int, int], Furnace] = {}
+        """The fire of every furnace that has been opened, by tile."""
         """Contents of the storage blocks that have been opened or
         filled, by tile."""
         self.announcements: list[str] = []
@@ -270,6 +273,15 @@ class Game:
         if chest is None:
             chest = self.chests[x, y] = Inventory(block.spec.container)
         return chest
+
+    def _tick_furnaces(self) -> None:
+        rate = self.config.tick_rate
+        for tile, slots in list(self.chests.items()):
+            block = self.content.blocks.get(self.tilemap.get(*tile))
+            if block is None or not block.spec.smelter:
+                continue
+            fire = self.furnaces.setdefault(tile, Furnace())
+            tick_furnace(fire, slots, self.content, rate)
 
     def chest_contents(self) -> dict[tuple[int, int], Inventory]:
         """Storage that is in the world, for saving.
@@ -640,6 +652,7 @@ class Game:
             self.drop(ItemStack(self.content.items[block.spec.drop]), tile)
         if block.spec.container is not None:
             chest = self.chests.pop(tile, None)
+            self.furnaces.pop(tile, None)
             for stack in chest or ():
                 if stack is not None:
                     self.drop(stack, tile)
@@ -937,6 +950,7 @@ class Game:
     def tick_world(self, view: Rect | None = None) -> None:
         """Advance everything but the players by one tick."""
         self.garden.tick(self._broken)
+        self._tick_furnaces()
         for player in self.players.values():
             self._fit_crafting_grid(player)
         self._tick_vitals()

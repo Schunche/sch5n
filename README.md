@@ -103,7 +103,7 @@ Health and hunger are shown at the bottom (the saved world keeps them). Eat
 food (apples) by holding the left mouse button with it in hand. At night
 slimes, zombies, bats and arrow-shooting skeletons come out, and rarely the King Slime (swords hit hardest; a bow shoots arrows at the cursor while you hold the left mouse button); torches keep
 them away and light the dark. Defeated creatures drop slime balls (torches),
-cloth (armor, beds) and more. Smelt ore at a furnace (stand next to it) and craft
+cloth (armor, beds) and more. Smelt ore in a furnace (right click it: ore, fuel such as sticks, planks or logs, and the ingots come out) and craft
 tools and armor of copper, iron and the other metals; wear armor in the three
 slots next to the crafting grid. A bed (right click it) sets where you respawn, and at night skips to morning if no creature is within 16 tiles.
 Worlds made by `python -m sch5n.world` have plains, desert and snow biomes,

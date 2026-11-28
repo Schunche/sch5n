@@ -93,6 +93,8 @@ PLAYER_DOT = (80, 220, 110)
 SELF_DOT = (250, 240, 120)
 HURT_FLASH_TICKS = 12
 HINT_Y = 48
+FURNACE_SLOTS = ("Ore", "Fuel", "Result")
+"""Names above the slots of an open furnace."""
 ZOOM_LEVELS = (0.5, 1.0, 2.0, 3.0)
 """World zoom steps: whole numbers or halves, so pixels stay sharp."""
 NIGHT_BELOW = 0.35
@@ -361,7 +363,9 @@ class PlayScene(Scene):
         self.chest_layout = replace(
             layout,
             columns=CHEST_COLUMNS,
-            slot_count=self.app.content.blocks.by_name("chest").spec.container
+            slot_count=len(self.world.chest)
+            if self.world.chest is not None
+            else self.app.content.blocks.by_name("chest").spec.container
             or CHEST_COLUMNS,
             origin=(bounds.right + 2 * gap + layout.border, layout.origin[1]),
         )
@@ -703,6 +707,11 @@ class PlayScene(Scene):
             self.server.step()
         self.session.poll()
         self._take_chat()
+        if (
+            self.world.chest is not None
+            and self.chest_layout.slot_count != len(self.world.chest)
+        ):
+            self._lay_out_chest()
         self._play_sounds()
         self._lay_out_crafting()
         if self.session.state is SessionState.CLOSED:
@@ -1032,6 +1041,7 @@ class PlayScene(Scene):
             return
         layout = self.chest_layout
         hovered = layout.slot_at(mouse, hotbar_only=False)
+        self._draw_furnace_labels(layout)
         for index in range(len(chest)):
             self.hud.draw_slot(
                 self.app.batch,
@@ -1039,6 +1049,27 @@ class PlayScene(Scene):
                 chest[index],
                 layout.border,
                 SlotLook(hovered=index == hovered, selected=False, alpha=1.0),
+            )
+
+    def _draw_furnace_labels(self, layout: InventoryLayout) -> None:
+        """Name the slots of an open furnace."""
+        tile = self.world.chest_tile
+        block = None if tile is None else self.world.tilemap.get(*tile)
+        info = self.app.content.blocks.get(block) if block else None
+        if info is None or not info.spec.smelter:
+            return
+        app = self.app
+        for index, label in enumerate(FURNACE_SLOTS):
+            rect = layout.slot_rect(index)
+            app.text.draw(
+                app.batch,
+                label,
+                (rect.x + rect.w / 2, rect.bottom + 10),
+                TextStyle(
+                    size=14,
+                    color=rgba(app.ui.color("text_dim")),
+                    anchor=Anchor.CENTER,
+                ),
             )
 
     def _draw_station(self) -> None:

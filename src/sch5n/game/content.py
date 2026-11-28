@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING, Annotated, Literal, Self
 
@@ -114,6 +114,8 @@ class BlockSpec(_Model):
     """Using it sets the spawn point of the player."""
     light: int = Field(default=0, ge=0, le=32)
     """How many tiles around it the block lights up at night."""
+    smelter: bool = False
+    """A furnace: its three slots are the input, the fuel and the output."""
     climbable: bool = False
     """Players inside it can climb: jump goes up, otherwise they slide."""
 
@@ -144,6 +146,8 @@ class ItemSpec(_Model):
     """Size in pixels of the item when lying in the world."""
     aliases: tuple[str, ...] = ()
     """Legacy names accepted when loading saved inventories."""
+    fuel: float = Field(default=0.0, ge=0)
+    """Seconds one of it burns in a furnace. Zero means it is no fuel."""
     food: int = Field(default=0, ge=0)
     """Hunger points eating it restores. Zero means it is not food."""
     ammo: str | None = None
@@ -220,10 +224,20 @@ class RecipeSpec(_Model):
         return self
 
 
+class SmeltSpec(_Model):
+    """What a furnace makes of an item, in `recipes.json`."""
+
+    input: str
+    result: RecipeResult
+    seconds: float = Field(default=6.0, gt=0)
+    """How long one item takes while the fuel burns."""
+
+
 class RecipesFile(_Model):
     """`recipes.json`."""
 
     recipes: tuple[RecipeSpec, ...] = ()
+    smelting: tuple[SmeltSpec, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -270,13 +284,13 @@ class BlockRegistry:
 
         """
         for block in self._by_name.values():
-            for field, names in (
+            for key, names in (
                 ("plant_on", block.spec.plant_on),
                 ("spreads_onto", block.spec.spreads_onto),
             ):
                 for name in names:
                     if name not in self._by_name:
-                        msg = f"{block.name}: unknown {field} {name!r}"
+                        msg = f"{block.name}: unknown {key} {name!r}"
                         raise ValueError(msg)
 
     def __init__(self, data: BlocksFile) -> None:
@@ -480,6 +494,8 @@ class Content:
     blocks: BlockRegistry
     items: ItemRegistry
     recipes: tuple[RecipeSpec, ...] = ()
+    smelting: dict[str, SmeltSpec] = field(default_factory=dict)
+    """What a furnace makes, by the item it is given."""
 
     @classmethod
     def load(cls, data_dir: Path) -> Content:
@@ -488,6 +504,9 @@ class Content:
         Returns:
             Content: The loaded content.
 
+        Raises:
+            ValueError: A smelting recipe names an unknown item.
+
         """
         blocks = BlockRegistry(
             load_model(BlocksFile, data_dir / "blocks.json")
@@ -495,13 +514,20 @@ class Content:
         items = ItemRegistry(
             load_model(ItemsFile, data_dir / "items.json"), blocks
         )
-        recipes = load_model(RecipesFile, data_dir / "recipes.json").recipes
+        file = load_model(RecipesFile, data_dir / "recipes.json")
+        recipes = file.recipes
         _check_recipes(recipes, items)
+        for smelt in file.smelting:
+            for name in (smelt.input, smelt.result.item):
+                if name not in items:
+                    msg = f"Smelting {smelt.input}: unknown item {name!r}"
+                    raise ValueError(msg)
         return cls(
             game=load_model(GameConfig, data_dir / "game.json"),
             blocks=blocks,
             items=items,
             recipes=recipes,
+            smelting={smelt.input: smelt for smelt in file.smelting},
         )
 
 

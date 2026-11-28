@@ -378,7 +378,7 @@ def test_ores_need_a_pickaxe_and_drop_ore(content: Content, ore: str) -> None:
 def test_metal_tools_are_made_from_ingots(
     content: Content, inventory: Inventory, metal: str
 ) -> None:
-    """Ore and sticks smelt into an ingot; ingots make the four tools."""
+    """A furnace turns ore into an ingot; ingots make the four tools."""
     names = {"O": f"{metal}_ore", "I": f"{metal}_ingot", "S": "stick"}
 
     def lay(*rows: str) -> str | None:
@@ -392,9 +392,8 @@ def test_metal_tools_are_made_from_ingots(
         result = crafted(inventory, content)
         return result and result.item.name
 
-    assert lay("OS ", "S  ", "   ") is None  # No furnace in reach.
-    inventory.stations = frozenset({"furnace"})
-    assert lay("OS ", "S  ", "   ") == f"{metal}_ingot"
+    assert lay("OS ", "S  ", "   ") is None  # Ore is smelted in a furnace.
+    assert content.smelting[f"{metal}_ore"].result.item == f"{metal}_ingot"
     assert lay("III", " S ", " S ") == f"{metal}_pickaxe"
     assert lay("II ", "IS ", " S ") == f"{metal}_axe"
     assert lay("I  ", "S  ", "S  ") == f"{metal}_shovel"
@@ -457,7 +456,10 @@ def test_every_ore_can_be_smelted_into_tools_and_armor(
     for pair in ORE_PAIRS:
         for metal in pair:
             assert f"{metal}_ore" in content.items
-            for made in ("ingot", "helmet", "chestplate", "leggings"):
+            assert content.smelting[f"{metal}_ore"].result.item == (
+                f"{metal}_ingot"
+            )
+            for made in ("helmet", "chestplate", "leggings", "boots"):
                 assert f"{metal}_{made}" in results, (metal, made)
             if metal in {"copper", "iron"}:
                 continue

@@ -18,7 +18,7 @@
         "oak_planks": {"textures": ["tile/oakPlanks/0"], "solid": true, "durability": 200, "tool": "axe", "drop": "oak_planks"},
         "grass": {"textures": ["tile/grass/0"], "solid": true, "durability": 100, "tool": "shovel", "slower_tools": ["pickaxe"], "drop": "dirt_block", "extra_drops": [{"item": "tall_grass", "chance": 0.3}], "spreads_onto": ["dirt"]},
         "oak_sapling": {"textures": ["item/oak_sapling"], "durability": 25, "tool": "lopper", "drop": "oak_sapling", "plant_on": ["dirt", "grass"], "grows_after": [60, 120], "hand_pickup": true},
-        "furnace": {"textures": ["tile/furnace/0"], "durability": 200, "tool": "pickaxe", "drop": "furnace", "station": "furnace"},
+        "furnace": {"textures": ["tile/furnace/0"], "durability": 200, "tool": "pickaxe", "drop": "furnace", "station": "furnace", "smelter": true, "container": 3},
         "chest": {"textures": ["tile/chest/0"], "durability": 150, "tool": "axe", "drop": "chest", "container": 27},
         "torch": {"textures": ["tile/torch/0"], "durability": 10, "tool": "axe", "drop": "torch", "hand_pickup": true, "light": 7},
         "crafting_bench": {"textures": ["tile/craftingBench/0", "tile/craftingBench/1"], "durability": 200, "tool": "axe", "drop": "crafting_bench", "crafting_side": 3},

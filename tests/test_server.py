@@ -1220,3 +1220,30 @@ def test_home_takes_a_player_back_to_spawn(
     step(server, [alice], 2)
     assert player.body.x < far
     assert any(m.text == "You are home." for m in alice.chat)
+
+
+def test_a_furnace_works_for_the_client_that_opened_it(
+    server: Server, content: Content
+) -> None:
+    """The client sees ore turn into an ingot in the open furnace."""
+    alice = join(server, content, "alice")
+    player = next(iter(server.game.players.values()))
+    x = int(player.body.center[0] // content.game.tile_size) + 1
+    tile = (x, SURFACE - 1)
+    server.game.tilemap.set(*tile, content.blocks.id_of("furnace"))
+    step(server, [alice])
+    player.inventory.cursor = ItemStack(content.items["tin_ore"])
+    alice.open_chest(*tile)
+    step(server, [alice], 2)
+    assert alice.world is not None
+    assert alice.world.chest is not None
+    assert len(alice.world.chest) == 3  # ruff: ignore[magic-value-comparison]
+    alice.click_chest(0)
+    step(server, [alice], 2)
+    player.inventory.cursor = ItemStack(content.items["stick"])
+    alice.click_chest(1)
+    seconds = content.smelting["tin_ore"].seconds
+    step(server, [alice], round(seconds * content.game.tick_rate) + 10)
+    made = alice.world.chest[2] if alice.world.chest else None
+    assert made is not None
+    assert made.item.name == "tin_ingot"
