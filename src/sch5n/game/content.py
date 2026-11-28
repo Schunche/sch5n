@@ -100,6 +100,8 @@ class BlockSpec(_Model):
     open to the sky next to it."""
     grows_after: tuple[float, float] | None = None
     """For saplings: the shortest and longest seconds until it is a tree."""
+    container: int | None = Field(default=None, gt=0, le=256)
+    """For chests: how many slots of storage the block holds."""
     station: str | None = None
     """For stations: a name recipes can require, like `furnace`."""
     crafting_side: int | None = Field(

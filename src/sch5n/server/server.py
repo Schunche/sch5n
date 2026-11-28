@@ -34,6 +34,10 @@ from sch5n.net.protocol import (
     PROTOCOL_VERSION,
     ChatMessage,
     ChatSend,
+    ChestClick,
+    ChestClose,
+    ChestOpen,
+    ChestState,
     Goodbye,
     Hello,
     InputMessage,
@@ -93,6 +97,9 @@ class _Client:
     ack: int | None = None
     """`seq` of the newest input applied."""
     sent_inventory: InventoryState | None = None
+    chest: tuple[int, int] | None = None
+    """Tile of the storage block the player has open."""
+    sent_chest: ChestState | None = None
     muted: bool = False
     chat_limit: RateLimit = field(default_factory=RateLimit)
     ended: bool = False
@@ -209,13 +216,14 @@ def player_state(player_id: int, player: Player) -> PlayerState:
 class Server:
     """Runs a game for any number of clients. Call `step` every tick."""
 
-    def __init__(
+    def __init__(  # ruff: ignore[too-many-arguments, too-many-positional-arguments]
         self,
         content: Content,
         tilemap: TileMap,
         setup: GameSetup = SERVER_SETUP,
         name: str = "sch5n server",
         inventories: dict[str, Inventory] | None = None,
+        chests: dict[tuple[int, int], Inventory] | None = None,
     ) -> None:
         """Start the game. Nobody can join over the network until `listen`.
 
@@ -235,6 +243,8 @@ class Server:
         )
         if inventories:
             self.game.restore_inventories(inventories)
+        if chests:
+            self.game.chests.update(chests)
         self.fingerprint = content_fingerprint(content)
         self.clients: list[_Client] = []
         self.host = ""
@@ -448,6 +458,77 @@ class Server:
             case _:
                 _kick(client, "Invalid inventory slot")
 
+    def _reachable_chest(self, client: _Client) -> Inventory | None:
+        """Find the chest a player has open, if it is in reach.
+
+        Returns:
+            Inventory | None: The contents, `None` if the chest is gone or
+            too far.
+
+        """
+        if client.player_id is None or client.chest is None:
+            return None
+        player = self.game.players[client.player_id]
+        if not player.can_reach(client.chest):
+            return None
+        return self.game.chest_at(*client.chest)
+
+    def _open_chest(self, client: _Client, message: ChestOpen) -> None:
+        client.chest = (message.x, message.y)
+        if self._reachable_chest(client) is None:
+            client.chest = None
+
+    def _click_chest(self, client: _Client, message: ChestClick) -> None:
+        chest = self._reachable_chest(client)
+        if chest is None or client.player_id is None:
+            return
+        if message.index >= len(chest):
+            _kick(client, "Invalid chest slot")
+            return
+        inventory = self.game.players[client.player_id].inventory
+        chest.cursor, inventory.cursor = inventory.cursor, None
+        if message.right:
+            chest.right_click(message.index)
+        else:
+            chest.left_click(message.index)
+        chest.cursor, inventory.cursor = None, chest.cursor
+
+    def _chest_state(self, client: _Client) -> ChestState | None:
+        """Work out what to tell a client about its chest.
+
+        Returns:
+            ChestState | None: The message, `None` if there is nothing new.
+
+        """
+        chest = self._reachable_chest(client)
+        if chest is None or client.chest is None:
+            client.chest = None
+            state = ChestState()
+        else:
+            x, y = client.chest
+            state = ChestState(
+                x=x, y=y, slots=[_stack_state(slot) for slot in chest]
+            )
+        previous = client.sent_chest
+        if state.slots is None:
+            client.sent_chest = None
+            return None if previous is None else state
+        if state == previous:
+            return None
+        client.sent_chest = state
+        return state
+
+    def _chest_message(
+        self, client: _Client, message: ChestOpen | ChestClick | ChestClose
+    ) -> None:
+        match message:
+            case ChestOpen():
+                self._open_chest(client, message)
+            case ChestClick():
+                self._click_chest(client, message)
+            case ChestClose():
+                client.chest = None
+
     def _handle(self, client: _Client, message: ClientMessage) -> None:
         joined = client.player_id is not None
         match message:
@@ -463,6 +544,10 @@ class Server:
                 self._inventory(client, message)
             case ChatSend() if joined:
                 self._chat(client, message)
+            case ChestOpen() | ChestClick() | ChestClose() if joined:
+                self._chest_message(client, message)
+            case ChestOpen() | ChestClick() | ChestClose() if joined:
+                self._chest_message(client, message)
             case Goodbye():
                 client.ended = True
                 client.connection.reason = message.reason or "Left"
@@ -581,6 +666,9 @@ class Server:
             if state != client.sent_inventory:
                 client.connection.send(state)
                 client.sent_inventory = state
+            chest_state = self._chest_state(client)
+            if chest_state is not None:
+                client.connection.send(chest_state)
         for client in self.clients:
             client.connection.flush()
 
@@ -595,6 +683,7 @@ class Server:
             self.game.tilemap,
             self.game.inventories(),
             owner,
+            self.game.chest_contents(),
         )
 
     def stop_listening(self) -> None:

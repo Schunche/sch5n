@@ -216,3 +216,32 @@ def test_vitals_survive_leaving_the_game(content: Content) -> None:
     game.remove_player(player_id)
     again = game.add_player("ann")
     assert game.players[again].vitals.hunger == HUNGRY
+
+
+def test_chests_are_saved_with_the_world(
+    tmp_path: Path, content: Content
+) -> None:
+    """Chest contents come back, and chests that vanished are not saved."""
+    tilemap = flat_world(content)
+    chest_id = content.blocks.id_of("chest")
+    tilemap.set(2, 9, chest_id)
+    game = Game(content, tilemap, GameSetup(seed=1, spawn=(0, 0)))
+    chest = game.chest_at(2, 9)
+    assert chest is not None
+    chest.slots[5] = ItemStack(content.items["stick"], 4)
+    gone = game.chest_at(2, 9)
+    assert gone is chest
+    assert game.chest_at(3, 9) is None
+    game.chests[7, 7] = Inventory(27)  # Nothing stands there.
+    path = world_path(tmp_path, "boxes")
+    save_world(path, "boxes", tilemap, {}, None, game.chest_contents())
+    world = load_world(path, content)
+    assert set(world.chests) == {(2, 9)}
+    stack = world.chests[2, 9][5]
+    assert stack is not None
+    assert (stack.item.name, stack.amount) == ("stick", 4)
+    again = Game(content, world.tilemap, GameSetup(seed=1, spawn=(0, 0)))
+    again.chests.update(world.chests)
+    reopened = again.chest_at(2, 9)
+    assert reopened is not None
+    assert reopened[5] is not None

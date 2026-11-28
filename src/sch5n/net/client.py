@@ -42,6 +42,10 @@ from sch5n.net.protocol import (
     PROTOCOL_VERSION,
     ChatMessage,
     ChatSend,
+    ChestClick,
+    ChestClose,
+    ChestOpen,
+    ChestState,
     Goodbye,
     Hello,
     InputMessage,
@@ -210,6 +214,9 @@ class ClientWorld:
         server."""
         self.pending: deque[tuple[int, TickInput]] = deque()
         """Inputs sent but not applied by the server yet, by `seq`."""
+        self.chest: Inventory | None = None
+        """The chest this player has open, as the server shows it."""
+        self.chest_tile: tuple[int, int] | None = None
         self.corrections = 0
         """Times the prediction differed from the server, for debugging."""
 
@@ -352,6 +359,27 @@ class ClientWorld:
         inventory.stations = frozenset(state.stations)
         inventory.select(state.selected)
 
+    def apply_chest(self, state: ChestState) -> None:
+        """Take over the server's view of the open chest.
+
+        Raises:
+            ProtocolError: The chest names unknown items.
+
+        """
+        if state.slots is None:
+            self.chest = None
+            self.chest_tile = None
+            return
+        try:
+            slots = [_stack(self.content, slot) for slot in state.slots]
+        except KeyError as error:
+            msg = f"Unknown item {error}"
+            raise ProtocolError(msg) from error
+        chest = Inventory(len(slots))
+        chest.slots = slots
+        self.chest = chest
+        self.chest_tile = (state.x, state.y)
+
     def tick_ambience(self, view: Rect | None) -> None:
         """Move leaves, clouds and wind streaks with the server's wind."""
         self.ambience.tick(
@@ -424,6 +452,8 @@ class ClientSession:
                 self.world.apply_snapshot(message)
             case InventoryState() if self.world is not None:
                 self.world.apply_inventory(message)
+            case ChestState() if self.world is not None:
+                self.world.apply_chest(message)
             case ChatMessage() if self.world is not None:
                 self.chat.append(message)
                 self.chat_count += 1
@@ -479,6 +509,23 @@ class ClientSession:
             self.connection.send(
                 InventoryMessage(action=action, index=index, slots=slots)
             )
+
+    def open_chest(self, x: int, y: int) -> None:
+        """Ask to open the storage block at a tile."""
+        if self.state is SessionState.PLAYING:
+            self.connection.send(ChestOpen(x=x, y=y))
+
+    def click_chest(self, index: int, *, right: bool = False) -> None:
+        """Click a slot of the open chest."""
+        if self.state is SessionState.PLAYING:
+            self.connection.send(ChestClick(index=index, right=right))
+
+    def close_chest(self) -> None:
+        """Close the open chest."""
+        if self.state is SessionState.PLAYING:
+            self.connection.send(ChestClose())
+        if self.world is not None:
+            self.world.apply_chest(ChestState())
 
     def say(self, text: str) -> None:
         """Say something in chat. Empty text is not sent."""

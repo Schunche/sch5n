@@ -129,6 +129,9 @@ class Game:
         self.floating_items: list[FloatingItem] = []
         self.ambience = Ambience(self.config, self.rng)
         self.garden = Garden(tilemap, self.rng, self.config.tick_rate)
+        self.chests: dict[tuple[int, int], Inventory] = {}
+        """Contents of the storage blocks that have been opened or
+        filled, by tile."""
         self.announcements: list[str] = []
         """Things everyone should hear, like deaths. Servers send and clear
         them."""
@@ -195,6 +198,35 @@ class Game:
             if player.name:
                 kept[player.name] = player.inventory
         return kept
+
+    def chest_at(self, x: int, y: int) -> Inventory | None:
+        """Find the storage of the block at a tile, making it if new.
+
+        Returns:
+            Inventory | None: The contents, `None` if the tile holds no
+            storage block.
+
+        """
+        block = self.content.blocks.get(self.tilemap.get(x, y))
+        if block is None or block.spec.container is None:
+            return None
+        chest = self.chests.get((x, y))
+        if chest is None:
+            chest = self.chests[x, y] = Inventory(block.spec.container)
+        return chest
+
+    def chest_contents(self) -> dict[tuple[int, int], Inventory]:
+        """Storage that is in the world, for saving.
+
+        Returns:
+            dict[tuple[int, int], Inventory]: Contents by tile.
+
+        """
+        return {
+            tile: chest
+            for tile, chest in self.chests.items()
+            if self.chest_at(*tile) is chest
+        }
 
     def restore_inventories(self, inventories: dict[str, Inventory]) -> None:
         """Give returning players these inventories, by name, on joining."""
@@ -441,6 +473,11 @@ class Game:
         """
         if block.spec.drop is not None:
             self.drop(ItemStack(self.content.items[block.spec.drop]), tile)
+        if block.spec.container is not None:
+            chest = self.chests.pop(tile, None)
+            for stack in chest or ():
+                if stack is not None:
+                    self.drop(stack, tile)
         self._drop_extras(block, tile)
         if (
             self.tilemap.get(*tile) != AIR

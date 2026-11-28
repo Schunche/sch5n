@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from sch5n.game.content import Content
     from sch5n.world.tilemap import TileMap
 
-PROTOCOL_VERSION = 6
+PROTOCOL_VERSION = 7
 """Raised whenever messages change incompatibly."""
 MAX_CLIENT_FRAME = 4096
 """Largest message a client may send, in bytes."""
@@ -119,6 +119,31 @@ class ChatSend(_Message):
 
     type: Literal["chat"] = "chat"
     text: str
+
+
+class ChestOpen(_Message):
+    """The player opens the storage block at a tile."""
+
+    type: Literal["chest_open"] = "chest_open"
+    x: int
+    y: int
+
+
+class ChestClick(_Message):
+    """A click on slot `index` of the open chest.
+
+    It works like an inventory click. The server checks the index.
+    """
+
+    type: Literal["chest_click"] = "chest_click"
+    index: int = Field(ge=0)
+    right: bool = False
+
+
+class ChestClose(_Message):
+    """The player closes the chest."""
+
+    type: Literal["chest_close"] = "chest_close"
 
 
 class Goodbye(_Message):
@@ -234,6 +259,15 @@ class InventoryState(_Message):
     """Crafting stations in reach, which some recipes need."""
 
 
+class ChestState(_Message):
+    """The chest a player has open. `slots` is `None` once it closed."""
+
+    type: Literal["chest_state"] = "chest_state"
+    x: int = 0
+    y: int = 0
+    slots: list[StackState | None] | None = None
+
+
 class ChatMessage(_Message):
     """A line of chat, sent to everyone it concerns."""
 
@@ -245,11 +279,24 @@ class ChatMessage(_Message):
 
 
 type ClientMessage = Annotated[
-    Hello | InputMessage | InventoryMessage | ChatSend | Goodbye,
+    Hello
+    | InputMessage
+    | InventoryMessage
+    | ChatSend
+    | ChestOpen
+    | ChestClick
+    | ChestClose
+    | Goodbye,
     Field(discriminator="type"),
 ]
 type ServerMessage = Annotated[
-    Welcome | Reject | Snapshot | InventoryState | ChatMessage | Goodbye,
+    Welcome
+    | Reject
+    | Snapshot
+    | InventoryState
+    | ChestState
+    | ChatMessage
+    | Goodbye,
     Field(discriminator="type"),
 ]
 type Message = ClientMessage | ServerMessage

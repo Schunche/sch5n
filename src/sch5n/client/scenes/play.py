@@ -150,6 +150,7 @@ class PlayScene(Scene):
             GameSetup(mode=app.options.game_mode, seed=app.options.seed),
             name=world.name,
             inventories=world.inventories,
+            chests=world.chests,
         )
         server.host = settings.player_name
         session = ClientSession(

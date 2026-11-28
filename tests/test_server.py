@@ -1029,3 +1029,71 @@ def test_stations_in_reach_reach_the_client(
     step(server, [alice], 3)
     assert alice.world is not None
     assert alice.world.inventory.stations == {"furnace"}
+
+
+CHEST_SLOTS = 27
+HALF_OF_FIVE = 2
+
+
+def test_chests_store_items_through_the_server(
+    server: Server, content: Content
+) -> None:
+    """Items move between the cursor and a chest, for every viewer."""
+    alice = join(server, content, "alice")
+    bob = join(server, content, "bob")
+    player = next(iter(server.game.players.values()))
+    x = int(player.body.center[0] // content.game.tile_size) + 1
+    tile = (x, SURFACE - 1)
+    server.game.tilemap.set(*tile, content.blocks.id_of("chest"))
+    step(server, [alice, bob])
+    player.inventory.cursor = ItemStack(content.items["dirt_block"], 5)
+    alice.open_chest(*tile)
+    bob.open_chest(*tile)
+    step(server, [alice, bob], 2)
+    assert alice.world is not None
+    assert bob.world is not None
+    assert alice.world.chest is not None
+    assert len(alice.world.chest) == CHEST_SLOTS
+    alice.click_chest(3)
+    step(server, [alice, bob], 2)
+    stored = bob.world.chest[3] if bob.world.chest else None
+    assert stored is not None
+    assert (stored.item.name, stored.amount) == ("dirt_block", 5)
+    assert player.inventory.cursor is None
+    alice.click_chest(3, right=True)
+    step(server, [alice, bob], 2)
+    assert player.inventory.cursor is not None
+    assert player.inventory.cursor.amount == HALF_OF_FIVE
+    alice.close_chest()
+    step(server, [alice, bob], 2)
+    assert alice.world.chest is None
+    assert bob.world.chest is not None
+    # Breaking the chest drops what is left in it.
+    server.game._broken(content.blocks.by_name("chest"), tile)  # ruff: ignore[private-member-access]
+    server.game.tilemap.set(*tile, AIR)
+    step(server, [alice, bob], 2)
+    assert bob.world.chest is None
+    assert any(
+        f.stack.item.name == "dirt_block" for f in server.game.floating_items
+    )
+
+
+def test_chests_are_out_of_reach_or_invalid(
+    server: Server, content: Content
+) -> None:
+    """Far chests and plain blocks do not open; bad slots are refused."""
+    alice = join(server, content)
+    far = (500, SURFACE - 1)
+    server.game.tilemap.set(*far, content.blocks.id_of("chest"))
+    alice.open_chest(*far)
+    alice.open_chest(0, SURFACE)
+    step(server, [alice], 2)
+    assert alice.world is not None
+    assert alice.world.chest is None
+    player = next(iter(server.game.players.values()))
+    x = int(player.body.center[0] // content.game.tile_size) + 1
+    server.game.tilemap.set(x, SURFACE - 1, content.blocks.id_of("chest"))
+    alice.open_chest(x, SURFACE - 1)
+    alice.click_chest(CHEST_SLOTS)
+    step(server, [alice], 2)
+    assert alice.state is SessionState.CLOSED

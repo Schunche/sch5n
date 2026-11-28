@@ -21,6 +21,7 @@
         "oak_planks": {"name": "Oak Planks", "description": "Place it to build.", "icon": "tile/oakPlanks/0", "max_stack": 1024, "places": "oak_planks", "drop_size": 16},
         "crafting_bench": {"name": "Crafting Bench", "description": "Stand near it to craft on a 3x3 grid.", "icon": "tile/craftingBench/0", "max_stack": 1024, "places": "crafting_bench", "drop_size": 16},
         "furnace": {"name": "Furnace", "description": "Stand near it to smelt ore.", "icon": "tile/furnace/0", "max_stack": 1024, "places": "furnace", "drop_size": 16},
+        "chest": {"name": "Chest", "description": "Right click it to store things.", "icon": "tile/chest/0", "max_stack": 1024, "places": "chest", "drop_size": 16},
         "stick": {"name": "Stick", "description": "A twig from a tree.", "icon": "item/stick", "drop_size": 16, "aliases": ["branch"]},
         "leaf": {"name": "Leaf", "description": "A leaf from a tree.", "icon": "item/leaf", "drop_size": 16},
         "bird_nest": {"name": "Bird's Nest", "description": "Found in the leaves, rarely.", "icon": "item/bird_nest", "drop_size": 16},

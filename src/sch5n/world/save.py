@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from sch5n.error.exceptions import ParseError
@@ -249,6 +249,8 @@ class World:
     """Inventories of the players who played here, by name."""
     owner: str | None = None
     """The player whose single player world it is, if any."""
+    chests: dict[tuple[int, int], Inventory] = field(default_factory=dict)
+    """Contents of the storage blocks, by tile."""
 
     def hand_over(self, player: str) -> None:
         """Make `player` the owner, taking over the owner's inventory.
@@ -268,12 +270,13 @@ class World:
         self.owner = player
 
 
-def save_world(
+def save_world(  # ruff: ignore[too-many-arguments, too-many-positional-arguments]
     path: Path,
     name: str,
     tilemap: TileMap,
     inventories: dict[str, Inventory],
     owner: str | None = None,
+    chests: dict[tuple[int, int], Inventory] | None = None,
 ) -> None:
     """Write a world file. A crash while saving leaves the old file whole.
 
@@ -286,6 +289,10 @@ def save_world(
         "inventories": {
             player: inventory_to_json(inventory)
             for player, inventory in inventories.items()
+        },
+        "chests": {
+            f"{x};{y}": inventory_to_json(chest)
+            for (x, y), chest in (chests or {}).items()
         },
         "map": tilemap_to_json(tilemap),
     }
@@ -327,4 +334,29 @@ def load_world(path: Path, content: Content) -> World:
             for player, inventory in inventories.items()
         },
         owner=owner if isinstance(owner := data.get("owner"), str) else None,
+        chests=_chests_from_json(data.get("chests"), content),
     )
+
+
+def _chests_from_json(
+    data: Json, content: Content
+) -> dict[tuple[int, int], Inventory]:
+    """Decode saved storage. Entries that cannot be read are skipped.
+
+    Returns:
+        dict[tuple[int, int], Inventory]: Contents by tile.
+
+    """
+    chests: dict[tuple[int, int], Inventory] = {}
+    if not isinstance(data, dict):
+        return chests
+    for key, value in data.items():
+        x, _, y = str(key).partition(";")
+        try:
+            tile = (int(x), int(y))
+            slots = value["slots"] if isinstance(value, dict) else None
+            size = len(slots) if isinstance(slots, list) else 0
+            chests[tile] = inventory_from_json(value, content.items, size)
+        except ValueError, KeyError, TypeError, ParseError:
+            LOGGER.warning("Skipping unreadable chest %r", key)
+    return chests
