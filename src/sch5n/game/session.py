@@ -129,6 +129,9 @@ class Game:
         self.floating_items: list[FloatingItem] = []
         self.ambience = Ambience(self.config, self.rng)
         self.garden = Garden(tilemap, self.rng, self.config.tick_rate)
+        self.announcements: list[str] = []
+        """Things everyone should hear, like deaths. Servers send and clear
+        them."""
         bounds = tilemap.bounds()
         self.horizon = (bounds[1] if bounds else 0) * self.config.tile_size
         """World y of the top of the world, where the sky begins."""
@@ -336,8 +339,8 @@ class Game:
 
     def _use_held_item(self, player: Player, inp: TickInput) -> None:
         held = player.inventory.held
-        if held is None:
-            self._pick_by_hand(player, inp)
+        if held is None or held.item.spec.food:
+            self._use_by_hand(player, inp)
             return
         if inp.target is None:
             return
@@ -358,6 +361,19 @@ class Game:
 
         elif inp.place and held.item.spec.places is not None:
             self._place_held(player, held.item, inp.target)
+
+    def _use_by_hand(self, player: Player, inp: TickInput) -> None:
+        """Eat the held food, or pick up a plant with an empty hand."""
+        held = player.inventory.held
+        if held is None:
+            self._pick_by_hand(player, inp)
+        elif (
+            inp.use
+            and player.use_cooldown >= held.item.spec.use_time
+            and player.vitals.eat(held.item.spec.food)
+        ):
+            player.inventory.consume_held()
+            player.use_cooldown = 0
 
     def _place_held(
         self, player: Player, item: ItemDef, target: tuple[int, int]
@@ -484,11 +500,23 @@ class Game:
         if player.body.y > self.void_y:
             self._respawn(player)
 
+    def _tick_vitals(self) -> None:
+        """Let players get hungry; one who starves is back at spawn."""
+        immune = self.setup.mode is GameMode.ADMIN
+        for player in self.players.values():
+            if player.vitals.tick(self.config.tick_rate, immune=immune):
+                player.vitals.restore()
+                self._respawn(player)
+                self.announcements.append(
+                    f"{player.name or "A player"} starved"
+                )
+
     def tick_world(self, view: Rect | None = None) -> None:
         """Advance everything but the players by one tick."""
         self.garden.tick(self._broken)
         for player in self.players.values():
             self._fit_crafting_grid(player)
+        self._tick_vitals()
         self.ambience.tick(self.tilemap, view, self.config.tile_size)
         self._tick_floating_items()
         self.ticks += 1

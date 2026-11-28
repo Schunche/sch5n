@@ -948,3 +948,19 @@ def test_leaving_is_announced_and_history_is_given(
     server.say("restart \x07soon")
     step(server, [alice, carol], 2)
     assert ("system", "", "restart soon") in lines(carol)
+
+
+def test_vitals_reach_the_client_and_deaths_are_announced(
+    server: Server, content: Content
+) -> None:
+    """Health and hunger are synced; starving is announced in chat."""
+    alice = join(server, content, "alice")
+    player = next(iter(server.game.players.values()))
+    player.vitals.hunger = 7
+    step(server, [alice])
+    assert alice.world is not None
+    assert alice.world.player is not None
+    assert alice.world.player.vitals.hunger == 7  # ruff: ignore[magic-value-comparison]
+    server.game.announcements.append("alice starved")
+    step(server, [alice], 2)
+    assert ("system", "", "alice starved") in lines(alice)

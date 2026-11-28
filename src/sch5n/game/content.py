@@ -131,6 +131,8 @@ class ItemSpec(_Model):
     """Size in pixels of the item when lying in the world."""
     aliases: tuple[str, ...] = ()
     """Legacy names accepted when loading saved inventories."""
+    food: int = Field(default=0, ge=0)
+    """Hunger points eating it restores. Zero means it is not food."""
 
 
 class ItemsFile(_Model):

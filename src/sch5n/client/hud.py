@@ -67,6 +67,10 @@ def item_tooltip(stack: ItemStack, tick_rate: int) -> list[TooltipLine]:
     if item.is_tool:
         seconds = spec.use_time / tick_rate
         lines.append(TooltipLine(f"Swings in {seconds:.2f} s", LineKind.STAT))
+    if spec.food:
+        lines.append(
+            TooltipLine(f"Restores {spec.food} hunger", LineKind.STAT)
+        )
     if item.is_stackable:
         lines.append(
             TooltipLine(f"Stacks up to {spec.max_stack}", LineKind.STAT)
@@ -94,6 +98,61 @@ def tooltip_rect(
     if y + h > screen[1]:
         y = mouse[1] - TOOLTIP_OFFSET[1] - h
     return Rect(max(0.0, x), max(0.0, y), w, h)
+
+
+@dataclass(frozen=True, slots=True)
+class VitalsLook:
+    """Where and how the health and hunger bars are drawn."""
+
+    center_x: float
+    bottom: float
+
+
+VITAL_COLORS = {"health": (214, 64, 64), "hunger": (222, 148, 56)}
+BAR_WIDTH = 150
+BAR_HEIGHT = 14
+BAR_GAP = 16
+
+
+def draw_vitals(  # ruff: ignore[too-many-arguments, too-many-positional-arguments]
+    batch: SpriteBatch,
+    text: TextRenderer,
+    style: Style,
+    where: VitalsLook,
+    health: tuple[int, int],
+    hunger: tuple[int, int],
+) -> None:
+    """Draw two bars, health left and hunger right, with their numbers.
+
+    `health` and `hunger` are current and maximum values.
+    """
+    bars = (("health", health), ("hunger", hunger))
+    left = where.center_x - BAR_GAP / 2 - BAR_WIDTH
+    for index, (name, (value, top)) in enumerate(bars):
+        x = left + index * (BAR_WIDTH + BAR_GAP)
+        y = where.bottom - BAR_HEIGHT
+        box = (x, y, BAR_WIDTH, BAR_HEIGHT)
+        batch.shape(box, rgba(style.color("button_inner"), 0.8), radius=3)
+        fill = BAR_WIDTH * max(0, min(value, top)) / max(1, top)
+        if fill > 0:
+            batch.shape(
+                (x, y, fill, BAR_HEIGHT),
+                rgba(VITAL_COLORS[name]),
+                radius=3,
+            )
+        batch.shape(
+            box, rgba(style.color("button_border")), radius=3, border=1.5
+        )
+        text.draw(
+            batch,
+            f"{value}",
+            (x + BAR_WIDTH / 2, y + BAR_HEIGHT / 2),
+            TextStyle(
+                size=12,
+                color=rgba(style.color("text")),
+                anchor=Anchor.CENTER,
+            ),
+        )
 
 
 @dataclass(frozen=True, slots=True)

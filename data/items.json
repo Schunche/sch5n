@@ -24,6 +24,6 @@
         "leaf": {"name": "Leaf", "description": "A leaf from a tree.", "icon": "item/leaf", "drop_size": 16},
         "bird_nest": {"name": "Bird's Nest", "description": "Found in the leaves, rarely.", "icon": "item/bird_nest", "drop_size": 16},
         "oak_sapling": {"name": "Oak Sapling", "description": "Plant it on dirt or grass.", "icon": "item/oak_sapling", "places": "oak_sapling", "drop_size": 16},
-        "apple": {"name": "Apple", "description": "Fruit from an oak.", "icon": "item/apple", "drop_size": 16}
+        "apple": {"name": "Apple", "description": "Fruit from an oak. Eat it to feel less hungry.", "icon": "item/apple", "drop_size": 16, "food": 5}
     }
 }

@@ -194,6 +194,8 @@ def player_state(player_id: int, player: Player) -> PlayerState:
         jump_speed=player.jump_speed,
         wall_slide=player.wall_slide,
         use_cooldown=player.use_cooldown,
+        health=player.vitals.health,
+        hunger=player.vitals.hunger,
     )
 
 
@@ -508,6 +510,9 @@ class Server:
 
         self._step_players()
         self.game.tick_world()
+        for text in self.game.announcements:
+            self.say(text)
+        self.game.announcements.clear()
 
         snapshot = self._snapshot()
         for client in self.clients:

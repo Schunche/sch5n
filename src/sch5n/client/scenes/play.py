@@ -14,7 +14,7 @@ import glfw
 
 from sch5n.client.camera import Camera
 from sch5n.client.chat import ChatBox
-from sch5n.client.hud import Hud, item_tooltip
+from sch5n.client.hud import Hud, VitalsLook, draw_vitals, item_tooltip
 from sch5n.client.inventory_mouse import BUTTONS, InventoryMouse
 from sch5n.client.keybinds import Action, Context
 from sch5n.client.render.batch import rgba
@@ -35,8 +35,10 @@ from sch5n.client.window import (
     MouseMoveEvent,
 )
 from sch5n.client.world_view import WorldRenderer, load_start_map
+from sch5n.game.config import GameMode
 from sch5n.game.crafting import crafted
 from sch5n.game.session import GameSetup, TickInput
+from sch5n.game.vitals import MAX_HEALTH, MAX_HUNGER
 from sch5n.log.logger import LOGGER
 from sch5n.net.client import ClientSession, SessionState
 from sch5n.net.discovery import lan_addresses
@@ -533,6 +535,7 @@ class PlayScene(Scene):
             self._draw_tooltip(mouse)
         if self.notice_ticks:
             self._draw_notice()
+        self._draw_vitals()
         self.chat.draw(
             batch,
             app.text,
@@ -545,6 +548,24 @@ class PlayScene(Scene):
         if self.debug:
             self._draw_debug()
         app.draw_cursor()
+
+    def _draw_vitals(self) -> None:
+        """Draw health and hunger at the bottom, unless an admin plays."""
+        player = self.player
+        if player is None or self.app.options.game_mode is GameMode.ADMIN:
+            return
+        app = self.app
+        vitals = player.vitals
+        draw_vitals(
+            app.batch,
+            app.text,
+            app.ui,
+            VitalsLook(
+                app.screen[0] / 2, app.screen[1] - app.ui.outer_padding
+            ),
+            (vitals.health, MAX_HEALTH),
+            (vitals.hunger, MAX_HUNGER),
+        )
 
     def _draw_station(self) -> None:
         """Name the crafting station in reach, if the grid is enlarged."""

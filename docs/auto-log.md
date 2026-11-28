@@ -28,3 +28,23 @@ Work done on the `claude/auto` branch, newest last.
   material over two sticks). They use the existing textures under
   `assets/textures/tool/`, and get weaker and slower than the copper ones.
 - Test: `tests/test_crafting.py`.
+
+## Placeholder texture
+
+- `assets/textures/tool/stone_axe.png` is a placeholder: the iron axe
+  recolored with the stone pickaxe's grays. Replace it with real art. (The
+  commit that added the stone axe forgot it and the game would not start;
+  fixed in the next commit.)
+
+## Health, hunger and edible apples
+
+- `sch5n.game.vitals.Vitals`: health and hunger, 20 each. Hunger drops by one
+  every 24 s; at 14 or more health regenerates (one per 4 s); at 0 health
+  drains (one per 6 s) and a starved player respawns fed, announced in chat.
+  Admin mode is immune and shows no bars.
+- Items may have `food` (hunger restored) in `data/items.json`. Holding use
+  with food in hand eats one per use time when not full. The apple restores 5.
+- Protocol 6: `PlayerState` carries `health` and `hunger`. The server runs
+  everything; clients only display it (bars at the bottom of the screen).
+- Not saved with worlds yet: vitals start full on joining.
+- Tests: `tests/test_vitals.py`, a sync test in `tests/test_server.py`.

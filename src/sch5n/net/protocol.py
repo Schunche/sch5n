@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from sch5n.game.content import Content
     from sch5n.world.tilemap import TileMap
 
-PROTOCOL_VERSION = 5
+PROTOCOL_VERSION = 6
 """Raised whenever messages change incompatibly."""
 MAX_CLIENT_FRAME = 4096
 """Largest message a client may send, in bytes."""
@@ -185,6 +185,8 @@ class PlayerState(_Message):
     jump_speed: float = 0.0
     wall_slide: bool = False
     use_cooldown: int = 0
+    health: int = 20
+    hunger: int = 20
 
 
 class ItemState(_Message):

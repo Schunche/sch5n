@@ -9,6 +9,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sch5n.game.physics import Body, approach, move_and_collide
+from sch5n.game.vitals import Vitals
 
 if TYPE_CHECKING:
     from sch5n.game.config import GameConfig, GameMode
@@ -75,6 +76,8 @@ class Player:
         """Ticks since `action` last changed."""
         self.use_cooldown = 0
         """Ticks since the held item was last used."""
+        self.vitals = Vitals()
+        self.mode = mode
         self.jump_hold = 0
         """Ticks the current jump may still be held to rise higher."""
         self.swing: Swing | None = None

@@ -241,6 +241,8 @@ class ClientWorld:
         player.jump_speed = state.jump_speed
         player.wall_slide = state.wall_slide
         player.use_cooldown = state.use_cooldown
+        player.vitals.health = state.health
+        player.vitals.hunger = state.hunger
         if state.swing is None:
             player.swing = None
         else:
