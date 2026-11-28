@@ -587,3 +587,4 @@ Todo: nothing left from this list.
 
 ## Desktop shortcuts
 - `install-desktop.sh --desktop` copies the app-menu entry to the Desktop; new `install-desktop.bat` makes Windows Start menu/Desktop shortcuts. Paths are resolved at install time. Players only (play.sh installs the menu entry; dev setup doesn't).
+- Shortcuts are now opt-in: play.sh/play.bat ask once (remembered in the user config dir), never when non-interactive or run with arguments.

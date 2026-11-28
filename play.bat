@@ -13,6 +13,15 @@ if errorlevel 1 (
     set "PATH=%USERPROFILE%\.local\bin;%PATH%"
 )
 
+set "ASKED=%APPDATA%\sch5n\shortcuts-asked"
+if not exist "%ASKED%" (
+    echo.
+    choice /c YN /m "Add the game to the Start menu and the Desktop"
+    if not errorlevel 2 call "%~dp0install-desktop.bat"
+    if not exist "%APPDATA%\sch5n" mkdir "%APPDATA%\sch5n"
+    echo asked> "%ASKED%"
+)
+
 uv run --no-dev --python 3.15 sch5n %*
 set "result=%errorlevel%"
 if not "%result%"=="0" (
