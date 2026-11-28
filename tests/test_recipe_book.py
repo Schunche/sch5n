@@ -33,7 +33,7 @@ def entry_for(content: Content, item: str) -> Entry:
 def test_every_recipe_has_an_entry(content: Content) -> None:
     """Entries cover the recipes, with their ingredient amounts."""
     book = entries(content)
-    assert len(book) == len(content.recipes)
+    assert len(book) == len(content.recipes) + len(content.smelting)
     pickaxe = entry_for(content, "stone_pickaxe")
     amounts = {n.choices[0].name: n.amount for n in pickaxe.needs}
     assert amounts == {"cobblestone": 3, "stick": 2}
