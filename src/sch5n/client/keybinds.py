@@ -69,6 +69,7 @@ class Action(StrEnum):
     PLACE_BLOCK = "place_block"
     INVENTORY = "inventory"
     DEBUG = "debug"
+    CHAT = "chat"
     HOTBAR_NEXT = "hotbar_next"
     HOTBAR_PREVIOUS = "hotbar_previous"
     HOTBAR_1 = "hotbar_1"
@@ -344,6 +345,7 @@ DEFAULTS: dict[Context, dict[Action, tuple[str, ...]]] = {
         Action.PLACE_BLOCK: ("mouse:RIGHT",),
         Action.INVENTORY: ("key:TAB",),
         Action.DEBUG: ("key:F3",),
+        Action.CHAT: ("key:T", "key:ENTER"),
         Action.HOTBAR_NEXT: ("wheel:DOWN",),
         Action.HOTBAR_PREVIOUS: ("wheel:UP",),
     }

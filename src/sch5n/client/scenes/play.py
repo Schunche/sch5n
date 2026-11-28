@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 import glfw
 
 from sch5n.client.camera import Camera
+from sch5n.client.chat import ChatBox
 from sch5n.client.hud import Hud, item_tooltip
 from sch5n.client.inventory_mouse import BUTTONS, InventoryMouse
 from sch5n.client.keybinds import Action, Context
@@ -28,6 +29,7 @@ from sch5n.client.ui import (
     hit_button,
 )
 from sch5n.client.window import (
+    CharEvent,
     KeyEvent,
     MouseButtonEvent,
     MouseMoveEvent,
@@ -55,6 +57,8 @@ if TYPE_CHECKING:
 NOTICE_TICKS = 600
 """How long a notice, like the LAN address, stays on screen."""
 NOTICE_SIZE = 16
+CARET_TICKS = 30
+"""Ticks the chat caret is on or off."""
 
 
 class PlayScene(Scene):
@@ -92,6 +96,11 @@ class PlayScene(Scene):
         self.inventory_open = False
         self.mouse = InventoryMouse(session)
         self.debug = False
+        self.chat = ChatBox()
+        self._chat_seen = 0
+        self._skip_char = False
+        """Ignore the character typed by the key that opened the chat."""
+        self.ticks = 0
         self.notice = ""
         self.notice_ticks = 0
         self._jump_requested = False
@@ -314,6 +323,9 @@ class PlayScene(Scene):
                 self._jump_requested = True
             case Action.DEBUG:
                 self.debug = not self.debug
+            case Action.CHAT if not self.inventory_open:
+                self.chat.start()
+                self._skip_char = True
             case Action.HOTBAR_NEXT if not self.inventory_open:
                 inventory(InventoryAction.SCROLL, 1)
             case Action.HOTBAR_PREVIOUS if not self.inventory_open:
@@ -371,8 +383,20 @@ class PlayScene(Scene):
     def _open_settings(self) -> None:
         self.app.switch(SettingsScene(self.app, back=self, in_game=True))
 
+    def _on_chat_event(self, event: Event) -> None:
+        """Type into the open chat box."""
+        if isinstance(event, CharEvent) and self._skip_char:
+            self._skip_char = False
+            return
+        text = self.chat.handle(event, lambda: self.app.window.clipboard)
+        if text:
+            self.session.say(text)
+
     def on_event(self, event: Event) -> None:
         """Handle input."""
+        if self.chat.open:
+            self._on_chat_event(event)
+            return
         match event:
             case KeyEvent(key=glfw.KEY_ESCAPE) if event.pressed:
                 if self.inventory_open:
@@ -395,6 +419,8 @@ class PlayScene(Scene):
             self._on_action(action)
 
     def _input(self) -> TickInput:
+        if self.chat.open:
+            return TickInput()
         app = self.app
         window = app.window
         mouse = window.mouse_pos
@@ -426,6 +452,7 @@ class PlayScene(Scene):
         if self.server is not None:
             self.server.step()
         self.session.poll()
+        self._take_chat()
         self._lay_out_crafting()
         if self.session.state is SessionState.CLOSED:
             reason = self.session.error or "Disconnected"
@@ -444,8 +471,19 @@ class PlayScene(Scene):
                 app.content.game.camera.smoothing / app.tick_rate,
             )
 
+    def _take_chat(self) -> None:
+        """Move newly received chat lines into the chat box."""
+        session = self.session
+        new = min(session.chat_count - self._chat_seen, len(session.chat))
+        if new > 0:
+            for message in list(session.chat)[-new:]:
+                self.chat.add(message, self.ticks)
+        self._chat_seen = session.chat_count
+
     def tick(self) -> None:
         """Advance the game by one tick."""
+        self.ticks += 1
+        self._skip_char = False
         self._advance(self._input())
         self._jump_requested = False
 
@@ -495,6 +533,15 @@ class PlayScene(Scene):
             self._draw_tooltip(mouse)
         if self.notice_ticks:
             self._draw_notice()
+        self.chat.draw(
+            batch,
+            app.text,
+            app.ui,
+            app.screen,
+            self.ticks,
+            app.tick_rate,
+            caret=(self.ticks // CARET_TICKS) % 2 == 0,
+        )
         if self.debug:
             self._draw_debug()
         app.draw_cursor()

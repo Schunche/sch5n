@@ -1397,3 +1397,28 @@ def test_font_can_be_chosen(app: App) -> None:
     for _ in app.ui.font_names[1:]:
         click_value(settings, Option.FONT)
     assert app.settings.font == first
+
+
+def test_chat_in_the_game(app: App) -> None:
+    """Chat opens with its key, goes through the server and is drawn."""
+    play = PlayScene.singleplayer(app)
+    for _ in range(WARMUP_TICKS):
+        play.tick()
+    play.on_event(KeyEvent(glfw.KEY_T, glfw.PRESS, 0))
+    assert play.chat.open
+    # The "t" typed by the opening key is not part of the message.
+    play.on_event(CharEvent("t"))
+    for char in "hello":
+        play.on_event(CharEvent(char))
+    play.on_event(KeyEvent(glfw.KEY_ENTER, glfw.PRESS, 0))
+    assert not play.chat.open
+    for _ in range(3):
+        play.tick()
+    texts = [e.message.text for e in play.chat.entries]
+    assert "hello" in texts
+    assert draw(app, play).std() > 0
+    play.on_event(KeyEvent(glfw.KEY_T, glfw.PRESS, 0))
+    assert draw(app, play).std() > 0
+    play.on_event(KeyEvent(glfw.KEY_ESCAPE, glfw.PRESS, 0))
+    assert not play.chat.open
+    play.leave()
