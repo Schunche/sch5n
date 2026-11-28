@@ -126,6 +126,10 @@ ARROW_SPEED = 7.0
 BOSS = "king_slime"
 BOSS_CHANCE = 0.04
 """Chance per try, at night, that the boss comes, if none is around."""
+SAFE_FALL = 7
+"""Tiles a player may fall without harm."""
+FALL_DAMAGE = 1
+"""Health lost for each tile fallen beyond that."""
 LIT_SAFE = 8
 """Creatures do not appear this many tiles from a light."""
 
@@ -355,6 +359,7 @@ class Game:
         player.jump_hold = 0
         player.jumps = player.max_jumps
         player.air_time = 0
+        player.reset_fall()
 
     @property
     def player(self) -> Player:
@@ -668,6 +673,9 @@ class Game:
         player.tick(self.tilemap, inp.move_x, jump_held=inp.jump_held)
         if player.body.y > self.void_y:
             self._respawn(player)
+        elif player.landed_from > SAFE_FALL:
+            hurt = int(player.landed_from - SAFE_FALL) * FALL_DAMAGE
+            self.hurt_player(player, hurt, "fell from a high place")
 
     def _tick_vitals(self) -> None:
         """Let players get hungry; one who starves is back at spawn."""

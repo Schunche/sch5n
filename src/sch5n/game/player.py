@@ -85,6 +85,10 @@ class Player:
         self.swing: Swing | None = None
         """The item swing in progress, if any."""
         self.jump_speed = self.tuning.jump_velocity
+        self.fall_peak = pos[1]
+        """The highest y (smallest) since the feet last left the ground."""
+        self.landed_from = 0.0
+        """Tiles of the fall that ended this tick; zero if none did."""
         """Upward speed of the current jump, kept while it is held."""
 
     def _set_action(self, action: Action) -> None:
@@ -120,6 +124,7 @@ class Player:
         self._walk(move_x, hits)
         self._fall(hits, jump_held=jump_held)
         self._choose_action(hits, move_x)
+        self._track_fall(hits)
         self.action_age += 1
         self.use_cooldown += 1
         if self.swing is not None:
@@ -171,6 +176,24 @@ class Player:
             body.vx = approach(body.vx, 0.0, tuning.friction)
         else:
             body.vx = 0.0
+
+    def _track_fall(self, hits: Collisions) -> None:
+        """Measure falls: from the highest point to the landing."""
+        body = self.body
+        self.landed_from = 0.0
+        if hits.down or self.wall_slide:
+            if hits.down:
+                self.landed_from = (
+                    body.y - self.fall_peak
+                ) / self.config.tile_size
+            self.fall_peak = body.y
+        else:
+            self.fall_peak = min(self.fall_peak, body.y)
+
+    def reset_fall(self) -> None:
+        """Forget the fall so far, after being put somewhere else."""
+        self.fall_peak = self.body.y
+        self.landed_from = 0.0
 
     def _fall(self, hits: Collisions, *, jump_held: bool) -> None:
         """Apply gravity, a held jump, and landing."""

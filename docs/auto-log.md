@@ -396,3 +396,11 @@ Work done on the `claude/auto` branch, newest last.
 - `biome_bands` and `WorldSpec` take a `home` column that is always plains,
   so the spawn at x = 0 never lands in a desert or on snow.
 - No new art.
+
+## Fall damage
+
+- `Player` measures a fall from its highest point to the landing
+  (`landed_from`, in tiles); `Game` hurts a player for each tile beyond
+  `SAFE_FALL` (7). Wall slides and respawns reset the measure; admins are
+  immune. Clients only predict movement, so nothing changed on the wire.
+- No new art.

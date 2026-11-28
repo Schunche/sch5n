@@ -295,3 +295,33 @@ def test_one_sword_blow_can_kill_a_slime(content: Content) -> None:
         if not game.mobs:
             break
     assert not game.mobs
+
+
+def drop_from(game: Game, tiles: int) -> int:
+    """Let the player fall from `tiles` above the ground.
+
+    Returns:
+        int: Health lost.
+
+    """
+    player = game.player
+    player.body.y = GROUND - player.body.h - tiles * TILE
+    player.reset_fall()
+    player.body.vy = 0.0
+    before = player.vitals.health
+    for _ in range(200):
+        game.tick(TickInput())
+    return before - player.vitals.health
+
+
+def test_short_falls_are_safe_and_long_ones_hurt(content: Content) -> None:
+    """Landing from a few tiles is harmless; a high fall costs health."""
+    game = make_game(content)
+    assert drop_from(game, 3) == 0
+    assert drop_from(game, 12) == 5  # ruff: ignore[magic-value-comparison]
+
+
+def test_admins_shrug_off_falls(content: Content) -> None:
+    """Admins take no fall damage."""
+    game = make_game(content, GameMode.ADMIN)
+    assert drop_from(game, 20) == 0
