@@ -138,4 +138,4 @@ def test_the_bed_is_saved(content: Content) -> None:
     again = inventory_from_json(
         inventory_to_json(inventory), content.items, 10
     )
-    assert again.home == (4, 7)  # ruff: ignore[magic-value-comparison]
+    assert again.home == (4, 7)
