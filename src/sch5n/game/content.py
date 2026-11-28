@@ -74,6 +74,9 @@ class BlockSpec(_Model):
     durability: int | None = None
     tool: str | None = None
     """Tool type that breaks it best. `None` means unbreakable."""
+    min_power: int = Field(default=0, ge=0)
+    """Least power of its own tool type that can break it. Weaker tools
+    cannot dent it, so ores come in tiers."""
     slower_tools: tuple[str, ...] = ()
     """Other tool types that break it too, with `slower_tool_power` of
     their power. A pickaxe digs dirt, but a shovel is made for it."""

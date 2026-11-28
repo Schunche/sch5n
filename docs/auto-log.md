@@ -560,3 +560,11 @@ Todo: nothing left from this list.
 - The recipe book lists what a furnace makes after the other recipes
   (labelled Furnace); clicking those does nothing. Shift click sends ore to
   the input slot and fuel to the fuel slot of an open furnace.
+
+## Ore tiers
+
+- `min_power` on blocks: the least power of the block's own tool type that
+  can break it. Iron and lead need 20 (a stone pickaxe), silver and tungsten
+  40 (iron or lead pickaxe), gold 55 (silver or tungsten), platinum 70 (gold).
+  Copper and tin need none. Ore item tooltips say which pickaxe to bring.
+  A too weak tool does nothing to the block (like a wrong tool).

@@ -477,3 +477,22 @@ def test_deeper_ores_make_better_pickaxes(content: Content) -> None:
     best = [max(power(m) for m in pair) for pair in ORE_PAIRS]
     assert best == sorted(best)
     assert len(set(best)) == len(best)
+
+
+def test_ores_come_in_tiers_of_pickaxe_power(content: Content) -> None:
+    """Each tier of ore needs the pickaxe of the tier before it."""
+    from sch5n.game.mining import tool_power  # ruff: ignore[import-outside-top-level]
+
+    def best(ore: str, pick: str) -> int:
+        return tool_power(content.items[pick], content.blocks.by_name(ore))
+
+    assert best("copper", "wooden_pickaxe") > 0
+    assert best("iron", "wooden_pickaxe") == 0
+    assert best("iron", "stone_pickaxe") > 0
+    assert best("silver", "stone_pickaxe") == 0
+    assert best("silver", "lead_pickaxe") > 0
+    assert best("gold", "iron_pickaxe") == 0
+    assert best("gold", "tungsten_pickaxe") > 0
+    assert best("platinum", "silver_pickaxe") == 0
+    assert best("platinum", "gold_pickaxe") > 0
+    assert best("dirt", "wooden_pickaxe") > 0

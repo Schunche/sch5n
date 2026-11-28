@@ -51,7 +51,8 @@ def tool_power(tool: ItemDef | None, block: BlockDef) -> int:
         return 0
     powers = tool.spec.tool_power
     if spec.tool in powers:
-        return powers[spec.tool]
+        power = powers[spec.tool]
+        return power if power >= spec.min_power else 0
     slower = max(
         (powers.get(kind, 0) for kind in spec.slower_tools), default=0
     )
