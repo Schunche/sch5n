@@ -129,3 +129,13 @@ def test_armor_goes_through_the_server(content: Content) -> None:
     mine = alice.world.inventory.armor[HEAD]
     assert mine is not None
     assert mine.item.name == "iron_helmet"
+
+
+def test_the_bed_is_saved(content: Content) -> None:
+    """A set spawn point comes back with the inventory."""
+    inventory = Inventory(10)
+    inventory.home = (4, 7)
+    again = inventory_from_json(
+        inventory_to_json(inventory), content.items, 10
+    )
+    assert again.home == (4, 7)  # ruff: ignore[magic-value-comparison]

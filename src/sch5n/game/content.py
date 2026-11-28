@@ -110,6 +110,8 @@ class BlockSpec(_Model):
     """For stations: the crafting grid side of players within reach."""
     hand_pickup: bool = False
     """An empty hand picks it up at once."""
+    bed: bool = False
+    """Using it sets the spawn point of the player."""
     light: int = Field(default=0, ge=0, le=32)
     """How many tiles around it the block lights up at night."""
 

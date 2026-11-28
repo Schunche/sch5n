@@ -582,3 +582,23 @@ def test_every_wood_has_a_sapling_and_planks(content: Content) -> None:
         assert f"{wood}_log" in content.items
         sapling = content.blocks.by_name(f"{wood}_sapling")
         assert sapling.spec.grows_after
+
+
+def test_a_bed_sets_the_spawn_point(game: Game, content: Content) -> None:
+    """Using a bed in reach makes the player respawn on it."""
+    spot = (2, 9)
+    bed = content.blocks.id_of("bed")
+    game.tilemap.set(*spot, bed)
+    player = game.player
+    far = (60, 9)
+    game.tilemap.set(*far, bed)
+    assert not game.sleep_in(player, far)
+    assert game.sleep_in(player, spot)
+    assert player.inventory.home == spot
+    game._respawn(player)  # ruff: ignore[private-member-access]
+    size = game.config.tile_size
+    assert player.body.x // size == spot[0]
+    assert player.body.y + player.body.h == spot[1] * size
+    game.tilemap.set(*spot, AIR)
+    game._respawn(player)  # ruff: ignore[private-member-access]
+    assert player.inventory.home is None

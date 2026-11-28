@@ -535,12 +535,12 @@ class PlayScene(Scene):
         block = self.world.tilemap.blocks.get(self.world.tilemap.get(*tile))
         if (
             block is None
-            or block.spec.container is None
+            or not (block.spec.container or block.spec.bed)
             or not player.can_reach(tile)
         ):
             return False
         self.session.open_chest(*tile)
-        self.inventory_open = True
+        self.inventory_open = block.spec.container is not None
         return True
 
     def _slot_under(self, pos: tuple[float, float]) -> int | None:

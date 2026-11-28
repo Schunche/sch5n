@@ -54,6 +54,7 @@
         "pine_sapling": {"name": "Pine Sapling", "description": "Plant it on dirt or grass.", "icon": "item/pine_sapling", "places": "pine_sapling", "drop_size": 16},
         "sand_block": {"name": "Sand Block", "description": "Place it to build.", "icon": "tile/sand/0", "max_stack": 1024, "places": "sand", "drop_size": 16},
         "snow_block": {"name": "Snow Block", "description": "Place it to build.", "icon": "tile/snow/0", "max_stack": 1024, "places": "snow", "drop_size": 16},
+        "bed": {"name": "Bed", "description": "Place it, then use it to set where you respawn.", "icon": "tile/bed/0", "max_stack": 16, "places": "bed", "drop_size": 16},
         "apple": {"name": "Apple", "description": "Fruit from an oak. Eat it to feel less hungry.", "icon": "item/apple", "drop_size": 16, "food": 5}
     }
 }

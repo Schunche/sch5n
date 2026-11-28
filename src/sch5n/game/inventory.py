@@ -94,6 +94,8 @@ class Inventory:  # ruff: ignore[too-many-public-methods]
         self.cursor: Slot = None
         self.crafting: list[Slot] = [None] * CRAFTING_SIDE**2
         """The square crafting grid, row by row."""
+        self.home: tuple[int, int] | None = None
+        """Tile of the bed that sets where the owner respawns."""
         self.armor: list[Slot] = [None] * len(ARMOR_PARTS)
         """What is worn, one slot for each of `ARMOR_PARTS`."""
         self.selected: int = 0
@@ -199,6 +201,7 @@ class Inventory:  # ruff: ignore[too-many-public-methods]
         copied.slots = [stack_copy(s) for s in self.slots]
         copied.crafting = [stack_copy(s) for s in self.crafting]
         copied.armor = [stack_copy(s) for s in self.armor]
+        copied.home = self.home
         copied.cursor = stack_copy(self.cursor)
         copied.selected = self.selected
         return copied

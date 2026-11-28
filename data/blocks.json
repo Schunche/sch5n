@@ -31,6 +31,7 @@
         "pine_log_leaf": {"textures": [["tile/pineLog/0", "tile/pineLeaf/0"]], "durability": 300, "tool": "axe", "tree": "trunk", "drop": "pine_log", "trim": {"tool": "lopper", "into": "pine_log", "durability": 50}, "extra_drops": [{"item": "stick", "chance": 0.5, "min_amount": 1, "max_amount": 2}, {"item": "leaf", "chance": 0.7, "min_amount": 1, "max_amount": 2}, {"item": "bird_nest", "chance": 0.03}, {"item": "pine_sapling", "chance": 0.08}], "particle": "leaf"},
         "pine_sapling": {"textures": ["item/pine_sapling"], "durability": 25, "tool": "lopper", "drop": "pine_sapling", "plant_on": ["dirt", "grass"], "grows_after": [60, 120], "hand_pickup": true},
         "sand": {"textures": ["tile/sand/0"], "solid": true, "durability": 100, "tool": "shovel", "slower_tools": ["pickaxe"], "drop": "sand_block"},
-        "snow": {"textures": ["tile/snow/0"], "solid": true, "durability": 100, "tool": "shovel", "slower_tools": ["pickaxe"], "drop": "snow_block"}
+        "snow": {"textures": ["tile/snow/0"], "solid": true, "durability": 100, "tool": "shovel", "slower_tools": ["pickaxe"], "drop": "snow_block"},
+        "bed": {"textures": ["tile/bed/0"], "durability": 60, "tool": "axe", "drop": "bed", "bed": true}
     }
 }

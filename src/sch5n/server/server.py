@@ -503,6 +503,11 @@ class Server:
         return self.game.chest_at(*client.chest)
 
     def _open_chest(self, client: _Client, message: ChestOpen) -> None:
+        if client.player_id is not None:
+            player = self.game.players[client.player_id]
+            if self.game.sleep_in(player, (message.x, message.y)):
+                _tell(client, "Your spawn point is set to this bed.")
+                return
         client.chest = (message.x, message.y)
         if self._reachable_chest(client) is None:
             client.chest = None

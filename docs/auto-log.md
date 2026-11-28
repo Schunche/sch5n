@@ -277,3 +277,12 @@ Work done on the `claude/auto` branch, newest last.
 - `data/maps/map1.json` is untouched.
 - Tests: `tests/test_biomes.py`, `tests/test_world_io.py`.
 - A generated map is used by saving it with `python -m sch5n.world <name> [--seed N]` and starting a new world or server with `--map <name>`.
+
+## Beds
+
+- Block and item `bed` (3 cloth over 3 planks). Right-click a bed in reach
+  to set your spawn point (a chat line confirms it); you respawn standing on
+  it as long as it stands. Saved with the inventory as `home`.
+- Block spec `bed: true`; `Game.sleep_in`; the client reuses the
+  right-click path of chests and `ChestOpen` (no new message).
+- Placeholder art to replace: `assets/textures/tile/bed/0.png`.

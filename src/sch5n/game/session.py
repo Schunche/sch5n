@@ -301,10 +301,47 @@ class Game:
                 )
         return (x, y)
 
+    def _home_point(self, player: Player) -> tuple[float, float] | None:
+        """Where a player's bed stands them up, if it is still there.
+
+        Returns:
+            tuple[float, float] | None: Top left of the body, `None` without
+            a bed.
+
+        """
+        home = player.inventory.home
+        if home is None:
+            return None
+        block = self.content.blocks.get(self.tilemap.get(*home))
+        if block is None or not block.spec.bed:
+            player.inventory.home = None
+            return None
+        size = self.config.tile_size
+        body = player.body
+        return (
+            home[0] * size + (size - body.w) / 2,
+            home[1] * size - body.h,
+        )
+
+    def sleep_in(self, player: Player, tile: tuple[int, int]) -> bool:
+        """Make the bed at a tile the player's spawn point.
+
+        Returns:
+            bool: Whether there was a bed in reach.
+
+        """
+        block = self.content.blocks.get(self.tilemap.get(*tile))
+        if block is None or not block.spec.bed or not player.can_reach(tile):
+            return False
+        player.inventory.home = tile
+        return True
+
     def _respawn(self, player: Player) -> None:
         """Put a player back at spawn, at rest. The inventory is kept."""
         body = player.body
-        body.x, body.y = self._spawn_point(self.setup.spawn)
+        body.x, body.y = self._home_point(player) or self._spawn_point(
+            self.setup.spawn
+        )
         body.vx = body.vy = 0.0
         player.jump_hold = 0
         player.jumps = player.max_jumps

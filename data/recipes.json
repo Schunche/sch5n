@@ -23,6 +23,7 @@
         {"pattern": ["MMM", "M M"], "key": {"M": "iron_ingot"}, "result": {"item": "iron_helmet"}},
         {"pattern": ["M M", "MMM", "MMM"], "key": {"M": "iron_ingot"}, "result": {"item": "iron_chestplate"}},
         {"pattern": ["MMM", "M M", "M M"], "key": {"M": "iron_ingot"}, "result": {"item": "iron_leggings"}},
+        {"pattern": ["CCC", "PPP"], "key": {"C": "cloth", "P": "oak_planks"}, "result": {"item": "bed"}},
         {"ingredients": ["stick", "leaf"], "result": {"item": "torch"}},
         {"ingredients": ["stick", "slime_ball"], "result": {"item": "torch", "amount": 4}},
         {"ingredients": ["copper_ore", "stick", "stick"], "station": "furnace", "result": {"item": "copper_ingot"}},

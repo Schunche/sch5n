@@ -182,6 +182,7 @@ def inventory_to_json(inventory: Inventory) -> dict[str, Json]:
         "slots": [_slot_to_json(slot) for slot in inventory],
         "crafting": [_slot_to_json(slot) for slot in inventory.crafting],
         "armor": [_slot_to_json(slot) for slot in inventory.armor],
+        "home": None if inventory.home is None else list(inventory.home),
         "health": inventory.vitals.health,
         "hunger": inventory.vitals.hunger,
     }
@@ -203,6 +204,23 @@ def _slot_from_json(data: Json, items: ItemRegistry) -> Slot:
         case _:
             msg = f"Invalid inventory slot {data!r}"
             raise ParseError(msg)
+
+
+def _restore_worn(
+    inventory: Inventory, data: dict[str, Json], items: ItemRegistry
+) -> None:
+    """Put back the armor and the bed of a saved inventory."""
+    match data.get("home"):
+        case [int(hx), int(hy)]:
+            inventory.home = (hx, hy)
+        case _:
+            pass
+    armor = data.get("armor", [])
+    if isinstance(armor, list):
+        for index, slot in enumerate(armor[: len(inventory.armor)]):
+            stack = _slot_from_json(slot, items)
+            if stack is None or stack.item.spec.armor == ARMOR_PARTS[index]:
+                inventory.armor[index] = stack
 
 
 def inventory_from_json(
@@ -232,12 +250,7 @@ def inventory_from_json(
         inventory.resize_crafting(MAX_CRAFTING_SIDE)
     for index, slot in enumerate(crafting[: len(inventory.crafting)]):
         inventory.crafting[index] = _slot_from_json(slot, items)
-    armor = data.get("armor", [])
-    if isinstance(armor, list):
-        for index, slot in enumerate(armor[: len(inventory.armor)]):
-            stack = _slot_from_json(slot, items)
-            if stack is None or stack.item.spec.armor == ARMOR_PARTS[index]:
-                inventory.armor[index] = stack
+    _restore_worn(inventory, data, items)
     selected = data.get("selected", 0)
     inventory.select(selected if isinstance(selected, int) else 0)
     health, hunger = data.get("health"), data.get("hunger")
