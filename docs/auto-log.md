@@ -597,3 +597,6 @@ Todo: nothing left from this list.
 - Shared `client/textedit.py` (`TextEdit`): caret, arrows, Home/End, Shift selection, Ctrl word jump/delete, Ctrl+A/C/X/V. Used by chat and every `TextField` (world name, player name, server address, setting values). Chat keeps Up/Down history.
 - Chat: Tab completes commands, `/time` subcommands, player names and item names; a hint line above the box lists candidates or the usage.
 - `/time set <moment|ticks>`, `/time add <ticks>`, `/time speed <n>` (0 stops the clock), `/time query`; `/time <moment>` still works. A day is 24000 ticks for `/time`.
+
+## Time of day is saved
+- World files keep the `clock` (ticks plus any `/time` shift), so loading a world resumes at the same moment of the day. The dedicated server also restores chests and the clock now.

@@ -132,6 +132,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         GameSetup(mode=args.game_mode, seed=args.seed),
         name=args.name,
         inventories=world.inventories,
+        chests=world.chests,
+        clock=world.clock,
     )
     try:
         port = server.listen(args.host, args.port, announce=not args.no_lan)

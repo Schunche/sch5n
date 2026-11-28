@@ -245,6 +245,7 @@ class Server:
         name: str = "sch5n server",
         inventories: dict[str, Inventory] | None = None,
         chests: dict[tuple[int, int], Inventory] | None = None,
+        clock: int = 0,
     ) -> None:
         """Start the game. Nobody can join over the network until `listen`.
 
@@ -266,6 +267,7 @@ class Server:
             self.game.restore_inventories(inventories)
         if chests:
             self.game.chests.update(chests)
+        self.game.time_offset = clock
         self.fingerprint = content_fingerprint(content)
         self.clients: list[_Client] = []
         self.host = ""
@@ -916,6 +918,7 @@ class Server:
             self.game.inventories(),
             owner,
             self.game.chest_contents(),
+            self.game.clock,
         )
 
     def stop_listening(self) -> None:

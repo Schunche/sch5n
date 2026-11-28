@@ -210,6 +210,7 @@ class PlayScene(Scene):
             name=world.name,
             inventories=world.inventories,
             chests=world.chests,
+            clock=world.clock,
         )
         server.host = settings.player_name
         session = ClientSession(

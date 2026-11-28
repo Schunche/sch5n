@@ -246,3 +246,18 @@ def test_chests_are_saved_with_the_world(
     reopened = again.chest_at(2, 9)
     assert reopened is not None
     assert reopened[5] is not None
+
+
+def test_the_time_of_day_is_saved(tmp_path: Path, content: Content) -> None:
+    """A world comes back at the moment of the day it was left at."""
+    from sch5n.server.server import Server  # ruff: ignore[import-outside-top-level]
+
+    server = Server(content, flat_world(content))
+    server.game.set_time(0.9)
+    clock = server.game.clock
+    path = world_path(tmp_path, "Night")
+    server.save(path)
+    world = load_world(path, content)
+    assert world.clock == clock
+    again = Server(content, world.tilemap, clock=world.clock)
+    assert again.game.clock == clock

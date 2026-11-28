@@ -272,6 +272,8 @@ class World:
     """The player whose single player world it is, if any."""
     chests: dict[tuple[int, int], Inventory] = field(default_factory=dict)
     """Contents of the storage blocks, by tile."""
+    clock: int = 0
+    """Ticks the day and night had counted when it was saved."""
 
     def hand_over(self, player: str) -> None:
         """Make `player` the owner, taking over the owner's inventory.
@@ -298,6 +300,7 @@ def save_world(  # ruff: ignore[too-many-arguments, too-many-positional-argument
     inventories: dict[str, Inventory],
     owner: str | None = None,
     chests: dict[tuple[int, int], Inventory] | None = None,
+    clock: int = 0,
 ) -> None:
     """Write a world file. A crash while saving leaves the old file whole.
 
@@ -307,6 +310,7 @@ def save_world(  # ruff: ignore[too-many-arguments, too-many-positional-argument
         "format": WORLD_FORMAT,
         "name": clean_name(name),
         "owner": owner,
+        "clock": clock,
         "inventories": {
             player: inventory_to_json(inventory)
             for player, inventory in inventories.items()
@@ -356,6 +360,7 @@ def load_world(path: Path, content: Content) -> World:
         },
         owner=owner if isinstance(owner := data.get("owner"), str) else None,
         chests=_chests_from_json(data.get("chests"), content),
+        clock=clock if isinstance(clock := data.get("clock"), int) else 0,
     )
 
 
