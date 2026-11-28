@@ -11,6 +11,7 @@ lazy from pathlib import Path
 import moderngl
 
 from sch5n.client.assets import ClientAssets
+from sch5n.client.audio import Audio
 from sch5n.client.keybinds import Keybinds
 from sch5n.client.render.atlas import create_texture
 from sch5n.client.render.background import BackgroundRenderer
@@ -84,6 +85,7 @@ class App:
         self.keybinds = Keybinds(self.settings.keybinds)
         self.ui = Style(load_ui(path.DATA_DIR), self.settings.theme)
         self.animations = load_animations(path.DATA_DIR)
+        self.audio = Audio(enabled=not self.options.hidden)
 
         self.window = Window(
             self.content.game.title,

@@ -91,6 +91,8 @@ MOB_DOT = (230, 60, 60)
 PLAYER_DOT = (80, 220, 110)
 SELF_DOT = (250, 240, 120)
 HURT_FLASH_TICKS = 12
+SOUND_RANGE = 24
+"""Tiles from the player within which block changes make sound."""
 HURT_FLASH_ALPHA = 0.3
 BOSS_BAR_WIDTH = 360
 BOSS_NAME = TextStyle(size=16, anchor=Anchor.BOTTOM_CENTER)
@@ -146,6 +148,7 @@ class PlayScene(Scene):
         """Ticks left of the death screen."""
         self.book = RecipeBook(app.content)
         self._chat_seen = 0
+        self._chat_sounded = 0
         self._skip_char = False
         """Ignore the character typed by the key that opened the chat."""
         self.ticks = 0
@@ -663,6 +666,7 @@ class PlayScene(Scene):
             self.server.step()
         self.session.poll()
         self._take_chat()
+        self._play_sounds()
         self._lay_out_crafting()
         if self.session.state is SessionState.CLOSED:
             reason = self.session.error or "Disconnected"
@@ -697,6 +701,7 @@ class PlayScene(Scene):
             and player.vitals.health < self._health_seen
         ):
             self.hurt_ticks = HURT_FLASH_TICKS
+            self.app.audio.play("hurt", self.app.settings)
         self._deaths_seen = player.deaths
         self._health_seen = player.vitals.health
         if self.hurt_ticks:
@@ -738,6 +743,27 @@ class PlayScene(Scene):
                 anchor=Anchor.CENTER,
             ),
         )
+
+    def _play_sounds(self) -> None:
+        """Play sounds for what changed near the player this tick."""
+        player = self.player
+        if player is None:
+            return
+        audio, settings = self.app.audio, self.app.settings
+        size = self.tile_size
+        px, py = player.body.center
+        heard: set[str] = set()
+        for x, y, old, new in self.world.tile_changes:
+            if math.hypot((x + 0.5) * size - px, (y + 0.5) * size - py) > (
+                SOUND_RANGE * size
+            ):
+                continue
+            heard.add("break" if new == 0 else "place" if old == 0 else "hit")
+        for name in sorted(heard):
+            audio.play(name, settings)
+        if self.session.chat_count > self._chat_sounded:
+            audio.play("chat", settings, gain=0.6)
+        self._chat_sounded = self.session.chat_count
 
     def _take_chat(self) -> None:
         """Move newly received chat lines into the chat box."""

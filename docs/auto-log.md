@@ -410,3 +410,15 @@ Work done on the `claude/auto` branch, newest last.
 - Scripted wandering bots on four generated worlds for 20000 ticks each
   found no crashes; deaths were all from creatures at night.
 - A shorter version is now a test in `tests/test_biomes.py`.
+
+## Sound effects
+
+- `client/audio.py` synthesizes six placeholder sounds (break, place, hit,
+  hurt, chat, craft) from noise and tones at start, so there are no audio
+  files. `Audio` plays them through pygame's mixer at master x effects
+  volume and does nothing without a sound device or in hidden runs.
+- The client world records the block changes of each snapshot
+  (`tile_changes`); the play scene plays break, place and hit sounds for
+  changes within 24 tiles, a hurt sound on damage and a chat sound on new
+  messages. "craft" is synthesized but not wired yet.
+- Music is not implemented; the music slider still has no effect.

@@ -211,6 +211,8 @@ class ClientWorld:
         self.players: dict[int, Player] = {}
         self.floating_items: list[FloatingItem] = []
         self.projectiles: dict[int, Projectile] = {}
+        self.tile_changes: list[tuple[int, int, int, int]] = []
+        """`(x, y, old, new)` blocks of the last snapshot, for sounds."""
         """Arrows in flight, as of the last snapshot."""
         self.mobs: dict[int, Mob] = {}
         self.inventory = Inventory(self.config.inventory.size)
@@ -292,10 +294,12 @@ class ClientWorld:
             msg = f"Invalid snapshot: {error}"
             raise ProtocolError(msg) from error
         known = len(self.content.blocks)
+        self.tile_changes = []
         for x, y, block, variant in snapshot.tiles:
             if not 0 <= block < known or not 0 <= variant <= MAX_VARIANT:
                 msg = "Unknown block"
                 raise ProtocolError(msg)
+            self.tile_changes.append((x, y, self.tilemap.get(x, y), block))
             self.tilemap.set(x, y, block, variant)
         try:
             mobs = {
