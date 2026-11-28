@@ -276,3 +276,4 @@ Work done on the `claude/auto` branch, newest last.
   `assets/textures/tile/sand/0.png`, `tile/snow/0.png`.
 - `data/maps/map1.json` is untouched.
 - Tests: `tests/test_biomes.py`, `tests/test_world_io.py`.
+- A generated map is used by saving it with `python -m sch5n.world <name> [--seed N]` and starting a new world or server with `--map <name>`.

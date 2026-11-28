@@ -85,3 +85,14 @@ def test_worlds_hold_ores_deeper_for_rarer_ones(content: Content) -> None:
     )
     shallow = {name for _, name in means[:1]}
     assert shallow & {"copper", "tin", "iron", "lead"}
+
+
+def test_a_player_can_stand_in_a_generated_world(content: Content) -> None:
+    """The game runs on a generated world and the player stays on top."""
+    from sch5n.game.session import Game, GameSetup, TickInput  # ruff: ignore[import-outside-top-level]
+
+    world = generate(content.blocks, WorldSpec(right=WIDTH, bottom=60), seed=5)
+    game = Game(content, world, GameSetup(seed=1, spawn=(160, 0)))
+    for _ in range(200):
+        game.tick(TickInput())
+    assert game.player.body.y < 0
