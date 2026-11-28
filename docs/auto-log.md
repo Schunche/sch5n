@@ -600,3 +600,6 @@ Todo: nothing left from this list.
 
 ## Time of day is saved
 - World files keep the `clock` (ticks plus any `/time` shift), so loading a world resumes at the same moment of the day. The dedicated server also restores chests and the clock now.
+
+## Help and weather
+- `/help <command>` shows one usage; unknown commands suggest the closest one. `/weather` says whether it rains and about when the next shower is.

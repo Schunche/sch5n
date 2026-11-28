@@ -33,6 +33,7 @@ from sch5n.game.daylight import DAY_SECONDS, phase
 from sch5n.game.inventory import MAX_CRAFTING_SIDE, ItemStack
 from sch5n.game.session import Game, GameSetup, TickInput
 from sch5n.game.smelting import FUEL, INPUT
+from sch5n.game.weather import rain_amount
 from sch5n.log.logger import LOGGER
 from sch5n.net.connection import Listener, SocketConnection, local_pair
 from sch5n.net.discovery import Announcer
@@ -80,6 +81,8 @@ if TYPE_CHECKING:
     type ServerSide = Connection[ServerMessage, ClientMessage]
     type ClientSide = Connection[ClientMessage, ServerMessage]
 
+MAX_RAIN_LOOKAHEAD = 10
+"""Days `/weather` looks ahead."""
 MAX_GIVE = 1024
 """Most items one `/give` hands over."""
 HELLO_TIMEOUT_TICKS = 600
@@ -547,6 +550,25 @@ class Server:
         given = amount - (left.amount if left else 0)
         _tell(client, f"Gave {given} {item.spec.name}.")
 
+    def _weather(self, client: _Client) -> None:
+        """Say whether it rains, and when the next shower comes."""
+        rate = self.game.config.tick_rate
+        day_ticks = DAY_SECONDS * rate
+        clock = self.game.clock
+        if rain_amount(clock, rate) > 0:
+            _tell(client, "It is raining.")
+            return
+        step = max(1, day_ticks // 48)
+        for ahead in range(step, day_ticks * MAX_RAIN_LOOKAHEAD, step):
+            if rain_amount(clock + ahead, rate) > 0:
+                hours = ahead / day_ticks * 24
+                _tell(
+                    client,
+                    f"Dry. The next rain is in about {hours:.0f} hours.",
+                )
+                return
+        _tell(client, "Dry, and no rain is coming soon.")
+
     def _go_home(self, client: _Client) -> None:
         if client.player_id is None:
             return
@@ -566,6 +588,9 @@ class Server:
             return
         if command.lower() == "home":
             self._go_home(client)
+            return
+        if command.lower() == "weather":
+            self._weather(client)
             return
         if command.lower() in {"msg", "w", "whisper", "tell"}:
             self._whisper(client, argument)

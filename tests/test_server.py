@@ -1334,3 +1334,12 @@ def test_the_host_can_give_items(server: Server, content: Content) -> None:
     assert "Gave 12 Gold Ore." in said
     assert "Use /give <item name> [amount]." in said
     assert any("Only the host" in m.text for m in bob.chat)
+
+
+def test_weather_command(server: Server, content: Content) -> None:
+    """/weather says if it rains or when it will."""
+    alice = join(server, content, "alice")
+    step(server, [alice])
+    alice.say("/weather")
+    step(server, [alice], 2)
+    assert any(m.text.startswith(("Dry", "It is raining")) for m in alice.chat)

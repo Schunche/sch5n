@@ -40,6 +40,7 @@ COMMANDS = {
     "me": "<action>",
     "msg": "<player> <text>",
     "home": "",
+    "weather": "",
     "kick": "<player>",
     "mute": "<player>",
     "unmute": "<player>",
