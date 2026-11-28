@@ -427,6 +427,6 @@ Work done on the `claude/auto` branch, newest last.
 
 - `client/hints.py`: one tip at a time at the top of the screen, each once
   per session, for the controls (first 20 s), the first unarmed night and
-  after a death. `Settings.show_hints` (default on) turns them off; there
-  is no settings screen toggle yet.
+  after a death. `Settings.show_hints` (default on) turns them off, and
+  Settings, Interface has a "Tips" toggle.
 - No new art.

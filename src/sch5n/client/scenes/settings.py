@@ -108,6 +108,7 @@ class Option(StrEnum):
     GUI_SIZE = "GUI size"
     FONT = "Font"
     CURSOR = "Cursor"
+    HINTS = "Tips"
     PLAYER_NAME = "Display name"
     PORT = "Port"
     LAN_ANNOUNCE = "Show on network"
@@ -132,6 +133,7 @@ PAGE_OPTIONS: dict[Page, tuple[Option, ...]] = {
         Option.GUI_SIZE,
         Option.FONT,
         Option.CURSOR,
+        Option.HINTS,
     ),
     Page.MULTIPLAYER: (
         Option.PLAYER_NAME,
@@ -156,6 +158,7 @@ OPTION_FIELDS: dict[Option, tuple[str, ...]] = {
     Option.CURSOR: ("cursor",),
     Option.PLAYER_NAME: ("player_name",),
     Option.PORT: ("multiplayer_port",),
+    Option.HINTS: ("show_hints",),
     Option.LAN_ANNOUNCE: ("lan_announce",),
     Option.MAX_PLAYERS: ("max_players",),
 }
@@ -238,6 +241,7 @@ _VALUE_TEXT: dict[Option, Callable[[App], str]] = {
         app.ui.config.fonts[app.ui.font_name(app.settings.font)].label
     ),
     Option.CURSOR: lambda app: CURSOR_LABELS[app.settings.cursor],
+    Option.HINTS: lambda app: "On" if app.settings.show_hints else "Off",
     Option.PLAYER_NAME: lambda app: app.settings.player_name,
     Option.PORT: lambda app: str(app.settings.multiplayer_port),
     Option.LAN_ANNOUNCE: lambda app: (
@@ -276,7 +280,12 @@ def change_option(app: App, option: Option, step: int) -> None:
     """Move an option `step` values forward (or back), apply and save."""
     s = app.settings
     match option:
-        case Option.DISPLAY_MODE | Option.VSYNC | Option.LAN_ANNOUNCE:
+        case (
+            Option.DISPLAY_MODE
+            | Option.VSYNC
+            | Option.LAN_ANNOUNCE
+            | Option.HINTS
+        ):
             (field,) = OPTION_FIELDS[option]
             app.update_settings(**{field: not getattr(s, field)})
         case Option.WINDOW_SIZE:

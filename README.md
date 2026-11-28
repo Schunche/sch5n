@@ -111,7 +111,7 @@ trees, and one ore of every pair; use one with `--map <name>`, or pick
 "Terrain: Generated" on the Worlds screen to start a fresh one. Falls of more
 than 7 tiles hurt (one health per extra tile; admins are immune). Rain falls
 on about a third of the days and stops under a roof. Short tips appear for
-new players (turn them off with `show_hints` in the settings file). Sound
+new players (turn them off in Settings, Interface). Sound
 effects are generated placeholders that follow the master and effects
 volume; music is not implemented.
 
