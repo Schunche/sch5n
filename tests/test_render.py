@@ -1422,3 +1422,23 @@ def test_chat_in_the_game(app: App) -> None:
     play.on_event(KeyEvent(glfw.KEY_ESCAPE, glfw.PRESS, 0))
     assert not play.chat.open
     play.leave()
+
+
+def test_recipe_book_opens_and_draws(app: App) -> None:
+    """The recipes button shows the book beside the open inventory."""
+    play = PlayScene.singleplayer(app)
+    for _ in range(WARMUP_TICKS):
+        play.tick()
+    play.on_event(KeyEvent(glfw.KEY_TAB, glfw.PRESS, 0))
+    assert play.inventory_open
+    closed = draw(app, play)
+    button = next(b for b in play.buttons if b.id == "recipes")
+    pos = button.rect.center
+    play.on_event(MouseButtonEvent(glfw.MOUSE_BUTTON_LEFT, glfw.PRESS, 0, pos))
+    assert play.book.open
+    assert play.book.usable
+    opened = draw(app, play)
+    assert (opened != closed).any()
+    play.on_event(MouseButtonEvent(glfw.MOUSE_BUTTON_LEFT, glfw.PRESS, 0, pos))
+    assert not play.book.open
+    play.leave()

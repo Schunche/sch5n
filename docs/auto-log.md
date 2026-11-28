@@ -77,3 +77,14 @@ Work done on the `claude/auto` branch, newest last.
   `/unmute <player>`; a hosted single player game sets it to the host's
   display name. Muted players are told so and cannot speak; kicked players
   see "Kicked by the host". Dedicated servers have no host, so nobody can.
+
+## Recipe book
+
+- `sch5n.client.recipe_book`: a "Recipes" button next to Settings (visible
+  while the inventory is open) shows a scrollable list of every recipe:
+  result, ingredient icons with amounts, and the smallest grid (`2x2`,
+  `3x3`; none for shapeless). Recipes whose ingredients are all in your
+  inventory get an accent outline. It sits beside the crafting grid, or
+  below the inventory in a narrow window. Client side only; the server still
+  decides what crafting does.
+- Tests: `tests/test_recipe_book.py`, a render test in `tests/test_render.py`.

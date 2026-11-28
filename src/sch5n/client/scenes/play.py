@@ -17,6 +17,7 @@ from sch5n.client.chat import ChatBox
 from sch5n.client.hud import Hud, VitalsLook, draw_vitals, item_tooltip
 from sch5n.client.inventory_mouse import BUTTONS, InventoryMouse
 from sch5n.client.keybinds import Action, Context
+from sch5n.client.recipe_book import RecipeBook
 from sch5n.client.render.batch import rgba
 from sch5n.client.render.text import TextStyle
 from sch5n.client.scenes.base import Scene
@@ -33,6 +34,7 @@ from sch5n.client.window import (
     KeyEvent,
     MouseButtonEvent,
     MouseMoveEvent,
+    ScrollEvent,
 )
 from sch5n.client.world_view import WorldRenderer, load_start_map
 from sch5n.game.config import GameMode
@@ -99,6 +101,7 @@ class PlayScene(Scene):
         self.mouse = InventoryMouse(session)
         self.debug = False
         self.chat = ChatBox()
+        self.book = RecipeBook(app.content)
         self._chat_seen = 0
         self._skip_char = False
         """Ignore the character typed by the key that opened the chat."""
@@ -281,6 +284,21 @@ class PlayScene(Scene):
         self.crafting_layout = CraftingLayout(
             self.inventory_layout, self.world.inventory.crafting_side
         )
+        self._place_book()
+
+    def _place_book(self) -> None:
+        """Put the recipe book beside the crafting grid.
+
+        A window too narrow for that gets it below the inventory.
+        """
+        crafting = self.crafting_layout.bounds()
+        inventory = self.inventory_layout.bounds(hotbar_only=False)
+        gap = self.app.ui.outer_padding
+        row = self.app.settings.gui_size * 1.5 + 8
+        screen = self.app.screen
+        self.book.place(crafting.right + gap, crafting.y, screen, row)
+        if not self.book.usable:
+            self.book.place(inventory.x, inventory.bottom + gap, screen, row)
 
     def on_enter(self) -> None:
         """Pick up settings changed while away, like the GUI size."""
@@ -291,6 +309,7 @@ class PlayScene(Scene):
         """Place the settings button for the window size."""
         w, h = self.app.screen
         pad = self.app.ui.outer_padding
+        step = self.app.ui.button.height + pad
         self.buttons = [
             button_at(
                 "settings",
@@ -298,7 +317,14 @@ class PlayScene(Scene):
                 (w - pad, h - pad),
                 self.app.ui,
                 Align.BOTTOM_RIGHT,
-            )
+            ),
+            button_at(
+                "recipes",
+                "Recipes",
+                (w - pad, h - pad - step),
+                self.app.ui,
+                Align.BOTTOM_RIGHT,
+            ),
         ]
 
     def _over_gui(self, pos: tuple[float, float]) -> bool:
@@ -308,6 +334,7 @@ class PlayScene(Scene):
             return True
         return self.inventory_open and (
             self.crafting_layout.bounds().contains_point(*pos)
+            or self.book.contains(pos)
             or hit_button(self.buttons, pos) is not None
         )
 
@@ -366,6 +393,11 @@ class PlayScene(Scene):
         elif hit_button(self.buttons, event.pos) == "settings":
             self.mouse.cancel()
             self._open_settings()
+        elif hit_button(self.buttons, event.pos) == "recipes":
+            self.mouse.cancel()
+            self.book.open = not self.book.open
+        elif self.book.contains(event.pos):
+            pass
         else:
             return False
         return True
@@ -413,6 +445,11 @@ class PlayScene(Scene):
                 return
             case MouseButtonEvent() if not event.pressed:
                 self.mouse.release(event.button, self.world.inventory)
+            case ScrollEvent(dy=dy) if (
+                self.inventory_open
+                and self.book.contains(self.app.window.mouse_pos)
+            ):
+                self.book.scroll_by(-1 if dy > 0 else 1)
             case MouseMoveEvent() if self.inventory_open:
                 self.mouse.move(self._slot_under(event.pos))
             case _:
@@ -531,6 +568,7 @@ class PlayScene(Scene):
                 crafted(inventory, app.content),
                 mouse,
             )
+            self.book.draw(batch, app.text, app.ui, self.hud, inventory)
             self._draw_station()
             self.hud.draw_cursor_stack(batch, inventory, mouse)
             self._draw_tooltip(mouse)
