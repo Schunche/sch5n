@@ -673,6 +673,7 @@ class Server:
                     y=mob.body.y,
                     facing_left=mob.facing_left,
                     hurt=mob.hurt > 0,
+                    health=mob.health,
                 )
                 for mob in game.mobs.values()
             ],

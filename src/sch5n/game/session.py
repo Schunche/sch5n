@@ -117,6 +117,9 @@ FADE_CHANCE = 0.004
 DESPAWN_TILES = 48
 """Creatures farther than this from every player vanish."""
 PLAYER_KNOCK = 3.0
+BOSS = "king_slime"
+BOSS_CHANCE = 0.04
+"""Chance per try, at night, that the boss comes, if none is around."""
 LIT_SAFE = 8
 """Creatures do not appear this many tiles from a light."""
 
@@ -620,8 +623,13 @@ class Game:
             int(self.rng.choice(len(kinds), p=weights / weights.sum()))
         ]
 
-    def _spawn_mob(self) -> None:
-        """Try to bring a creature out of the dark near a random player."""
+    def _spawn_mob(self, kind: MobKind | None = None) -> None:
+        """Try to bring a creature out of the dark near a random player.
+
+        Args:
+            kind: What comes; picked by weight if not given.
+
+        """
         if not self.players:
             return
         rng = self.rng
@@ -639,7 +647,7 @@ class Game:
         )
         if surface is None:
             return
-        kind = self._pick_kind()
+        kind = kind or self._pick_kind()
         top = (surface * size) - kind.size[1]
         mob = Mob(kind, (column * size + (size - kind.size[0]) / 2, top))
         lit = self.tilemap.region(
@@ -650,7 +658,11 @@ class Game:
         )
         if self.tilemap.blocks.light[lit].any():
             return
-        if self.tilemap.any_solid(column, surface - 2, column + 1, surface):
+        wide = -(-kind.size[0] // size)
+        high = -(-kind.size[1] // size)
+        if self.tilemap.any_solid(
+            column, surface - high, column + wide, surface
+        ):
             return
         self.mobs[self._next_mob] = mob
         self._next_mob += 1
@@ -674,10 +686,14 @@ class Game:
 
     def _mob_died(self, mob_id: int) -> None:
         mob = self.mobs.pop(mob_id)
+        if mob.kind.boss:
+            self.announcements.append(f"The {mob.kind.display_name} fell!")
         if self.rng.random() < mob.kind.drop_chance:
             size = self.config.tile_size
             self.drop(
-                ItemStack(self.content.items[mob.kind.drop]),
+                ItemStack(
+                    self.content.items[mob.kind.drop], mob.kind.drop_amount
+                ),
                 (int(mob.body.center[0] // size), int(mob.body.y // size)),
             )
 
@@ -692,6 +708,13 @@ class Game:
             and self.ticks % SPAWN_EVERY == 0
         ):
             self._spawn_mob()
+        if (
+            light < NIGHT_LIGHT
+            and self.ticks % SPAWN_EVERY == 0
+            and not any(m.kind.boss for m in self.mobs.values())
+            and self.rng.random() < BOSS_CHANCE
+        ):
+            self._spawn_mob(KINDS[BOSS])
         size = self.config.tile_size
         for mob_id, mob in list(self.mobs.items()):
             nearest = self._nearest_player(mob.body.center)

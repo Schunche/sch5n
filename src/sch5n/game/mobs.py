@@ -32,7 +32,16 @@ class MobKind:
     """Item that may drop when it dies."""
     drop_chance: float
     weight: int = 1
-    """How often it is picked to spawn, next to the other kinds."""
+    """How often it is picked to spawn, next to the other kinds. Zero
+    means it never spawns as one of the crowd."""
+    drop_amount: int = 1
+    boss: bool = False
+    """Bosses show a health bar."""
+
+    @property
+    def display_name(self) -> str:
+        """Name shown to players."""
+        return self.name.replace("_", " ").title()
 
 
 KINDS = {
@@ -58,6 +67,20 @@ KINDS = {
         sight=18.0,
         drop="cloth",
         drop_chance=0.5,
+    ),
+    "king_slime": MobKind(
+        name="king_slime",
+        size=(96, 72),
+        health=120,
+        speed=0.35,
+        jump=5.2,
+        damage=4,
+        sight=40.0,
+        drop="slime_ball",
+        drop_chance=1.0,
+        weight=0,
+        drop_amount=10,
+        boss=True,
     ),
 }
 """Every kind by name; each has a texture `mob/<name>.png`."""

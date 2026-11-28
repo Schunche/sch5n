@@ -316,6 +316,8 @@ class ClientWorld:
         mob = Mob(KINDS[state.kind], (state.x, state.y))
         mob.facing_left = state.facing_left
         mob.hurt = 1 if state.hurt else 0
+        if state.health > 0:
+            mob.health = state.health
         return mob
 
     def _predicted_position(self) -> tuple[float, float] | None:

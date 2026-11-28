@@ -156,7 +156,7 @@ def test_slimes_appear_at_night_only(content: Content) -> None:
         night.tick(TickInput())
         night.player.vitals.health = MAX_HEALTH
     assert night.mobs
-    assert len(night.mobs) <= 3  # ruff: ignore[magic-value-comparison]
+    assert sum(not m.kind.boss for m in night.mobs.values()) <= 3  # ruff: ignore[magic-value-comparison]
     night.ticks = NOON
     for _ in range(3000):
         night.tick(TickInput())
@@ -212,4 +212,33 @@ def test_both_kinds_spawn_at_night(content: Content) -> None:
     """Over many tries the dark brings slimes and zombies."""
     game = make_game(content)
     seen = {game._pick_kind().name for _ in range(200)}  # ruff: ignore[private-member-access]
-    assert seen == set(KINDS)
+    assert seen == {k.name for k in KINDS.values() if k.weight}
+
+
+def test_the_boss_comes_once_and_drops_a_lot(content: Content) -> None:
+    """At night one king slime may appear; killing it drops many balls."""
+    from sch5n.game.session import BOSS  # ruff: ignore[import-outside-top-level]
+
+    boss = KINDS[BOSS]
+    assert boss.boss
+    assert boss.weight == 0
+    game = make_game(content)
+    game.ticks = MIDNIGHT
+    for _ in range(4000):
+        game.tick(TickInput())
+        game.player.vitals.health = MAX_HEALTH
+        if any(m.kind.boss for m in game.mobs.values()):
+            break
+    assert sum(m.kind.boss for m in game.mobs.values()) == 1
+    for _ in range(600):
+        game.tick(TickInput())
+        game.player.vitals.health = MAX_HEALTH
+    assert sum(m.kind.boss for m in game.mobs.values()) <= 1
+    game.announcements.clear()
+    mob_id = next(i for i, m in game.mobs.items() if m.kind.boss)
+    game._mob_died(mob_id)  # ruff: ignore[private-member-access]
+    assert any(
+        f.stack.item.name == boss.drop and f.stack.amount == boss.drop_amount
+        for f in game.floating_items
+    )
+    assert any("fell" in text for text in game.announcements)

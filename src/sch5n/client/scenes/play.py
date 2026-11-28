@@ -78,6 +78,8 @@ ARMOR_LABEL = TextStyle(
     size=14, color=(220, 220, 230, 255), anchor=Anchor.BOTTOM_RIGHT
 )
 """Style of the text above the armor slots."""
+BOSS_BAR_WIDTH = 360
+BOSS_NAME = TextStyle(size=16, anchor=Anchor.BOTTOM_CENTER)
 CHEST_COLUMNS = 9
 """Slots per row in an open chest."""
 CARET_TICKS = 30
@@ -761,6 +763,7 @@ class PlayScene(Scene):
         if self.notice_ticks:
             self._draw_notice()
         self._draw_vitals()
+        self._draw_boss()
         if self.death_ticks:
             self._draw_death()
         self.chat.draw(
@@ -815,6 +818,24 @@ class PlayScene(Scene):
             (first.x - self.app.ui.outer_padding, first.bottom),
             ARMOR_LABEL,
         )
+
+    def _draw_boss(self) -> None:
+        """Show the health of a boss that is around, at the top."""
+        boss = next((m for m in self.world.mobs.values() if m.kind.boss), None)
+        if boss is None:
+            return
+        app = self.app
+        width = min(BOSS_BAR_WIDTH, app.screen[0] * 0.6)
+        x, y = (app.screen[0] - width) / 2, app.ui.outer_padding + 70
+        share = max(0.0, min(1.0, boss.health / boss.kind.health))
+        app.text.draw(
+            app.batch,
+            boss.kind.display_name,
+            (app.screen[0] / 2, y - 4),
+            BOSS_NAME,
+        )
+        app.batch.shape((x - 2, y - 2, width + 4, 16), rgba((0, 0, 0), 0.7))
+        app.batch.shape((x, y, width * share, 12), rgba((200, 50, 60), 1.0))
 
     def _draw_chest(self, mouse: tuple[float, float]) -> None:
         """Draw the slots of the open chest."""

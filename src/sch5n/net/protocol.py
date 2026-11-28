@@ -234,6 +234,8 @@ class MobState(_Message):
     y: float
     facing_left: bool = False
     hurt: bool = False
+    health: int = 0
+    """Health left. Zero means it is not told."""
 
 
 class Snapshot(_Message):

@@ -233,3 +233,16 @@ Work done on the `claude/auto` branch, newest last.
   armor icons (`cloth_cap`, `cloth_tunic`, `cloth_pants`, `*_helmet`,
   `*_chestplate`, `*_leggings`).
 - Tests: `tests/test_armor.py`.
+
+## King Slime (boss)
+
+- `king_slime` (96x72, 120 health, touch hurts 4, sees 40 tiles) may come
+  at night, 4% per spawn try, never more than one at a time, and fades at
+  daybreak like the other creatures. Defeating it drops 10 slime balls and
+  announces "The King Slime fell!" in chat.
+- Kinds gained `weight` 0 (never part of the crowd), `drop_amount`, `boss`.
+  `MobState.health` tells clients how hurt a mob is, so the top of the
+  screen shows a boss health bar.
+- Placeholder art to replace: `assets/textures/mob/king_slime.png` (the
+  slime at 6x with a crown).
+- Tests: `tests/test_mobs.py`.
