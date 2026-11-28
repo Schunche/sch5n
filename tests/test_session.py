@@ -552,3 +552,33 @@ def test_covered_grass_turns_back_to_dirt(content: Content) -> None:
     run(game, GRASS_TICKS * 4)
     assert tilemap.get(0, 10) == dirt
     assert tilemap.get(0, 9) == grass
+
+
+def test_each_sapling_grows_its_own_tree(content: Content) -> None:
+    """Birch and pine saplings grow trees of their own wood and shape."""
+    from sch5n.game.plants import TREES, grow_tree  # ruff: ignore[import-outside-top-level]
+
+    ids = content.blocks.id_of
+    for wood, shape in TREES.items():
+        tilemap = flat_world(content)
+        x, y = 40, 9
+        tilemap.set(x, y, ids(f"{wood}_sapling"))
+        assert grow_tree(tilemap, x, y)
+        assert tilemap.get(x, y) == ids(f"{wood}_log")
+        top = y - (len(shape) - 1)
+        crown = next(c for c in shape[0] if c != " ")
+        assert tilemap.get(x, top) == ids(
+            f"{wood}_leaf" if crown == "o" else f"{wood}_log_leaf"
+        )
+    assert len({tuple(s) for s in TREES.values()}) == len(TREES)
+
+
+def test_every_wood_has_a_sapling_and_planks(content: Content) -> None:
+    """Birch and pine leaves drop their own sapling; logs make planks."""
+    for wood in ("birch", "pine"):
+        leaf = content.blocks.by_name(f"{wood}_leaf")
+        drops = {d.item for d in leaf.spec.extra_drops}
+        assert f"{wood}_sapling" in drops
+        assert f"{wood}_log" in content.items
+        sapling = content.blocks.by_name(f"{wood}_sapling")
+        assert sapling.spec.grows_after

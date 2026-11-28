@@ -48,6 +48,10 @@
         "iron_helmet": {"name": "Iron Helmet", "description": "Worn on the head: 2 defense. Put it in an armor slot of the inventory.", "icon": "item/iron_helmet", "drop_size": 16, "max_stack": 1, "armor": "head", "defense": 2},
         "iron_chestplate": {"name": "Iron Chestplate", "description": "Worn on the chest: 3 defense. Put it in an armor slot of the inventory.", "icon": "item/iron_chestplate", "drop_size": 16, "max_stack": 1, "armor": "chest", "defense": 3},
         "iron_leggings": {"name": "Iron Leggings", "description": "Worn on the legs: 2 defense. Put it in an armor slot of the inventory.", "icon": "item/iron_leggings", "drop_size": 16, "max_stack": 1, "armor": "legs", "defense": 2},
+        "birch_log": {"name": "Birch Log", "description": "Place it to build, or craft it into planks.", "icon": "tile/birchLog/0", "max_stack": 1024, "places": "birch_log", "drop_size": 16},
+        "birch_sapling": {"name": "Birch Sapling", "description": "Plant it on dirt or grass.", "icon": "item/birch_sapling", "places": "birch_sapling", "drop_size": 16},
+        "pine_log": {"name": "Pine Log", "description": "Place it to build, or craft it into planks.", "icon": "tile/pineLog/0", "max_stack": 1024, "places": "pine_log", "drop_size": 16},
+        "pine_sapling": {"name": "Pine Sapling", "description": "Plant it on dirt or grass.", "icon": "item/pine_sapling", "places": "pine_sapling", "drop_size": 16},
         "apple": {"name": "Apple", "description": "Fruit from an oak. Eat it to feel less hungry.", "icon": "item/apple", "drop_size": 16, "food": 5}
     }
 }

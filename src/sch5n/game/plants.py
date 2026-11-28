@@ -28,7 +28,33 @@ OAK = (
 )
 """A grown oak, top row first. The sapling's tile is the bottom of the
 trunk, in the middle column."""
-OAK_BLOCKS = {"o": "oak_leaf", "B": "oak_log_leaf", "L": "oak_log"}
+BIRCH = (
+    "  o  ",
+    " ooo ",
+    " oBo ",
+    " oBo ",
+    "  L  ",
+    "  L  ",
+    "  L  ",
+    "  L  ",
+    "  L  ",
+    "  L  ",
+)
+"""A tall, slim birch."""
+PINE = (
+    "  o  ",
+    "  B  ",
+    " ooo ",
+    " oBo ",
+    "ooooo",
+    "ooBoo",
+    "  L  ",
+    "  L  ",
+    "  L  ",
+)
+"""A pine with a pointed crown."""
+TREES = {"oak": OAK, "birch": BIRCH, "pine": PINE}
+"""Tree shapes by the wood; a sapling `<wood>_sapling` grows one."""
 SKY_ROWS = 256
 """Rows above the world's top searched for the surface."""
 SPREAD_EVERY = 6
@@ -60,10 +86,14 @@ def grow_tree(tilemap: TileMap, x: int, y: int) -> bool:
         bool: Whether it grew.
 
     """
-    middle, bottom = len(OAK[0]) // 2, len(OAK) - 1
+    sapling = tilemap.blocks.get(tilemap.get(x, y))
+    wood = sapling.name.removesuffix("_sapling") if sapling else "oak"
+    shape = TREES.get(wood, OAK)
+    names = {"o": f"{wood}_leaf", "B": f"{wood}_log_leaf", "L": f"{wood}_log"}
+    middle, bottom = len(shape[0]) // 2, len(shape) - 1
     tree = [
-        (x + column - middle, y + row - bottom, OAK_BLOCKS[part])
-        for row, line in enumerate(OAK)
+        (x + column - middle, y + row - bottom, names[part])
+        for row, line in enumerate(shape)
         for column, part in enumerate(line)
         if part != " "
     ]

@@ -21,6 +21,14 @@
         "furnace": {"textures": ["tile/furnace/0"], "durability": 200, "tool": "pickaxe", "drop": "furnace", "station": "furnace"},
         "chest": {"textures": ["tile/chest/0"], "durability": 150, "tool": "axe", "drop": "chest", "container": 27},
         "torch": {"textures": ["tile/torch/0"], "durability": 10, "tool": "axe", "drop": "torch", "hand_pickup": true, "light": 7},
-        "crafting_bench": {"textures": ["tile/craftingBench/0", "tile/craftingBench/1"], "durability": 200, "tool": "axe", "drop": "crafting_bench", "crafting_side": 3}
+        "crafting_bench": {"textures": ["tile/craftingBench/0", "tile/craftingBench/1"], "durability": 200, "tool": "axe", "drop": "crafting_bench", "crafting_side": 3},
+        "birch_log": {"textures": ["tile/birchLog/0"], "durability": 300, "tool": "axe", "drop": "birch_log", "tree": "trunk"},
+        "birch_leaf": {"textures": ["tile/birchLeaf/0"], "durability": 50, "tool": "lopper", "slower_tools": ["axe"], "tree": "crown", "extra_drops": [{"item": "stick", "chance": 0.5, "min_amount": 1, "max_amount": 2}, {"item": "leaf", "chance": 0.7, "min_amount": 1, "max_amount": 2}, {"item": "bird_nest", "chance": 0.03}, {"item": "birch_sapling", "chance": 0.08}], "particle": "leaf"},
+        "birch_log_leaf": {"textures": [["tile/birchLog/0", "tile/birchLeaf/0"]], "durability": 300, "tool": "axe", "tree": "trunk", "drop": "birch_log", "trim": {"tool": "lopper", "into": "birch_log", "durability": 50}, "extra_drops": [{"item": "stick", "chance": 0.5, "min_amount": 1, "max_amount": 2}, {"item": "leaf", "chance": 0.7, "min_amount": 1, "max_amount": 2}, {"item": "bird_nest", "chance": 0.03}, {"item": "birch_sapling", "chance": 0.08}], "particle": "leaf"},
+        "birch_sapling": {"textures": ["item/birch_sapling"], "durability": 25, "tool": "lopper", "drop": "birch_sapling", "plant_on": ["dirt", "grass"], "grows_after": [60, 120], "hand_pickup": true},
+        "pine_log": {"textures": ["tile/pineLog/0"], "durability": 300, "tool": "axe", "drop": "pine_log", "tree": "trunk"},
+        "pine_leaf": {"textures": ["tile/pineLeaf/0"], "durability": 50, "tool": "lopper", "slower_tools": ["axe"], "tree": "crown", "extra_drops": [{"item": "stick", "chance": 0.5, "min_amount": 1, "max_amount": 2}, {"item": "leaf", "chance": 0.7, "min_amount": 1, "max_amount": 2}, {"item": "bird_nest", "chance": 0.03}, {"item": "pine_sapling", "chance": 0.08}], "particle": "leaf"},
+        "pine_log_leaf": {"textures": [["tile/pineLog/0", "tile/pineLeaf/0"]], "durability": 300, "tool": "axe", "tree": "trunk", "drop": "pine_log", "trim": {"tool": "lopper", "into": "pine_log", "durability": 50}, "extra_drops": [{"item": "stick", "chance": 0.5, "min_amount": 1, "max_amount": 2}, {"item": "leaf", "chance": 0.7, "min_amount": 1, "max_amount": 2}, {"item": "bird_nest", "chance": 0.03}, {"item": "pine_sapling", "chance": 0.08}], "particle": "leaf"},
+        "pine_sapling": {"textures": ["item/pine_sapling"], "durability": 25, "tool": "lopper", "drop": "pine_sapling", "plant_on": ["dirt", "grass"], "grows_after": [60, 120], "hand_pickup": true}
     }
 }

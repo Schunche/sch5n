@@ -246,3 +246,17 @@ Work done on the `claude/auto` branch, newest last.
 - Placeholder art to replace: `assets/textures/mob/king_slime.png` (the
   slime at 6x with a crown).
 - Tests: `tests/test_mobs.py`.
+
+## Tree variety
+
+- Birch (tall and slim, pale bark) and pine (pointed crown, dark leaves)
+  join the oak. Blocks `<wood>_log`, `_leaf`, `_log_leaf`, `_sapling` are
+  appended to the end of `data/blocks.json` (so older block ids stay), plus
+  items `<wood>_log` and `<wood>_sapling`. Leaves drop their own sapling,
+  logs craft into oak planks.
+- `game/plants.py`: `TREES` maps a wood to its shape; `grow_tree` reads the
+  wood from the sapling it grows.
+- Placeholder art to replace (recolored from the oak): `tile/birchLog`,
+  `tile/birchLeaf`, `tile/pineLog`, `tile/pineLeaf`, `item/birch_sapling.png`,
+  `item/pine_sapling.png` under `assets/textures/`.
+- Tests: `tests/test_session.py` (each sapling grows its own tree).

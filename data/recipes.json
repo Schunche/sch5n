@@ -1,6 +1,8 @@
 {
     "recipes": [
         {"ingredients": ["oak_log"], "result": {"item": "oak_planks", "amount": 4}},
+        {"ingredients": ["birch_log"], "result": {"item": "oak_planks", "amount": 4}},
+        {"ingredients": ["pine_log"], "result": {"item": "oak_planks", "amount": 4}},
         {"pattern": ["SS", "SS"], "key": {"S": "stick"}, "result": {"item": "oak_planks", "amount": 2}},
         {"pattern": ["P", "P"], "key": {"P": "oak_planks"}, "result": {"item": "stick", "amount": 4}},
         {"pattern": ["PP", "PP"], "key": {"P": "oak_planks"}, "result": {"item": "crafting_bench"}},
