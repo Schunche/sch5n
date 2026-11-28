@@ -318,3 +318,7 @@ Work done on the `claude/auto` branch, newest last.
   above the ground, drops a leaf now and then. Kinds gained `flying`.
 - Placeholder art to replace: `assets/textures/mob/bat.png`.
 - Tests: `tests/test_mobs.py`.
+
+## Hurt flash
+
+- Taking damage flashes the screen red for 12 ticks (`PlayScene.hurt_ticks`); joining with less than full health does not. Test in `tests/test_render.py`.

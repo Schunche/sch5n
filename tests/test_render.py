@@ -1603,3 +1603,23 @@ def test_shift_click_moves_a_stack_and_armor_slots_click(app: App) -> None:
     assert world[1] is None
     assert any(s and s.item.name == "stick" for s in world.slots[10:])
     play.leave()
+
+
+def test_taking_damage_flashes_the_screen(app: App) -> None:
+    """Losing health starts a red flash that fades; joining hurt does not."""
+    play = PlayScene.singleplayer(app)
+    server = play.server
+    assert server is not None
+    inventory = server.game.players[play.world.local_id].inventory
+    for _ in range(3):
+        play.tick()
+    assert play.hurt_ticks == 0
+    inventory.vitals.health -= 3
+    play.tick()
+    play.tick()
+    assert play.hurt_ticks > 0
+    play.render()
+    for _ in range(30):
+        play.tick()
+    assert play.hurt_ticks == 0
+    play.leave()

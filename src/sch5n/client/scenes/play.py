@@ -78,6 +78,8 @@ ARMOR_LABEL = TextStyle(
     size=14, color=(220, 220, 230, 255), anchor=Anchor.BOTTOM_RIGHT
 )
 """Style of the text above the armor slots."""
+HURT_FLASH_TICKS = 12
+HURT_FLASH_ALPHA = 0.3
 BOSS_BAR_WIDTH = 360
 BOSS_NAME = TextStyle(size=16, anchor=Anchor.BOTTOM_CENTER)
 CHEST_COLUMNS = 9
@@ -124,6 +126,9 @@ class PlayScene(Scene):
         self.chat = ChatBox()
         self._deaths_seen = 0
         self.death_ticks = 0
+        self.hurt_ticks = 0
+        """Ticks left of the red flash after taking damage."""
+        self._health_seen: int | None = None
         """Ticks left of the death screen."""
         self.book = RecipeBook(app.content)
         self._chat_seen = 0
@@ -668,7 +673,25 @@ class PlayScene(Scene):
         if player.deaths > self._deaths_seen:
             self.death_ticks = DEATH_TICKS
             self.mouse.cancel()
+        elif (
+            self._health_seen is not None
+            and player.vitals.health < self._health_seen
+        ):
+            self.hurt_ticks = HURT_FLASH_TICKS
         self._deaths_seen = player.deaths
+        self._health_seen = player.vitals.health
+        if self.hurt_ticks:
+            self.hurt_ticks -= 1
+
+    def _draw_hurt(self) -> None:
+        """Flash the screen red for a moment after taking damage."""
+        if not self.hurt_ticks or self.death_ticks:
+            return
+        w, h = self.app.screen
+        share = self.hurt_ticks / HURT_FLASH_TICKS
+        self.app.batch.shape(
+            (0, 0, w, h), rgba((200, 0, 0), HURT_FLASH_ALPHA * share)
+        )
 
     def _draw_death(self) -> None:
         """Dim the game and say the player died, fading away."""
@@ -765,6 +788,7 @@ class PlayScene(Scene):
             self._draw_notice()
         self._draw_vitals()
         self._draw_boss()
+        self._draw_hurt()
         if self.death_ticks:
             self._draw_death()
         self.chat.draw(
