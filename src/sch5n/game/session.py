@@ -107,9 +107,9 @@ SPAWN_NEAR, SPAWN_FAR = 14, 24
 """Tiles from a player where creatures appear, nearest and farthest."""
 SPAWN_SPAN = 40
 """Rows above and below a player searched for ground to appear on."""
-SPAWN_EVERY = 90
+SPAWN_EVERY = 130
 """Ticks between tries to spawn a creature."""
-MOBS_PER_PLAYER = 3
+MOBS_PER_PLAYER = 2
 MAX_MOBS = 16
 NIGHT_LIGHT = 0.35
 """Daylight below which creatures spawn."""
@@ -126,6 +126,8 @@ ARROW_SPEED = 7.0
 BOSS = "king_slime"
 BOSS_CHANCE = 0.04
 """Chance per try, at night, that the boss comes, if none is around."""
+RESPAWN_SAFE_TICKS = 180
+"""Ticks a player who just respawned cannot be touched by creatures."""
 SAFE_FALL = 7
 """Tiles a player may fall without harm."""
 FALL_DAMAGE = 1
@@ -360,6 +362,7 @@ class Game:
         player.jumps = player.max_jumps
         player.air_time = 0
         player.reset_fall()
+        player.hurt_cooldown = RESPAWN_SAFE_TICKS
 
     @property
     def player(self) -> Player:

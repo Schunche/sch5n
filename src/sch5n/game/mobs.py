@@ -128,7 +128,7 @@ HURT_TICKS = 12
 """Ticks a mob flashes after being hit."""
 KNOCK_DECAY = 0.85
 KNOCK_SPEED = 3.0
-CONTACT_COOLDOWN = 45
+CONTACT_COOLDOWN = 70
 """Ticks a player is safe after being touched."""
 
 

@@ -430,3 +430,12 @@ Work done on the `claude/auto` branch, newest last.
   after a death. `Settings.show_hints` (default on) turns them off, and
   Settings, Interface has a "Tips" toggle.
 - No new art.
+
+## Night balance
+
+- A bot that only walked, never fought, died 11 to 28 times in one day
+  with fists. Now: creatures spawn every 130 ticks (was 90), two per
+  player (was three), touches pause 70 ticks (was 45), and a respawned
+  player is safe for 3 seconds. The same bot dies 5 to 18 times; real
+  players who fight, build and light torches do far better.
+- The boss test waits longer for its rarer spawn chance.

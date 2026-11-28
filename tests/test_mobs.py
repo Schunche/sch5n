@@ -224,7 +224,7 @@ def test_the_boss_comes_once_and_drops_a_lot(content: Content) -> None:
     assert boss.weight == 0
     game = make_game(content)
     game.ticks = MIDNIGHT
-    for _ in range(4000):
+    for _ in range(12000):
         game.tick(TickInput())
         game.player.vitals.health = MAX_HEALTH
         if any(m.kind.boss for m in game.mobs.values()):
