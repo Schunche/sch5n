@@ -22,7 +22,7 @@ from sch5n.game.chat import (
 )
 from sch5n.game.commands import run_command
 from sch5n.game.config import MAX_PLAYERS
-from sch5n.game.crafting import craft, craft_all
+from sch5n.game.crafting import craft, craft_all, fill_recipe
 from sch5n.game.inventory import MAX_CRAFTING_SIDE
 from sch5n.game.session import Game, GameSetup, TickInput
 from sch5n.log.logger import LOGGER
@@ -168,6 +168,13 @@ def _arrange(
             inventory.stow_crafting(message.index)
         case InventoryAction.GATHER:
             inventory.gather(message.index)
+        case InventoryAction.FILL_RECIPE | InventoryAction.FILL_RECIPE_ALL:
+            fill_recipe(
+                inventory,
+                content,
+                message.index,
+                maximum=message.action is InventoryAction.FILL_RECIPE_ALL,
+            )
         case _:
             single = message.action is InventoryAction.SPREAD_SINGLE
             inventory.spread(message.slots, single=single)
@@ -519,6 +526,8 @@ class Server:
                 | InventoryAction.CRAFT_ALL
                 | InventoryAction.STOW_CRAFTING
                 | InventoryAction.GATHER
+                | InventoryAction.FILL_RECIPE
+                | InventoryAction.FILL_RECIPE_ALL
                 | InventoryAction.SPREAD
                 | InventoryAction.SPREAD_SINGLE
             ):

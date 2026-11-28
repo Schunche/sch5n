@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from sch5n.game.content import Content
     from sch5n.world.tilemap import TileMap
 
-PROTOCOL_VERSION = 10
+PROTOCOL_VERSION = 11
 """Raised whenever messages change incompatibly."""
 MAX_CLIENT_FRAME = 4096
 """Largest message a client may send, in bytes."""
@@ -105,6 +105,10 @@ class InventoryAction(StrEnum):
     `Inventory.spread`."""
     SPREAD_SINGLE = "spread_single"
     """Put one item of the cursor stack into each of `slots`."""
+    FILL_RECIPE = "fill_recipe"
+    """Lay out recipe number `index` in the crafting grid."""
+    FILL_RECIPE_ALL = "fill_recipe_all"
+    """Like `FILL_RECIPE`, with as many sets as the inventory holds."""
     GATHER = "gather"
     """Collect matching items into slot `index`, numbered like `slots`."""
 

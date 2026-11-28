@@ -492,11 +492,18 @@ class PlayScene(Scene):
                     else InventoryAction.CRAFT
                 )
         else:
-            return self._click_button_or_book(event.pos)
+            return self._click_button_or_book(
+                event.pos, shift=bool(event.mods & glfw.MOD_SHIFT)
+            )
         return True
 
-    def _click_button_or_book(self, pos: tuple[float, float]) -> bool:
-        """Press the settings or recipes button.
+    def _click_button_or_book(
+        self, pos: tuple[float, float], *, shift: bool = False
+    ) -> bool:
+        """Press the settings or recipes button, or pick a recipe.
+
+        A recipe is laid out in the crafting grid, with as many sets as
+        possible if `shift` is held.
 
         Returns:
             bool: Whether the click hit a button or the recipe book.
@@ -510,6 +517,14 @@ class PlayScene(Scene):
                 self.mouse.cancel()
                 self.book.open = not self.book.open
             case _:
+                index = self.book.entry_at(pos)
+                if index is not None:
+                    self.session.inventory(
+                        InventoryAction.FILL_RECIPE_ALL
+                        if shift
+                        else InventoryAction.FILL_RECIPE,
+                        index,
+                    )
                 return self.book.contains(pos)
         return True
 

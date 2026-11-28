@@ -144,3 +144,126 @@ def craft_all(inventory: Inventory, content: Content) -> None:
         _use_ingredients(inventory)
         inventory.add(result)
         result = crafted(inventory, content)
+
+
+def _layout(
+    recipe: RecipeSpec, side: int
+) -> list[tuple[int, tuple[str, ...]]] | None:
+    """Place a recipe in a grid of `side`, from its top left corner.
+
+    Returns:
+        list[tuple[int, tuple[str, ...]]] | None: Grid slot and accepted
+        item names of each ingredient, or `None` if it does not fit.
+
+    """
+    if recipe.pattern:
+        if len(recipe.pattern) > side or len(recipe.pattern[0]) > side:
+            return None
+        return [
+            (row * side + column, recipe.choices(symbol))
+            for row, line in enumerate(recipe.pattern)
+            for column, symbol in enumerate(line)
+            if symbol != " "
+        ]
+    if len(recipe.ingredients) > side**2:
+        return None
+    return [(i, (name,)) for i, name in enumerate(recipe.ingredients)]
+
+
+def _available(inventory: Inventory) -> dict[str, int]:
+    totals: dict[str, int] = {}
+    for stack in inventory.slots:
+        if stack is not None:
+            name = stack.item.name
+            totals[name] = totals.get(name, 0) + stack.amount
+    return totals
+
+
+def _take(inventory: Inventory, name: str, amount: int) -> None:
+    for index, stack in enumerate(inventory.slots):
+        if amount <= 0:
+            return
+        if stack is not None and stack.item.name == name:
+            used = min(amount, stack.amount)
+            stack.amount -= used
+            amount -= used
+            if stack.amount <= 0:
+                inventory.slots[index] = None
+
+
+def _choose(
+    layout: list[tuple[int, tuple[str, ...]]], have: dict[str, int]
+) -> tuple[list[tuple[int, str]], dict[str, int]] | None:
+    """Pick an item for every slot of a layout from what is held.
+
+    Returns:
+        tuple | None: The item of each slot and how many of each item one
+        set takes, or `None` if something is missing.
+
+    """
+    chosen: list[tuple[int, str]] = []
+    need: dict[str, int] = {}
+    for slot, names in layout:
+        name = next((n for n in names if have.get(n, 0) > need.get(n, 0)), "")
+        if not name:
+            return None
+        chosen.append((slot, name))
+        need[name] = need.get(name, 0) + 1
+    return chosen, need
+
+
+def fill_recipe(
+    inventory: Inventory,
+    content: Content,
+    index: int,
+    *,
+    maximum: bool = False,
+) -> bool:
+    """Lay the ingredients of recipe `index` out in the crafting grid.
+
+    The grid is cleared into the inventory first. One set is laid out, or
+    as many as the inventory holds with `maximum`. Nothing changes if the
+    recipe does not fit the grid, needs a station out of reach, or the
+    inventory lacks the items.
+
+    Returns:
+        bool: Whether the grid now holds the recipe.
+
+    """
+    if not 0 <= index < len(content.recipes):
+        return False
+    recipe = content.recipes[index]
+    if recipe.station and recipe.station not in inventory.stations:
+        return False
+    layout = _layout(recipe, inventory.crafting_side)
+    if layout is None:
+        return False
+    before = inventory.copy()
+    for slot in range(len(inventory.crafting)):
+        inventory.stow_crafting(slot)
+    if any(stack is not None for stack in inventory.crafting):
+        _restore(inventory, before)
+        return False
+    have = _available(inventory)
+    picked = _choose(layout, have)
+    if picked is None:
+        _restore(inventory, before)
+        return False
+    chosen, need = picked
+    sets = min(have[name] // count for name, count in need.items())
+    if maximum:
+        sets = min(
+            sets, *(content.items[name].spec.max_stack for name in need)
+        )
+    else:
+        sets = 1
+    for name, count in need.items():
+        _take(inventory, name, count * sets)
+    for slot, name in chosen:
+        inventory.crafting[slot] = ItemStack(content.items[name], sets)
+    return True
+
+
+def _restore(inventory: Inventory, before: Inventory) -> None:
+    inventory.slots[:] = before.slots
+    inventory.crafting[:] = before.crafting

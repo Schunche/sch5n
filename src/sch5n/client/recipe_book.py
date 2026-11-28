@@ -174,6 +174,24 @@ class RecipeBook:
         """
         return self.open and self.usable and self.rect.contains_point(*pos)
 
+    def entry_at(self, pos: tuple[float, float]) -> int | None:
+        """Find the recipe drawn at a screen position.
+
+        Returns:
+            int | None: Its index among the recipes, or `None`.
+
+        """
+        if not self.contains(pos) or self.row_height <= 0:
+            return None
+        row = int(
+            (pos[1] - (self.rect.y + 2 * PADDING + TITLE_SIZE))
+            // self.row_height
+        )
+        index = self.scroll + row
+        if row < 0 or row >= self.visible_rows or index >= len(self.entries):
+            return None
+        return index
+
     def draw(
         self,
         batch: SpriteBatch,

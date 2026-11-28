@@ -476,3 +476,12 @@ Work done on the `claude/auto` branch, newest last.
   filling the gap, and the top 4 rows are always dirt so grass grows on
   every column. The first stone is now about 19 rows down on average
   (was about 80). `data/maps/map1.json` is untouched.
+
+## Recipe book fills the grid
+
+- Clicking a recipe in the book lays its ingredients out in the crafting
+  grid (the grid is cleared into the inventory first); shift + click fills
+  it with as many sets as the inventory holds. New `FILL_RECIPE` and
+  `FILL_RECIPE_ALL` inventory actions (protocol 11) and `fill_recipe` in
+  `game/crafting.py`. Recipes that do not fit the grid or need a station out
+  of reach do nothing.
