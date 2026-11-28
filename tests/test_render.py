@@ -1504,3 +1504,35 @@ def test_chest_opens_from_a_click_and_stores_items(app: App) -> None:
         play.tick()
     assert play.world.chest is None
     play.leave()
+
+
+def test_creatures_and_the_death_screen_draw(app: App) -> None:
+    """A creature is drawn; dying shows the death screen, which fades."""
+    from sch5n.game.mobs import KINDS, Mob  # ruff: ignore[import-outside-top-level]
+
+    play = PlayScene.singleplayer(app)
+    for _ in range(WARMUP_TICKS):
+        play.tick()
+    server = play.server
+    assert server is not None
+    player = play.player
+    assert player is not None
+    before = draw(app, play)
+    kind = KINDS["slime"]
+    mob = Mob(kind, (player.body.x + 80, player.body.y + player.body.h - 24))
+    server.game.mobs[1] = mob
+    play.tick()
+    with_slime = draw(app, play)
+    assert (with_slime != before).any()
+    server.game.hurt_player(
+        next(iter(server.game.players.values())), 99, "died"
+    )
+    for _ in range(3):
+        play.tick()
+    assert play.death_ticks > 0
+    dimmed = draw(app, play)
+    assert dimmed.astype(int).sum() < with_slime.astype(int).sum()
+    for _ in range(play.death_ticks):
+        play.tick()
+    assert play.death_ticks == 0
+    play.leave()

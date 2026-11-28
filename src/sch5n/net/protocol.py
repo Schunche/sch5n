@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from sch5n.game.content import Content
     from sch5n.world.tilemap import TileMap
 
-PROTOCOL_VERSION = 7
+PROTOCOL_VERSION = 8
 """Raised whenever messages change incompatibly."""
 MAX_CLIENT_FRAME = 4096
 """Largest message a client may send, in bytes."""
@@ -212,6 +212,7 @@ class PlayerState(_Message):
     use_cooldown: int = 0
     health: int = 20
     hunger: int = 20
+    deaths: int = 0
 
 
 class ItemState(_Message):
@@ -221,6 +222,16 @@ class ItemState(_Message):
     amount: int
     x: float
     y: float
+
+
+class MobState(_Message):
+    """A hostile creature."""
+
+    kind: str
+    x: float
+    y: float
+    facing_left: bool = False
+    hurt: bool = False
 
 
 class Snapshot(_Message):
@@ -234,6 +245,7 @@ class Snapshot(_Message):
     wind: float
     players: list[PlayerState]
     items: list[ItemState]
+    mobs: list[MobState] = []
     tiles: list[tuple[int, int, int, int]] = []
     """Tiles changed since the last snapshot: `(x, y, block, variant)`."""
     damage: list[tuple[int, int, float]] = []

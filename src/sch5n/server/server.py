@@ -45,6 +45,7 @@ from sch5n.net.protocol import (
     InventoryMessage,
     InventoryState,
     ItemState,
+    MobState,
     PlayerState,
     Reject,
     Snapshot,
@@ -210,6 +211,7 @@ def player_state(player_id: int, player: Player) -> PlayerState:
         use_cooldown=player.use_cooldown,
         health=player.vitals.health,
         hunger=player.vitals.hunger,
+        deaths=player.deaths,
     )
 
 
@@ -635,6 +637,16 @@ class Server:
                     y=floating.sprite_rect.y,
                 )
                 for floating in game.floating_items
+            ],
+            mobs=[
+                MobState(
+                    kind=mob.kind.name,
+                    x=mob.body.x,
+                    y=mob.body.y,
+                    facing_left=mob.facing_left,
+                    hurt=mob.hurt > 0,
+                )
+                for mob in game.mobs.values()
             ],
             tiles=changes,
             damage=[(x, y, left) for (x, y), left in tilemap.damage.items()],

@@ -26,7 +26,7 @@ from sch5n.client.inventory_mouse import BUTTONS, InventoryMouse
 from sch5n.client.keybinds import Action, Context
 from sch5n.client.recipe_book import RecipeBook
 from sch5n.client.render.batch import rgba
-from sch5n.client.render.text import TextStyle
+from sch5n.client.render.text import Anchor, TextStyle
 from sch5n.client.scenes.base import Scene
 from sch5n.client.scenes.settings import SettingsScene
 from sch5n.client.ui import (
@@ -68,6 +68,9 @@ if TYPE_CHECKING:
 NOTICE_TICKS = 600
 """How long a notice, like the LAN address, stays on screen."""
 NOTICE_SIZE = 16
+DEATH_TICKS = 180
+"""How long the death screen stays."""
+DEATH_SIZE = 48
 CHEST_COLUMNS = 9
 """Slots per row in an open chest."""
 CARET_TICKS = 30
@@ -110,6 +113,9 @@ class PlayScene(Scene):
         self.mouse = InventoryMouse(session)
         self.debug = False
         self.chat = ChatBox()
+        self._deaths_seen = 0
+        self.death_ticks = 0
+        """Ticks left of the death screen."""
         self.book = RecipeBook(app.content)
         self._chat_seen = 0
         self._skip_char = False
@@ -603,12 +609,52 @@ class PlayScene(Scene):
         self.renderer.tick(self.world)
         if self.notice_ticks:
             self.notice_ticks -= 1
+        self._watch_deaths()
+        if self.death_ticks:
+            self.death_ticks -= 1
         player = self.player
         if player is not None:
             self.camera.follow(
                 player.body.center,
                 app.content.game.camera.smoothing / app.tick_rate,
             )
+
+    def _watch_deaths(self) -> None:
+        """Show the death screen when the server counts another death."""
+        player = self.player
+        if player is None:
+            return
+        if player.deaths > self._deaths_seen:
+            self.death_ticks = DEATH_TICKS
+            self.mouse.cancel()
+        self._deaths_seen = player.deaths
+
+    def _draw_death(self) -> None:
+        """Dim the game and say the player died, fading away."""
+        app = self.app
+        fade = min(1.0, self.death_ticks / app.tick_rate)
+        w, h = app.screen
+        app.batch.shape((0, 0, w, h), rgba((120, 0, 0), 0.45 * fade))
+        app.text.draw(
+            app.batch,
+            "You died",
+            (w / 2, h / 2 - 20),
+            TextStyle(
+                size=DEATH_SIZE,
+                color=rgba(app.ui.color("text"), fade),
+                anchor=Anchor.CENTER,
+            ),
+        )
+        app.text.draw(
+            app.batch,
+            "Back at the start, fed and well",
+            (w / 2, h / 2 + 30),
+            TextStyle(
+                size=NOTICE_SIZE,
+                color=rgba(app.ui.color("text_dim"), fade),
+                anchor=Anchor.CENTER,
+            ),
+        )
 
     def _take_chat(self) -> None:
         """Move newly received chat lines into the chat box."""
@@ -676,6 +722,8 @@ class PlayScene(Scene):
         if self.notice_ticks:
             self._draw_notice()
         self._draw_vitals()
+        if self.death_ticks:
+            self._draw_death()
         self.chat.draw(
             batch,
             app.text,

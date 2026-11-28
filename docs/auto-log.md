@@ -144,3 +144,22 @@ Work done on the `claude/auto` branch, newest last.
   dark blue tint covers the world (not the HUD).
 - Tests: `tests/test_daylight.py`. Not done: stars/moon art, a `/time`
   command, light sources (torches) that push the dark back.
+
+## Slimes, damage and the death screen
+
+- `sch5n.game.mobs`: hostile creatures (`KINDS`, only `slime` so far).
+  Slimes spawn on the ground 14 to 24 tiles from a player at night (up to 3
+  per player, 16 in all), walk towards players in sight (14 tiles), hop
+  over steps, and fade away in daylight or far from everyone. Touching one
+  costs 2 health, with a short pause and a knockback. Admins are immune.
+- Players hit them by swinging any tool at their tile; tools' `damage`
+  counts (at least 1) with a knockback. Slimes die after a few hits and may
+  drop a `slime_ball` (not used in any recipe yet).
+- `Game.hurt_player` handles damage; at 0 health (or starvation) a player
+  respawns fed and `deaths` goes up. The server announces it in chat.
+- Protocol 8: `Snapshot.mobs` and `PlayerState.deaths`. The client shows a
+  "You died" screen for three seconds when its death counter rises.
+- Placeholder art (drawn by script): `assets/textures/mob/slime.png`
+  (drawn at 2x, nearest neighbour) and
+  `assets/textures/item/slime_ball.png`.
+- Tests: `tests/test_mobs.py`, a render test in `tests/test_render.py`.

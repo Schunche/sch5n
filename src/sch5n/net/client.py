@@ -34,6 +34,7 @@ from sch5n.game.inventory import (
     Inventory,
     ItemStack,
 )
+from sch5n.game.mobs import KINDS, Mob
 from sch5n.game.player import Action, Player, Swing
 from sch5n.game.session import swing_tool
 from sch5n.net.connection import SocketConnection
@@ -71,6 +72,7 @@ if TYPE_CHECKING:
     from sch5n.net.connection import Connection
     from sch5n.net.protocol import (
         ClientMessage,
+        MobState,
         PlayerState,
         ServerMessage,
         StackState,
@@ -207,6 +209,7 @@ class ClientWorld:
         self.ambience = Ambience(self.config, np.random.default_rng())
         self.players: dict[int, Player] = {}
         self.floating_items: list[FloatingItem] = []
+        self.mobs: dict[int, Mob] = {}
         self.inventory = Inventory(self.config.inventory.size)
         self.ticks = 0
         self.prediction = True
@@ -250,6 +253,7 @@ class ClientWorld:
         player.use_cooldown = state.use_cooldown
         player.vitals.health = state.health
         player.vitals.hunger = state.hunger
+        player.deaths = state.deaths
         if state.swing is None:
             player.swing = None
         else:
@@ -288,12 +292,28 @@ class ClientWorld:
                 msg = "Unknown block"
                 raise ProtocolError(msg)
             self.tilemap.set(x, y, block, variant)
+        try:
+            mobs = {
+                index: self._mob(state)
+                for index, state in enumerate(snapshot.mobs)
+            }
+        except KeyError as error:
+            msg = f"Unknown creature {error}"
+            raise ProtocolError(msg) from error
+        self.mobs = mobs
         self.players = players
         self.floating_items = items
         self.tilemap.damage = {(x, y): left for x, y, left in snapshot.damage}
         self.ambience.wind.strength = snapshot.wind
         self.ticks = snapshot.tick
         self._reconcile(snapshot.ack, predicted)
+
+    @staticmethod
+    def _mob(state: MobState) -> Mob:
+        mob = Mob(KINDS[state.kind], (state.x, state.y))
+        mob.facing_left = state.facing_left
+        mob.hurt = 1 if state.hurt else 0
+        return mob
 
     def _predicted_position(self) -> tuple[float, float] | None:
         player = self.player

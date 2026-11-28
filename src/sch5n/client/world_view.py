@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from sch5n.game.config import Rig, ScissorTool, SwingKey, ToolUseConfig
     from sch5n.game.content import ItemDef
     from sch5n.game.floating_item import FloatingItem
+    from sch5n.game.mobs import Mob
     from sch5n.game.player import Player, Swing
     from sch5n.math.rect import Rect
     from sch5n.math.vector import IntTuple2
@@ -645,6 +646,26 @@ def draw_floating_items(
         )
 
 
+HURT_TINT = (1.0, 0.45, 0.45, 1.0)
+"""Color multiplied onto a creature that was just hit."""
+
+
+def draw_mobs(
+    batch: SpriteBatch, assets: ClientAssets, mobs: Mapping[int, Mob]
+) -> None:
+    """Queue hostile creatures, red while hurt."""
+    for mob in mobs.values():
+        body = mob.body
+        region = assets.mob_sprites[mob.kind.name]
+        batch.sprite(
+            assets.atlas,
+            (body.x, body.y, body.w, body.h),
+            region,
+            HURT_TINT if mob.hurt else WHITE,
+            Transform(flip_x=mob.facing_left),
+        )
+
+
 def draw_particles(
     batch: SpriteBatch, assets: ClientAssets, ambience: Ambience
 ) -> None:
@@ -788,6 +809,11 @@ class WorldView(Protocol):
         ...
 
     @property
+    def mobs(self) -> Mapping[int, Mob]:
+        """Hostile creatures by id."""
+        ...
+
+    @property
     def players(self) -> Mapping[int, Player]:
         """Players by id."""
         ...
@@ -884,6 +910,7 @@ class WorldRenderer:
         draw_particles(batch, app.assets, world.ambience)
         draw_wind_streaks(batch, world.ambience)
         draw_floating_items(batch, app.assets, world.floating_items)
+        draw_mobs(batch, app.assets, world.mobs)
         if show_players:
             for player_id, player in world.players.items():
                 if player_id != local_id and player.name:

@@ -76,6 +76,9 @@ class Player:
         """Ticks since `action` last changed."""
         self.use_cooldown = 0
         """Ticks since the held item was last used."""
+        self.hurt_cooldown = 0
+        """Ticks left before another touch can hurt."""
+        self.deaths = 0
         self.mode = mode
         self.jump_hold = 0
         """Ticks the current jump may still be held to rise higher."""

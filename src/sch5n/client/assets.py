@@ -11,6 +11,7 @@ import numpy as np
 from sch5n.client.render.atlas import AtlasBuilder, Region, create_texture
 from sch5n.client.render.image import load_rgba
 from sch5n.game.config import Rig, load_model
+from sch5n.game.mobs import KINDS
 from sch5n.log.logger import LOGGER
 
 if TYPE_CHECKING:
@@ -259,7 +260,7 @@ def body_copies(
 class ClientAssets:
     """The texture atlas and lookups into it."""
 
-    def __init__(
+    def __init__(  # ruff: ignore[too-many-locals, too-many-statements]
         self,
         ctx: moderngl.Context,
         textures_dir: Path,
@@ -289,6 +290,7 @@ class ClientAssets:
             builder, textures_dir, content, self.colorkey
         )
         item_keys = {item.name: add(item.spec.icon) for item in content.items}
+        sprite_keys = {name: add(f"mob/{name}") for name in KINDS}
         mob_keys = {
             (mob, action): (clip, add_clip(clip))
             for mob, actions in animations.mobs.items()
@@ -342,6 +344,10 @@ class ClientAssets:
             key: Animation(clip, tuple(regions[k] for k in keys))
             for key, (clip, keys) in mob_keys.items()
         }
+        self.mob_sprites = {
+            name: regions[key] for name, key in sprite_keys.items()
+        }
+        """Single image of every hostile creature, by kind."""
         self.armless, self.bare = (
             {
                 (mob, action): Animation(clip, tuple(regions[k] for k in keys))

@@ -12,9 +12,15 @@ import numpy as np
 from sch5n.game.ambient import Ambience
 from sch5n.game.config import GameMode
 from sch5n.game.content import AIR, TreePart
+from sch5n.game.daylight import daylight, phase
 from sch5n.game.floating_item import FloatingItem
 from sch5n.game.inventory import CRAFTING_SIDE, Inventory, ItemStack
 from sch5n.game.mining import HitResult, can_place, fell_tree, hit_tile, log_of
+from sch5n.game.mobs import (
+    CONTACT_COOLDOWN,
+    KINDS,
+    Mob,
+)
 from sch5n.game.plants import Garden
 from sch5n.game.player import Player
 from sch5n.log.logger import LOGGER
@@ -94,6 +100,24 @@ def swing_tool(player: Player, inp: TickInput, tile_size: int) -> bool:
     return True
 
 
+SPAWN_NEAR, SPAWN_FAR = 14, 24
+"""Tiles from a player where creatures appear, nearest and farthest."""
+SPAWN_SPAN = 40
+"""Rows above and below a player searched for ground to appear on."""
+SPAWN_EVERY = 90
+"""Ticks between tries to spawn a creature."""
+MOBS_PER_PLAYER = 3
+MAX_MOBS = 16
+NIGHT_LIGHT = 0.35
+"""Daylight below which creatures spawn."""
+DAY_LIGHT = 0.7
+"""Daylight above which they start to fade away."""
+FADE_CHANCE = 0.004
+DESPAWN_TILES = 48
+"""Creatures farther than this from every player vanish."""
+PLAYER_KNOCK = 3.0
+
+
 class Game:
     """Owns the simulation state of one play session.
 
@@ -129,6 +153,9 @@ class Game:
         self.floating_items: list[FloatingItem] = []
         self.ambience = Ambience(self.config, self.rng)
         self.garden = Garden(tilemap, self.rng, self.config.tick_rate)
+        self.mobs: dict[int, Mob] = {}
+        """Hostile creatures by id."""
+        self._next_mob = 0
         self.chests: dict[tuple[int, int], Inventory] = {}
         """Contents of the storage blocks that have been opened or
         filled, by tile."""
@@ -388,6 +415,7 @@ class Game:
             return
 
         if swing_tool(player, inp, self.config.tile_size):
+            self._strike_mobs(player, held.item.spec.damage, (x, y))
             hit = hit_tile(self.tilemap, x, y, held.item)
             if hit.result is HitResult.WRONG_TOOL and self.ticks % 10 == 0:
                 LOGGER.debug("Another tool is needed for %s", hit.block)
@@ -548,10 +576,119 @@ class Game:
         for player in self.players.values():
             if player.vitals.tick(self.config.tick_rate, immune=immune):
                 player.vitals.restore()
+                player.deaths += 1
                 self._respawn(player)
                 self.announcements.append(
                     f"{player.name or "A player"} starved"
                 )
+
+    def hurt_player(self, player: Player, damage: int, cause: str) -> None:
+        """Take health from a player. At zero it respawns, fed.
+
+        Admins cannot be hurt.
+        """
+        if self.setup.mode is GameMode.ADMIN:
+            return
+        player.vitals.health -= damage
+        if player.vitals.health <= 0:
+            player.vitals.restore()
+            player.deaths += 1
+            self._respawn(player)
+            self.announcements.append(f"{player.name or "A player"} {cause}")
+
+    def _spawn_mob(self) -> None:
+        """Try to bring a creature out of the dark near a random player."""
+        if not self.players:
+            return
+        rng = self.rng
+        player = list(self.players.values())[
+            int(rng.integers(len(self.players)))
+        ]
+        size = self.config.tile_size
+        side = int(rng.choice((-1, 1)))
+        column = int(player.body.center[0] // size) + side * int(
+            rng.integers(SPAWN_NEAR, SPAWN_FAR)
+        )
+        row = int(player.body.center[1] // size)
+        surface = self.tilemap.surface_y(
+            column, row - SPAWN_SPAN, row + SPAWN_SPAN
+        )
+        if surface is None:
+            return
+        kind = KINDS["slime"]
+        top = (surface * size) - kind.size[1]
+        mob = Mob(kind, (column * size + (size - kind.size[0]) / 2, top))
+        if self.tilemap.any_solid(column, surface - 2, column + 1, surface):
+            return
+        self.mobs[self._next_mob] = mob
+        self._next_mob += 1
+
+    def _strike_mobs(
+        self, player: Player, damage: int, target: tuple[int, int]
+    ) -> None:
+        """Hurt the creatures at the tile a player swung at."""
+        size = self.config.tile_size
+        area = Rect(
+            (target[0] - 0.5) * size,
+            (target[1] - 0.5) * size,
+            2 * size,
+            2 * size,
+        )
+        for mob_id, mob in list(self.mobs.items()):
+            if not mob.body.rect.collides(area):
+                continue
+            if mob.hit(max(1, damage), player.body.center[0]):
+                self._mob_died(mob_id)
+
+    def _mob_died(self, mob_id: int) -> None:
+        mob = self.mobs.pop(mob_id)
+        if self.rng.random() < mob.kind.drop_chance:
+            size = self.config.tile_size
+            self.drop(
+                ItemStack(self.content.items[mob.kind.drop]),
+                (int(mob.body.center[0] // size), int(mob.body.y // size)),
+            )
+
+    def _tick_mobs(self) -> None:
+        """Spawn at night, move, touch players and fade with the day."""
+        rate = self.config.tick_rate
+        light = daylight(phase(self.ticks, rate))
+        wanted = min(MAX_MOBS, MOBS_PER_PLAYER * len(self.players))
+        if (
+            light < NIGHT_LIGHT
+            and len(self.mobs) < wanted
+            and self.ticks % SPAWN_EVERY == 0
+        ):
+            self._spawn_mob()
+        size = self.config.tile_size
+        for mob_id, mob in list(self.mobs.items()):
+            nearest = self._nearest_player(mob.body.center)
+            target = None if nearest is None else nearest.body.center
+            mob.tick(self.tilemap, self.config.physics, size, target)
+            gone = mob.body.y > self.void_y or (
+                nearest is None
+                or math.dist(nearest.body.center, mob.body.center)
+                > DESPAWN_TILES * size
+                or (light > DAY_LIGHT and self.rng.random() < FADE_CHANCE)
+            )
+            if gone:
+                del self.mobs[mob_id]
+                continue
+            for player in self.players.values():
+                if player.hurt_cooldown <= 0 and mob.body.rect.collides(
+                    player.body.rect
+                ):
+                    player.hurt_cooldown = CONTACT_COOLDOWN
+                    away = (
+                        1.0
+                        if player.body.center[0] >= mob.body.center[0]
+                        else -1.0
+                    )
+                    player.body.vx = away * PLAYER_KNOCK
+                    player.body.vy = -PLAYER_KNOCK
+                    self.hurt_player(player, mob.kind.damage, "was slain")
+        for player in self.players.values():
+            player.hurt_cooldown = max(0, player.hurt_cooldown - 1)
 
     def tick_world(self, view: Rect | None = None) -> None:
         """Advance everything but the players by one tick."""
@@ -559,6 +696,7 @@ class Game:
         for player in self.players.values():
             self._fit_crafting_grid(player)
         self._tick_vitals()
+        self._tick_mobs()
         self.ambience.tick(self.tilemap, view, self.config.tile_size)
         self._tick_floating_items()
         self.ticks += 1

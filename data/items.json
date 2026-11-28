@@ -36,6 +36,7 @@
         "platinum_ore": {"name": "Platinum Ore", "description": "Raw metal. Smelt it at a furnace, with sticks as fuel.", "icon": "tile/platinum/0", "drop_size": 16},
         "copper_ingot": {"name": "Copper Ingot", "description": "Smelted from copper ore.", "icon": "item/copper_ingot", "drop_size": 16},
         "iron_ingot": {"name": "Iron Ingot", "description": "Smelted from iron ore.", "icon": "item/iron_ingot", "drop_size": 16},
+        "slime_ball": {"name": "Slime Ball", "description": "Sticky goo from a slime.", "icon": "item/slime_ball", "drop_size": 16},
         "apple": {"name": "Apple", "description": "Fruit from an oak. Eat it to feel less hungry.", "icon": "item/apple", "drop_size": 16, "food": 5}
     }
 }
