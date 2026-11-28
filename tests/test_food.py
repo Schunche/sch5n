@@ -109,3 +109,10 @@ def test_the_game_runs_furnaces_it_has_opened(content: Content) -> None:
     out = slots.slots[OUTPUT]
     assert out is not None
     assert out.item.name == "gold_ingot"
+
+
+def test_sand_smelts_into_glass(content: Content) -> None:
+    """Glass is a solid block made by smelting sand."""
+    assert content.smelting["sand_block"].result.item == "glass_block"
+    assert content.items["glass_block"].spec.places == "glass"
+    assert content.blocks.by_name("glass").spec.solid

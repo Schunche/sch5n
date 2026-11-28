@@ -55,6 +55,7 @@
         "birch_sapling": {"name": "Birch Sapling", "description": "Plant it on dirt or grass.", "icon": "item/birch_sapling", "places": "birch_sapling", "drop_size": 16},
         "pine_log": {"name": "Pine Log", "description": "Place it to build, or craft it into planks.", "icon": "tile/pineLog/0", "max_stack": 1024, "places": "pine_log", "drop_size": 16},
         "pine_sapling": {"name": "Pine Sapling", "description": "Plant it on dirt or grass.", "icon": "item/pine_sapling", "places": "pine_sapling", "drop_size": 16},
+        "glass_block": {"name": "Glass", "description": "Place it to build.", "icon": "tile/glass/0", "max_stack": 1024, "places": "glass", "drop_size": 16},
         "sand_block": {"name": "Sand Block", "description": "Place it to build.", "icon": "tile/sand/0", "max_stack": 1024, "places": "sand", "drop_size": 16},
         "snow_block": {"name": "Snow Block", "description": "Place it to build.", "icon": "tile/snow/0", "max_stack": 1024, "places": "snow", "drop_size": 16},
         "bed": {"name": "Bed", "description": "Place it, then use it to set where you respawn.", "icon": "tile/bed/0", "max_stack": 16, "places": "bed", "drop_size": 16},

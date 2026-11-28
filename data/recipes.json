@@ -102,6 +102,7 @@
         {"input": "platinum_ore", "result": {"item": "platinum_ingot"}},
         {"input": "copper_ore", "result": {"item": "copper_ingot"}},
         {"input": "iron_ore", "result": {"item": "iron_ingot"}},
-        {"input": "apple", "result": {"item": "baked_apple"}}
+        {"input": "apple", "result": {"item": "baked_apple"}},
+        {"input": "sand_block", "result": {"item": "glass_block"}}
     ]
 }
