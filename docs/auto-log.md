@@ -450,3 +450,8 @@ Work done on the `claude/auto` branch, newest last.
 
 - `/home` in chat sends the player to their bed or the spawn point
   (`Game.go_home`), with the usual 3 seconds of safety after respawning.
+
+## Re-check
+
+- After sounds, tips, falls and boss changes: the server fuzz test passes,
+  and 16 players on a 3000 wide world cost 3.7 ms per tick (budget 16.7).
