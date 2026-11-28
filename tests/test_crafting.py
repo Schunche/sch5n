@@ -423,3 +423,22 @@ def test_the_furnace_is_made_from_cobblestone(
     result = crafted(inventory, content)
     assert result is not None
     assert result.item.name == "furnace"
+
+
+def test_torches_are_made_from_sticks(
+    content: Content, inventory: Inventory
+) -> None:
+    """A stick with a leaf or slime goo makes torches, which give light."""
+    names = {"S": "stick", "L": "leaf", "G": "slime_ball"}
+    for second, amount in (("L", 1), ("G", 4)):
+        inventory.resize_crafting(2)
+        for index, symbol in enumerate(("S", second, " ", " ")):
+            inventory.crafting[index] = (
+                ItemStack(content.items[names[symbol]])
+                if symbol != " "
+                else None
+            )
+        result = crafted(inventory, content)
+        assert result is not None
+        assert (result.item.name, result.amount) == ("torch", amount)
+    assert content.blocks.by_name("torch").spec.light > 0

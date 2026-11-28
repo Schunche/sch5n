@@ -180,3 +180,15 @@ def test_mobs_are_synced_to_clients(content: Content) -> None:
     assert [m.kind.name for m in alice.world.mobs.values()] == ["slime"]
     assert alice.world.player is not None
     assert alice.world.player.deaths == 2  # ruff: ignore[magic-value-comparison]
+
+
+def test_no_creatures_appear_next_to_a_torch(content: Content) -> None:
+    """Lights keep the dark away from where they shine."""
+    game = make_game(content)
+    game.ticks = MIDNIGHT
+    torch = content.blocks.id_of("torch")
+    for x in range(-60, 60, 4):
+        game.tilemap.set(x, 9, torch)
+    for _ in range(900):
+        game.tick(TickInput())
+    assert not game.mobs

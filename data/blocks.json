@@ -20,6 +20,7 @@
         "oak_sapling": {"textures": ["item/oak_sapling"], "durability": 25, "tool": "lopper", "drop": "oak_sapling", "plant_on": ["dirt", "grass"], "grows_after": [60, 120], "hand_pickup": true},
         "furnace": {"textures": ["tile/furnace/0"], "durability": 200, "tool": "pickaxe", "drop": "furnace", "station": "furnace"},
         "chest": {"textures": ["tile/chest/0"], "durability": 150, "tool": "axe", "drop": "chest", "container": 27},
+        "torch": {"textures": ["tile/torch/0"], "durability": 10, "tool": "axe", "drop": "torch", "hand_pickup": true, "light": 7},
         "crafting_bench": {"textures": ["tile/craftingBench/0", "tile/craftingBench/1"], "durability": 200, "tool": "axe", "drop": "crafting_bench", "crafting_side": 3}
     }
 }

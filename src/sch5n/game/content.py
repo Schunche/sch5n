@@ -110,6 +110,8 @@ class BlockSpec(_Model):
     """For stations: the crafting grid side of players within reach."""
     hand_pickup: bool = False
     """An empty hand picks it up at once."""
+    light: int = Field(default=0, ge=0, le=32)
+    """How many tiles around it the block lights up at night."""
 
 
 class BlocksFile(_Model):
@@ -301,10 +303,13 @@ class BlockRegistry:
         count = len(self._blocks)
         self.solid = np.zeros(count, dtype=np.bool_)
         """`solid[block_id]` lookup table."""
+        self.light = np.zeros(count, dtype=np.uint8)
+        """`light[block_id]` lookup table, the radius it lights."""
         self.particle = np.zeros(count, dtype=np.bool_)
         """`particle[block_id]` lookup table, whether it emits particles."""
         for block in self._by_name.values():
             self.solid[block.id] = block.spec.solid
+            self.light[block.id] = block.spec.light
             self.particle[block.id] = block.spec.particle is not None
 
     def __len__(self) -> int:

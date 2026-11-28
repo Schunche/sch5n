@@ -175,3 +175,15 @@ Work done on the `claude/auto` branch, newest last.
   harmless.
 - Night sky: a fixed scatter of stars and a moon (opposite the sun) fade in
   with the dark (`draw_stars_and_moon`). Cosmetic, no art needed.
+
+## Torches and light
+
+- Block `torch` (`"light": 7` radius in tiles in `data/blocks.json`): placed
+  against a solid block, picked up by hand (or an axe). At night a warm glow
+  of stacked translucent circles is drawn around every light in view, over
+  the dark tint (`draw_lights`); slimes do not spawn within 8 tiles of one.
+  Recipes: stick + leaf makes one, stick + slime ball makes four.
+- The glow is a client-side effect only (it does not lift the dark tint
+  under it); real per-tile lighting would be a bigger rendering change.
+- Placeholder art: `assets/textures/tile/torch/0.png`.
+- Tests in `tests/test_mobs.py` and `tests/test_crafting.py`.

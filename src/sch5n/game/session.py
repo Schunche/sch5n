@@ -116,6 +116,8 @@ FADE_CHANCE = 0.004
 DESPAWN_TILES = 48
 """Creatures farther than this from every player vanish."""
 PLAYER_KNOCK = 3.0
+LIT_SAFE = 8
+"""Creatures do not appear this many tiles from a light."""
 
 
 class Game:
@@ -632,6 +634,14 @@ class Game:
         kind = KINDS["slime"]
         top = (surface * size) - kind.size[1]
         mob = Mob(kind, (column * size + (size - kind.size[0]) / 2, top))
+        lit = self.tilemap.region(
+            column - LIT_SAFE,
+            surface - LIT_SAFE,
+            column + LIT_SAFE + 1,
+            surface + LIT_SAFE + 1,
+        )
+        if self.tilemap.blocks.light[lit].any():
+            return
         if self.tilemap.any_solid(column, surface - 2, column + 1, surface):
             return
         self.mobs[self._next_mob] = mob

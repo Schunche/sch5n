@@ -12,6 +12,8 @@
         {"pattern": ["C", "S", "S"], "key": {"C": ["cobblestone", "stone_block"], "S": "stick"}, "result": {"item": "stone_shovel"}},
         {"pattern": ["CCC", "C C", "CCC"], "key": {"C": ["cobblestone", "stone_block"]}, "result": {"item": "furnace"}},
         {"pattern": ["PPP", "P P", "PPP"], "key": {"P": "oak_planks"}, "result": {"item": "chest"}},
+        {"ingredients": ["stick", "leaf"], "result": {"item": "torch"}},
+        {"ingredients": ["stick", "slime_ball"], "result": {"item": "torch", "amount": 4}},
         {"ingredients": ["copper_ore", "stick", "stick"], "station": "furnace", "result": {"item": "copper_ingot"}},
         {"ingredients": ["iron_ore", "stick", "stick"], "station": "furnace", "result": {"item": "iron_ingot"}},
         {"pattern": ["III", " S ", " S "], "key": {"I": "copper_ingot", "S": "stick"}, "result": {"item": "copper_pickaxe"}},
